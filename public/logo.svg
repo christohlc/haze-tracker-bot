@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <title>Haze Tracker SG</title>
+  <defs>
+    <!-- Sky fades from clear blue (AQI moderate) to hazy amber (AQI unhealthy). -->
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4f8fdc"/>
+      <stop offset="0.55" stop-color="#a9b8c4"/>
+      <stop offset="1" stop-color="#e2b84a"/>
+    </linearGradient>
+    <radialGradient id="shell" cx="0.38" cy="0.32" r="0.75">
+      <stop offset="0" stop-color="#c88b4f"/>
+      <stop offset="0.6" stop-color="#9a6332"/>
+      <stop offset="1" stop-color="#6a4120"/>
+    </radialGradient>
+    <clipPath id="nut">
+      <path d="M256 82C330 86 398 158 398 246C398 318 340 366 256 366C172 366 114 318 114 246C114 158 182 86 256 82Z"/>
+    </clipPath>
+    <filter id="blur" x="-20%" y="-50%" width="140%" height="200%">
+      <feGaussianBlur stdDeviation="14"/>
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" fill="url(#sky)"/>
+
+  <!-- haze behind the nut -->
+  <ellipse cx="256" cy="214" rx="250" ry="30" fill="#efe7d6" opacity="0.5" filter="url(#blur)"/>
+
+  <!-- hazelnut -->
+  <g clip-path="url(#nut)">
+    <rect x="100" y="70" width="312" height="310" fill="url(#shell)"/>
+    <!-- shell grain -->
+    <g fill="none" stroke="#5c391b" stroke-opacity="0.28" stroke-width="5" stroke-linecap="round">
+      <path d="M256 90C230 160 220 230 222 300"/>
+      <path d="M256 90C296 160 312 230 308 300"/>
+    </g>
+    <!-- pale husk scar at the base -->
+    <path d="M100 288C160 262 352 262 412 288L412 380L100 380Z" fill="#dcbc84"/>
+    <g fill="#b48b52">
+      <circle cx="180" cy="300" r="6"/><circle cx="222" cy="292" r="6"/><circle cx="264" cy="290" r="6"/>
+      <circle cx="306" cy="294" r="6"/><circle cx="344" cy="304" r="6"/><circle cx="200" cy="322" r="6"/>
+      <circle cx="244" cy="316" r="6"/><circle cx="288" cy="318" r="6"/><circle cx="328" cy="328" r="6"/>
+    </g>
+    <!-- highlight -->
+    <ellipse cx="196" cy="176" rx="28" ry="52" fill="#fff" opacity="0.22" transform="rotate(28 196 176)"/>
+  </g>
+  <!-- tip -->
+  <path d="M244 92Q256 62 268 92Z" fill="#6a4120"/>
+
+  <!-- haze in front: soft glow + bold bars that survive small sizes -->
+  <g filter="url(#blur)" fill="#f3ede1" opacity="0.7">
+    <rect x="60" y="324" width="320" height="40" rx="20"/>
+    <rect x="140" y="374" width="320" height="40" rx="20"/>
+  </g>
+  <g fill="#f6f1e7" opacity="0.94">
+    <rect x="76" y="330" width="290" height="28" rx="14"/>
+    <rect x="152" y="380" width="290" height="28" rx="14"/>
+    <rect x="124" y="430" width="230" height="28" rx="14"/>
+  </g>
+</svg>

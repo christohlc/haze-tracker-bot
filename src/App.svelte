@@ -39,10 +39,13 @@
 
 <main>
   <header>
-    <h1>How much haze have you smoked today?</h1>
-    {#if data}
-      <p class="note">Latest PM2.5 reading {sgtHour(data.snapshot.asOf, true)} SGT</p>
-    {/if}
+    <img class="logo" src="/logo.svg" alt="" width="44" height="44" />
+    <div>
+      <h1>How much haze have you smoked today?</h1>
+      {#if data}
+        <p class="note">Latest PM2.5 reading {sgtHour(data.snapshot.asOf, true)} SGT</p>
+      {/if}
+    </div>
   </header>
 
   {#if error && !data}
@@ -85,7 +88,14 @@
       calc(24px + var(--tg-safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
   }
   header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
     padding: 8px 4px 14px;
+  }
+  .logo {
+    flex: none;
+    border-radius: 12px;
   }
   h1 {
     margin: 0 0 2px;
