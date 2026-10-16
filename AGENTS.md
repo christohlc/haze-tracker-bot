@@ -16,6 +16,34 @@ There is no server to run locally and no `node_modules` to import from at runtim
 the only things available inside a module are the platform SDK and other modules
 in this project.
 
+## This bot: “I’m going hazelnuts!”
+
+Singapore haze bot + Mini App. User-facing overview in [README.md](README.md); visual
+and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious from the code:
+
+- **The hourly job is `endpoints/tick`**, run by `.github/workflows/tick.yml` (the
+  platform has no scheduler). It refreshes NEA, sends alerts, then runs the forecast.
+  `tick` and `admin` call `requireCli(ctx)`: they're CLI-only, never Mini App endpoints.
+- **Some `tgcloud/lib/` modules are shared with the front-end and tests**
+  (`psi`, `cigs`, `advice`, `alert-settings`, `alert-rules`, `format`, `snapshot`,
+  `forecast/features|predict|model`). Keep these pure: no `sdk` import, no DB, so
+  Vite and `node --test` can load them. Modules that touch `sdk` are `store`, `nea`,
+  `alerts`, `subscriptions`, `cli-only`, `forecast/inputs`.
+- **Secrets live in the `settings` DB table**, set only via `endpoints/admin` from the
+  CLI. Never commit or echo a key.
+- **`tgcloud/lib/forecast/model.js` is generated** by `scripts/train/train.py`. Don't
+  edit it by hand; retrain, and keep `test/forecast-vectors.json` passing.
+- **1-hour and 3-hour PSI and the forecast are our own calculations**, not NEA's.
+  Copy must keep saying so; only the 24-hour PSI is official.
+- **Outside Telegram**, `npm run dev` serves fixture data (`src/dev/`), with a
+  `?demo=worst|empty|error|loading` toggle. Use it to check UI changes in the preview.
+- **User-facing changes get a “What's new” entry** at the top of `src/lib/changelog.ts`.
+- **New or changed UI gets a pass with the UI skills** before it's committed:
+  `emil-design-eng` (polish, motion) and `mobile-native` (touch, safe areas), plus
+  `break-ui` for components that show data. Keep the result consistent with docs/design.md.
+- Checks: `npm test` and `npm run check`. Deploy: `npm run deploy` (+ `npx tgcloud
+  migrate` after schema changes).
+
 ## Layout
 
 Everything the platform runs lives in the **`tgcloud/`** folder. The rest of the

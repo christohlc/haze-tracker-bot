@@ -59,6 +59,48 @@ export function setMainButtonBusy(busy: boolean) {
   else mb.hideProgress();
 }
 
+/** Show Telegram's header BackButton. Returns a cleanup that hides it and drops the handler. */
+export function showBackButton(onClick: () => void): () => void {
+  const bb = tg?.BackButton;
+  if (!inTelegram || !bb) return () => {};
+  bb.onClick(onClick);
+  bb.show();
+  return () => {
+    bb.offClick(onClick);
+    bb.hide();
+  };
+}
+
+/** Read a small per-user value: Telegram CloudStorage in Telegram, localStorage outside. */
+export function getStored(key: string): Promise<string | null> {
+  const cs = tg?.CloudStorage;
+  if (inTelegram && cs) {
+    return new Promise((resolve) => {
+      try {
+        cs.getItem(key, (err: unknown, value?: string) => resolve(err ? null : value || null));
+      } catch {
+        resolve(null);
+      }
+    });
+  }
+  try {
+    return Promise.resolve(localStorage.getItem(key));
+  } catch {
+    return Promise.resolve(null);
+  }
+}
+
+/** Write a small per-user value. Best effort: failures are ignored. */
+export function setStored(key: string, value: string) {
+  const cs = tg?.CloudStorage;
+  try {
+    if (inTelegram && cs) cs.setItem(key, value);
+    else localStorage.setItem(key, value);
+  } catch {
+    // storage unavailable (private mode, old client)
+  }
+}
+
 /** Ask the user to let the bot message them. Resolves true if allowed. */
 export function requestWriteAccess(): Promise<boolean> {
   return new Promise((resolve) => {
