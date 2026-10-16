@@ -71,10 +71,13 @@ export function showBackButton(onClick: () => void): () => void {
   };
 }
 
-/** Read a small per-user value: Telegram CloudStorage in Telegram, localStorage outside. */
+// CloudStorage needs Bot API 6.9+; older clients throw, so they use localStorage too.
+const cloud = () => (inTelegram && tg.isVersionAtLeast?.('6.9') ? tg.CloudStorage : null);
+
+/** Read a small per-user value: Telegram CloudStorage in Telegram, localStorage otherwise. */
 export function getStored(key: string): Promise<string | null> {
-  const cs = tg?.CloudStorage;
-  if (inTelegram && cs) {
+  const cs = cloud();
+  if (cs) {
     return new Promise((resolve) => {
       try {
         cs.getItem(key, (err: unknown, value?: string) => resolve(err ? null : value || null));
@@ -92,9 +95,9 @@ export function getStored(key: string): Promise<string | null> {
 
 /** Write a small per-user value. Best effort: failures are ignored. */
 export function setStored(key: string, value: string) {
-  const cs = tg?.CloudStorage;
+  const cs = cloud();
   try {
-    if (inTelegram && cs) cs.setItem(key, value);
+    if (cs) cs.setItem(key, value);
     else localStorage.setItem(key, value);
   } catch {
     // storage unavailable (private mode, old client)

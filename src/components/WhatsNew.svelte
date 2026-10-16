@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { CHANGELOG, LATEST_ID } from '../lib/changelog';
+  import { sgtDate } from '../lib/format';
   import { reducedMotion } from '../lib/motion';
   import { getStored, selectionHaptic, setStored, showBackButton } from '../lib/telegram';
 
@@ -9,19 +10,20 @@
   let dialog: HTMLDialogElement;
   let open = $state(false);
   let unseen = $state(false);
+  let opened = false; // set before storage answers? then the answer is stale
 
   onMount(async () => {
-    unseen = Boolean(LATEST_ID) && (await getStored(SEEN_KEY)) !== LATEST_ID;
+    const seen = await getStored(SEEN_KEY);
+    if (!opened) unseen = seen !== LATEST_ID;
   });
 
   function show() {
     selectionHaptic();
     dialog.showModal();
     open = true;
-    if (unseen) {
-      unseen = false;
-      setStored(SEEN_KEY, LATEST_ID);
-    }
+    opened = true;
+    unseen = false;
+    setStored(SEEN_KEY, LATEST_ID);
   }
 
   let closing = false;
@@ -29,23 +31,28 @@
   async function close() {
     if (closing || !dialog.open) return;
     closing = true;
-    if (!reducedMotion()) {
-      const ease = 'cubic-bezier(0.32, 0.72, 0, 1)';
-      await Promise.allSettled([
-        dialog.animate([{ transform: 'translateY(100%)' }], { duration: 200, easing: ease, fill: 'forwards' }).finished,
-        dialog.animate([{ opacity: 0 }], { duration: 200, easing: ease, fill: 'forwards', pseudoElement: '::backdrop' }).finished,
-      ]);
+    try {
+      if (!reducedMotion()) {
+        const easing = getComputedStyle(dialog).getPropertyValue('--ease-drawer');
+        const opts = { duration: 200, easing, fill: 'forwards' } as const;
+        await Promise.allSettled([
+          dialog.animate([{ transform: 'translateY(100%)' }], opts).finished,
+          dialog.animate([{ opacity: 0 }], { ...opts, pseudoElement: '::backdrop' }).finished,
+        ]);
+      }
+    } finally {
+      dialog.close();
+      dialog.getAnimations({ subtree: true }).forEach((a) => a.cancel());
+      closing = false;
     }
-    dialog.close();
-    dialog.getAnimations({ subtree: true }).forEach((a) => a.cancel());
-    closing = false;
   }
+
+  // Tap outside the sheet closes it, but not a drag that started inside and ended outside.
+  let downOnBackdrop = false;
+  const onBackdropUp = (e: PointerEvent) => downOnBackdrop && e.target === dialog && close();
 
   // Telegram's header back arrow closes the sheet, like a native screen.
   $effect(() => (open ? showBackButton(close) : undefined));
-
-  const fmtDate = (d: string) =>
-    new Date(`${d}T00:00:00+08:00`).toLocaleDateString('en-SG', { day: 'numeric', month: 'short', timeZone: 'Asia/Singapore' });
 </script>
 
 <button type="button" class="trigger" onclick={show} aria-haspopup="dialog">
@@ -67,7 +74,8 @@
     e.preventDefault();
     close();
   }}
-  onclick={(e) => e.target === dialog && close()}
+  onpointerdown={(e) => (downOnBackdrop = e.target === dialog)}
+  onpointerup={onBackdropUp}
 >
   <div class="sheet">
     <div class="head">
@@ -77,7 +85,7 @@
     <ol>
       {#each CHANGELOG as entry (entry.id)}
         <li>
-          <time datetime={entry.date}>{fmtDate(entry.date)}</time>
+          <time datetime={entry.date}>{sgtDate(entry.date)}</time>
           <h3>{entry.title}</h3>
           <p>{entry.body}</p>
         </li>
@@ -103,7 +111,7 @@
     transition: transform 120ms var(--ease-out);
   }
   .trigger:active {
-    transform: scale(0.94);
+    transform: scale(0.97);
   }
   .dot {
     position: absolute;
@@ -112,7 +120,7 @@
     width: 9px;
     height: 9px;
     border-radius: 50%;
-    background: var(--status-critical);
+    background: var(--accent);
     box-shadow: 0 0 0 2px var(--card);
   }
 
@@ -129,10 +137,10 @@
     overscroll-behavior: contain;
   }
   dialog[open] {
-    animation: sheet-up 320ms cubic-bezier(0.32, 0.72, 0, 1);
+    animation: sheet-up 320ms var(--ease-drawer);
   }
   dialog::backdrop {
-    background: rgba(0, 0, 0, 0.4);
+    background: var(--scrim);
   }
   dialog[open]::backdrop {
     animation: fade-in 320ms var(--ease-out);
@@ -153,7 +161,6 @@
   }
   .head .section-title {
     margin: 0;
-    font-size: 1.25rem;
   }
   .close {
     min-height: 44px;

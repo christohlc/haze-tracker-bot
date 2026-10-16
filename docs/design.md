@@ -44,7 +44,8 @@ which is described below.
 | Regions | `--region-north` … `--region-south` | Fixed order matching `REGIONS`. Never cycled or reassigned |
 | Status | `--status-good`, `--status-critical` | Feed health, errors, “Stop all alerts” |
 | Shape | `--radius` 16px, `--gutter` 16px | |
-| Motion | `--ease-out`, `--ease-in-out` | |
+| Motion | `--ease-out`, `--ease-in-out`, `--ease-drawer` | `--ease-drawer` for bottom sheets |
+| Overlay | `--scrim` | Behind modal sheets |
 
 Dark mode sets `:root[data-theme='dark']`. `src/lib/telegram.ts` takes the scheme from Telegram
 or, outside Telegram, from the OS. A new colour token needs both a light and a dark value.
@@ -108,7 +109,7 @@ User-facing changes are listed in [`src/lib/changelog.ts`](../src/lib/changelog.
 first, and shown in a sheet opened from the header. Entries are written for users, not
 developers:
 
-- A title of a few words saying what someone can now do (“Get haze alerts in the app”).
+- A title of a few words saying what someone can now do (“Turn on alerts from here”).
 - One or two sentences of detail. No file names, model versions or “refactor”.
 - Behind-the-scenes changes get an entry only when users would notice them (e.g. a better
   forecast).

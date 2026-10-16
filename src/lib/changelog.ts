@@ -14,7 +14,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     id: '2026-10-16-forecast',
     date: '2026-10-16',
     title: 'See the next 24 hours',
-    body: 'A PSI forecast for the next hour up to the next day, with a likely range and what’s pushing it up or down. Also in the chat with /forecast. It’s our model, not an official forecast.',
+    body: 'A PSI forecast from the next hour to the next day, with a likely range and what’s pushing it up or down (also in the chat with /forecast). It’s our model, not an official forecast.',
   },
   {
     id: '2026-10-16-app-alerts',
@@ -25,7 +25,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     id: '2026-10-16-new-look',
     date: '2026-10-16',
-    title: 'A new name and look',
+    title: 'See the haze at a glance',
     body: 'Meet I’m going hazelnuts! The top card is now a sky that clears or turns hazy with the PSI, and regions are shown as bars for the period you pick.',
   },
   {
@@ -37,9 +37,9 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     id: '2026-10-16-dashboard',
     date: '2026-10-16',
-    title: 'The haze dashboard',
-    body: 'PSI by region, how many cigarettes’ worth you’ve breathed in, the past day’s readings and NEA’s advice, updated every hour.',
+    title: 'Check the haze anytime',
+    body: 'Send /haze for the PSI by region and NEA’s advice, or /cigs for how many cigarettes’ worth you’ve breathed in. The dashboard adds the past day’s readings, updated every hour.',
   },
 ];
 
-export const LATEST_ID = CHANGELOG[0]?.id ?? '';
+export const LATEST_ID = CHANGELOG[0].id;

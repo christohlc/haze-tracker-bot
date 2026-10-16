@@ -27,8 +27,9 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
 - **Some `tgcloud/lib/` modules are shared with the front-end and tests**
   (`psi`, `cigs`, `advice`, `alert-settings`, `alert-rules`, `format`, `snapshot`,
   `forecast/features|predict|model`). Keep these pure: no `sdk` import, no DB, so
-  Vite and `node --test` can load them. Modules that touch `sdk` are `store`, `nea`,
-  `alerts`, `subscriptions`, `cli-only`, `forecast/inputs`.
+  Vite and `node --test` can load them. Modules that touch `sdk`, directly or via `store`, are
+  `store`, `nea`, `refresh`, `alerts`, `subscriptions`, `cli-only`, `forecast/inputs`,
+  `forecast/run`.
 - **Secrets live in the `settings` DB table**, set only via `endpoints/admin` from the
   CLI. Never commit or echo a key.
 - **`tgcloud/lib/forecast/model.js` is generated** by `scripts/train/train.py`. Don't
@@ -37,7 +38,7 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   Copy must keep saying so; only the 24-hour PSI is official.
 - **Outside Telegram**, `npm run dev` serves fixture data (`src/dev/`), with a
   `?demo=worst|empty|error|loading` toggle. Use it to check UI changes in the preview.
-- **User-facing changes get a “What's new” entry** at the top of `src/lib/changelog.ts`.
+- **User-facing changes get a “What’s new” entry** at the top of `src/lib/changelog.ts`.
 - **New or changed UI gets a pass with the UI skills** before it's committed:
   `emil-design-eng` (polish, motion) and `mobile-native` (touch, safe areas), plus
   `break-ui` for components that show data. Keep the result consistent with docs/design.md.

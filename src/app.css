@@ -41,6 +41,8 @@
 
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1); /* iOS sheet curve */
+  --scrim: rgba(0, 0, 0, 0.4);
   --radius: 16px;
   --gutter: 16px;
 
@@ -65,6 +67,7 @@
   --accent: var(--tg-theme-button-color, #c88b4f);
   --accent-ink: var(--tg-theme-button-text-color, #0b0b0b);
   --brand-shell: #c88b4f;
+  --scrim: rgba(0, 0, 0, 0.6);
 
   --band-good: #0ca30c;           --band-good-ink: #0b0b0b;
   --band-moderate: #3987e5;       --band-moderate-ink: #0b0b0b;
