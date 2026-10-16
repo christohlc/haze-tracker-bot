@@ -1,3 +1,4 @@
+import type { PUBLISHERS } from '../../tgcloud/lib/news-parse.js';
 import { callEndpoint, inTelegram } from './telegram';
 
 export type RegionId = 'north' | 'west' | 'central' | 'east' | 'south';
@@ -54,11 +55,20 @@ export interface Forecast {
   model: { version: number; trainedAt: string };
 }
 
+export interface NewsItem {
+  source: keyof typeof PUBLISHERS;
+  title: string;
+  link: string;
+  publishedAt: string;
+}
+
 export interface Dashboard {
   snapshot: Snapshot;
   history: HourRow[];
   sources: SourceStatus[];
   forecast?: Forecast | null;
+  /** Haze headlines, newest first; null until the hourly job has fetched them once. */
+  news?: NewsItem[] | null;
   serverTime: number;
 }
 

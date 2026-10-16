@@ -26,10 +26,10 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   `tick` and `admin` call `requireCli(ctx)`: they're CLI-only, never Mini App endpoints.
 - **Some `tgcloud/lib/` modules are shared with the front-end and tests**
   (`psi`, `cigs`, `advice`, `alert-settings`, `alert-rules`, `format`, `snapshot`,
-  `forecast/features|predict|model`). Keep these pure: no `sdk` import, no DB, so
+  `forecast/features|predict|model`, `news-parse`). Keep these pure: no `sdk` import, no DB, so
   Vite and `node --test` can load them. Modules that touch `sdk`, directly or via `store`, are
   `store`, `nea`, `refresh`, `alerts`, `subscriptions`, `cli-only`, `forecast/inputs`,
-  `forecast/run`.
+  `forecast/run`, `news`.
 - **Secrets live in the `settings` DB table**, set only via `endpoints/admin` from the
   CLI. Never commit or echo a key.
 - **`tgcloud/lib/forecast/model.js` is generated** by `scripts/train/train.py`. Don't

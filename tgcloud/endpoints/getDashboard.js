@@ -3,12 +3,13 @@
 // The platform verifies init data before this runs, so only Telegram users reach it.
 
 import { getForecast } from '../lib/forecast/run.js';
+import { getNews } from '../lib/news.js';
 import { getSnapshot } from '../lib/refresh.js';
 import { allSourceStatus, recentReadings } from '../lib/store.js';
 
 export default async function () {
   const { history: _recent, ...snapshot } = await getSnapshot();
-  const [history, sources, forecast] = await Promise.all([recentReadings(48), allSourceStatus(), getForecast()]);
+  const [history, sources, forecast, news] = await Promise.all([recentReadings(48), allSourceStatus(), getForecast(), getNews()]);
   return {
     snapshot,
     // 48h so the chart can draw 24h rolling averages across the whole past day.
@@ -22,6 +23,7 @@ export default async function () {
     })),
     // Only show a forecast issued from the same NEA hour the page is showing.
     forecast: forecast?.issuedAt === snapshot.asOf ? forecast : null,
+    news,
     serverTime: Date.now(),
   };
 }

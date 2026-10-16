@@ -484,5 +484,43 @@
       "detail": "latest 2026-10-16T13:00:00+08:00"
     }
   ],
-  "serverTime": 1792129298250
+  "serverTime": 1792129298250,
+  "news": [
+    {
+      "source": "st",
+      "title": "Purple Parade postponed to first half of 2027 amid haze concerns",
+      "link": "https://www.straitstimes.com/singapore/purple-parade-postponed-to-first-half-of-2027-amid-haze-concerns",
+      "publishedAt": "2026-10-16T04:40:00.000Z"
+    },
+    {
+      "source": "cna",
+      "title": "No lessons, no pay: Sports coaches hit by haze cancellations, facility closures",
+      "link": "https://www.channelnewsasia.com/singapore/haze-sports-coaches-activesg-facilities-closure-6464996",
+      "publishedAt": "2026-10-16T03:12:15.000Z"
+    },
+    {
+      "source": "cna",
+      "title": "Haze prompts closure of all outdoor and non-air-conditioned ActiveSG facilities",
+      "link": "https://www.channelnewsasia.com/singapore/haze-activesg-closure",
+      "publishedAt": "2026-10-16T01:30:00.000Z"
+    },
+    {
+      "source": "mothership",
+      "title": "ActiveSG closes outdoor and non-air-conditioned facilities in east & central due to haze",
+      "link": "https://mothership.sg/2026/10/activesg-haze-closure/",
+      "publishedAt": "2026-10-16T00:09:13.000Z"
+    },
+    {
+      "source": "st",
+      "title": "Some retailers capping purchases of N95 masks as haze drives surge in demand",
+      "link": "https://www.straitstimes.com/singapore/n95-masks-haze-demand",
+      "publishedAt": "2026-10-15T09:00:00.000Z"
+    },
+    {
+      "source": "st",
+      "title": "S’pore is experiencing its 12th consecutive day of unhealthy air, the longest since 2015 haze crisis",
+      "link": "https://www.straitstimes.com/singapore/12th-day-unhealthy-air",
+      "publishedAt": "2026-10-14T04:00:00.000Z"
+    }
+  ]
 }

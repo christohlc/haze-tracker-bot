@@ -41,9 +41,26 @@ export function worstCase(): Dashboard {
       { source: 'nea_pm25', lastOkAt: 1_760_590_000, lastErrorAt: 1_760_600_000, lastError: 'NEA pm25 503: Service Unavailable — upstream timeout after 30000 ms while fetching https://api-open.data.gov.sg/v2/real-time/api/pm25?date=2026-10-16', detail: null },
       { source: 'nea_psi', lastOkAt: null, lastErrorAt: 1_760_600_000, lastError: 'NEA psi: no items', detail: null },
       { source: 'some_future_feed_with_a_very_long_identifier', lastOkAt: 1_760_600_000, lastErrorAt: null, lastError: null, detail: null },
+      { source: 'news_mothership', lastOkAt: null, lastErrorAt: 1_760_600_000, lastError: 'HTTP 403', detail: null },
     ],
+    news: worstNews(),
     serverTime: Date.now(),
   };
+}
+
+/** 30 stories (only 8 show): a very long headline, an unbreakable one, emoji, Chinese, a future date and the oldest kept. */
+function worstNews(): NonNullable<Dashboard['news']> {
+  const now = Date.now();
+  const ago = (min: number) => new Date(now - min * 60_000).toISOString();
+  const special = [
+    { source: 'st', title: 'Haze in S’pore: Air quality worsens amid ‘very unhealthy’ PSI and ‘high’ PM2.5 in some regions as Indonesia battles hundreds of hotspots across Sumatra and Kalimantan, with no rain expected for at least another fortnight, says Meteorological Service Singapore in its latest advisory', publishedAt: ago(0) },
+    { source: 'cna', title: 'Haze_update_https://www.channelnewsasia.com/singapore/haze-psi-very-unhealthy-readings-island-wide-1234567890', publishedAt: ago(-30) },
+    { source: 'mothership', title: '😷😷😷 Haze 😷😷😷', publishedAt: ago(59) },
+    { source: 'st', title: '新加坡烟霾：空气质量恶化，PSI 达到“非常不健康”水平', publishedAt: ago(60 * 23 + 59) },
+    { source: 'mothership', title: 'H', publishedAt: ago(60 * 24 * 13) },
+  ];
+  const rest = Array.from({ length: 25 }, (_, i) => ({ source: 'cna', title: `Haze story ${i + 6}`, publishedAt: ago(60 * 24 + i * 60) }));
+  return [...special, ...rest].map((n, i) => ({ ...n, link: `https://example.com/haze/${i}` })) as NonNullable<Dashboard['news']>;
 }
 
 /** NEA returned nothing usable: every value null, no history, no feeds recorded yet. */
@@ -67,6 +84,7 @@ export function emptyCase(): Dashboard {
     },
     history: [],
     sources: [],
+    news: [],
     serverTime: Date.now(),
   };
 }
