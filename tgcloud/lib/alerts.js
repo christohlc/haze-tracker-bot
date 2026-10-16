@@ -7,6 +7,7 @@
 import { BotApiError } from 'sdk';
 import { dailyDue, nextAlertBand, runBatched, SEND_INTERVAL_MS, sgtHourOf } from './alert-rules.js';
 import { dashboardButton } from './buttons.js';
+import { isRateLimited, isUnreachable } from './bot-errors.js';
 import { cachedCardId, sendCardOrText } from './card/send.js';
 import { formatBandAlert, formatHaze, formatHazeCaption } from './format.js';
 import { sgtDate } from './nea.js';
@@ -29,6 +30,8 @@ import {
 const BUDGET_MS = 20_000;
 /** Band alerts stop by here, so daily updates still get time in a backlog. */
 const BAND_BUDGET_MS = 12_000;
+
+const DAILY_HEADER = '☀️ <b>Daily haze update</b>\n\n';
 
 const sleep = typeof setTimeout === 'function' ? (/** @type {number} */ ms) => new Promise((r) => setTimeout(r, ms)) : null;
 
@@ -89,8 +92,8 @@ export async function runAlerts(snap, now = Date.now()) {
       due,
       (sub) =>
         sendNoting429(sub.chatId, `daily:${sub.chatId}:${date}`, {
-          caption: `☀️ <b>Daily haze update</b>\n\n${formatHazeCaption(snap)}`,
-          text: `☀️ <b>Daily haze update</b>\n\n${formatHaze(snap)}`,
+          caption: `${DAILY_HEADER}${formatHazeCaption(snap)}`,
+          text: `${DAILY_HEADER}${formatHaze(snap)}`,
         }),
       { deadline, sleep, firstAlone: await firstAlone() },
     );
@@ -121,13 +124,8 @@ async function send(chatId, key, snap, message) {
       return { result: 'removed' };
     }
     await releaseAlert(key);
-    if (e instanceof BotApiError && e.code === 429) return { result: 'limited', retryAfterS: e.parameters?.retry_after };
+    if (isRateLimited(e)) return { result: 'limited', retryAfterS: /** @type {any} */ (e).parameters?.retry_after };
     console.error('alert send failed', e instanceof BotApiError ? `${e.code} ${e.description}` : String(e)); // no chat id: tick output lands in public Actions logs
     return { result: 'failed' };
   }
-}
-
-/** The bot can't message this chat (blocked, never started, left, deleted). @param {unknown} e */
-export function isUnreachable(e) {
-  return e instanceof BotApiError && (e.code === 403 || /chat not found/i.test(e.description));
 }

@@ -59,7 +59,8 @@ export async function runBatched(items, task, { deadline, size = SEND_BATCH, int
   /** @type {string[]} */
   const results = [];
   let slowest = intervalMs;
-  for (let i = 0, n = firstAlone ? 1 : size; i < items.length; i += n, n = size) {
+  for (let i = 0; i < items.length; ) {
+    const n = i === 0 && firstAlone ? 1 : size;
     const start = now();
     if (start + slowest > deadline) return { results, stopped: 'budget' };
     const batch = await Promise.all(items.slice(i, i + n).map(task));
@@ -67,7 +68,8 @@ export async function runBatched(items, task, { deadline, size = SEND_BATCH, int
     if (batch.includes('limited')) return { results, stopped: 'limited' };
     const took = now() - start;
     slowest = Math.max(slowest, took);
-    if (sleep && took < intervalMs && i + n < items.length) await sleep(intervalMs - took);
+    i += n;
+    if (sleep && took < intervalMs && i < items.length) await sleep(intervalMs - took);
   }
   return { results, stopped: null };
 }

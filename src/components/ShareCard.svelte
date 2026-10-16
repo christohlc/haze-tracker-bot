@@ -62,8 +62,8 @@
     status = null;
     error = null;
     try {
-      const result = await shareCard(url);
-      status = DONE[result];
+      const { result, alsoSentToChat } = await shareCard(url);
+      status = alsoSentToChat && result !== 'sent' ? `${DONE[result] ?? ''} A copy is also in your chat with the bot.`.trim() : DONE[result];
       if (result !== 'cancelled') notifyHaptic('success');
     } catch (e) {
       error = e instanceof Error ? e.message : 'Couldn’t share the picture. Try again.';

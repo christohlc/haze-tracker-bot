@@ -14,17 +14,23 @@ export async function renderCardUrl(snapshot: Snapshot): Promise<string> {
 
 export type ShareResult = 'shared' | 'cancelled' | 'sent' | 'downloaded';
 
+/** `alsoSentToChat`: this hour's picture had to be uploaded first, via the user's chat with the bot. */
+export interface ShareOutcome {
+  result: ShareResult;
+  alsoSentToChat: boolean;
+}
+
 /**
  * Share the card into a chat of the user's choosing (Bot API 8.0+), or on older clients send it
  * to their chat with the bot so they can forward it. Outside Telegram (dev) it downloads `url`.
  */
-export async function shareCard(url: string): Promise<ShareResult> {
+export async function shareCard(url: string): Promise<ShareOutcome> {
   if (!inTelegram) {
     const a = document.createElement('a');
     a.href = url;
     a.download = 'haze.png';
     a.click();
-    return 'downloaded';
+    return { result: 'downloaded', alsoSentToChat: false };
   }
   const canShare = typeof tg.shareMessage === 'function' && tg.isVersionAtLeast?.('8.0');
   const call = () =>
@@ -37,7 +43,10 @@ export async function shareCard(url: string): Promise<ShareResult> {
     if (!(await requestWriteAccess())) throw new Error('Sharing needs permission for the bot to message you.');
     res = await call();
   }
-  if (!canShare || !res.preparedId) return 'sent';
+  if (!canShare || !res.preparedId) return { result: 'sent', alsoSentToChat: false };
   const id = res.preparedId;
-  return new Promise((resolve) => tg.shareMessage(id, (sent: boolean) => resolve(sent ? 'shared' : 'cancelled')));
+  const alsoSentToChat = res.sentToChat;
+  return new Promise((resolve) =>
+    tg.shareMessage(id, (sent: boolean) => resolve({ result: sent ? 'shared' : 'cancelled', alsoSentToChat })),
+  );
 }

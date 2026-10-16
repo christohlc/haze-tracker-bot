@@ -60,7 +60,7 @@ const PM25_COLOUR = { I: 'good', II: 'unhealthy', III: 'very_unhealthy', IV: 'ha
 const CARD = { w: 262, h: 222, r: 24 };
 
 /** Top-left of each region's card, roughly where the region is. */
-const CARD_AT = {
+export const CARD_AT = {
   north: [409, 372],
   west: [36, 600],
   central: [409, 610],

@@ -44,7 +44,7 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   `card/geometry|png|raster|summary|glyphs|art`). Keep these pure: no `sdk` import, no DB, so
   Vite and `node --test` can load them. Modules that touch `sdk`, directly or via `store`, are
   `store`, `nea`, `refresh`, `alerts`, `subscriptions`, `cli-only`, `forecast/inputs`,
-  `forecast/run`, `news`, `card/send`.
+  `forecast/run`, `news`, `bot-errors`, `card/send`.
 - **The summary picture (`tgcloud/lib/card/`) is drawn in plain JS**: the runtime has no canvas,
   fonts or zlib, so `png.js` has its own deflate and `glyphs.js` / `art.js` are pre-rendered
   bitmaps **generated** by `npm run card:assets` (fonts in `scripts/card/fonts/`, island outline

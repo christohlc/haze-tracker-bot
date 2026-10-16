@@ -6,7 +6,7 @@
 // it goes to the user's own chat first (`sentToChat` says so).
 
 import { api, BotApiError, EndpointError } from 'sdk';
-import { isUnreachable } from '../lib/alerts.js';
+import { isUnreachable } from '../lib/bot-errors.js';
 import { dashboardButton } from '../lib/buttons.js';
 import { cachedCardId, sendCard } from '../lib/card/send.js';
 import { formatHazeCaption, formatShareCaption } from '../lib/format.js';

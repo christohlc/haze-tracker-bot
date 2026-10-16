@@ -5,7 +5,7 @@ import { crc32 as zlibCrc32, inflateSync } from 'node:zlib';
 import { runBatched } from '../tgcloud/lib/alert-rules.js';
 import { CARD_H, CARD_W } from '../tgcloud/lib/card/geometry.js';
 import { crc32, encodePng } from '../tgcloud/lib/card/png.js';
-import { bandRanges, cardDate, drawSummaryCard, summaryCardPng } from '../tgcloud/lib/card/summary.js';
+import { bandRanges, CARD_AT, cardDate, drawSummaryCard, summaryCardPng } from '../tgcloud/lib/card/summary.js';
 import { formatBandAlert, formatHazeCaption } from '../tgcloud/lib/format.js';
 import { PM25_BANDS, PSI_BANDS } from '../tgcloud/lib/psi.js';
 import { worstCase } from '../src/dev/worst.ts';
@@ -79,6 +79,22 @@ test('the sky follows the worst 24-hour PSI band', () => {
   const top = (snap) => [...drawSummaryCard(snap).data.subarray(0, 3)];
   assert.deepEqual(top(worst), [0x4b, 0x2f, 0x45]); // hazardous
   assert.deepEqual(top({ ...worst, worst: { ...worst.worst, psi24h: null } }), [0x8d, 0xb8, 0xea]); // no reading
+});
+
+test('each region’s band pill has its 24-hour PSI band colour', () => {
+  const c = drawSummaryCard(fixture);
+  const BAND_HEX = { unhealthy: [0xdc, 0xab, 0x00], very_unhealthy: [0xe0, 0x48, 0x1f] };
+  for (const r of fixture.regions) {
+    const [x, y] = CARD_AT[r.id];
+    const i = ((y + 155) * c.width + x + 30) * 3; // inside the pill, left of its label
+    const expected = r.psi24h > 200 ? BAND_HEX.very_unhealthy : BAND_HEX.unhealthy;
+    assert.deepEqual([...c.data.subarray(i, i + 3)], expected, r.id);
+  }
+  // A reading that rounds to 55 is coloured as 55 (Normal), not 55.4 (Elevated).
+  const edge = drawSummaryCard({ ...fixture, regions: [{ ...fixture.regions[0], pm25: 55.4 }] });
+  const [x, y] = CARD_AT[fixture.regions[0].id];
+  const dot = ((y + 197) * edge.width + x + 32) * 3;
+  assert.deepEqual([...edge.data.subarray(dot, dot + 3)], [0x0c, 0xa3, 0x0c]);
 });
 
 test('legend ranges come from the band tables', () => {

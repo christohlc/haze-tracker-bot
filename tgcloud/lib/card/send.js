@@ -4,11 +4,22 @@
 // one render and one upload. If the picture can't be sent, the text goes out instead.
 
 import { api, BotApiError, InputFile } from 'sdk';
+import { isRateLimited, isUnreachable } from '../bot-errors.js';
 import { getState, setState } from '../store.js';
 import { summaryCardPng } from './summary.js';
 
 /** One card per NEA hour, PSI hour and staleness (the stale banner is drawn in). @param {any} snap */
 const cardKey = (snap) => `${snap.asOf}|${snap.psiAsOf}|${snap.stale ? 'stale' : ''}`;
+
+/** The last card drawn in this isolate, so sends racing to upload it don't each redraw it. */
+let drawn = /** @type {{ key: string, png: Uint8Array } | null} */ (null);
+
+/** @param {any} snap */
+function cardPng(snap) {
+  const key = cardKey(snap);
+  if (drawn?.key !== key) drawn = { key, png: summaryCardPng(snap) };
+  return drawn.png;
+}
 
 /** The uploaded card for this snapshot, or null. @param {any} snap @returns {Promise<string | null>} */
 export async function cachedCardId(snap) {
@@ -25,7 +36,7 @@ export async function sendCard(chatId, snap, caption, reply_markup) {
   const fileId = await cachedCardId(snap);
   const msg = await api.sendPhoto({
     chat_id: chatId,
-    photo: fileId ?? new InputFile(summaryCardPng(snap), 'haze.png', { type: 'image/png' }),
+    photo: fileId ?? new InputFile(cardPng(snap), 'haze.png', { type: 'image/png' }),
     caption,
     parse_mode: 'HTML',
     ...(reply_markup && { reply_markup }),
@@ -44,7 +55,7 @@ export async function sendCardOrText(chatId, snap, { caption, text, reply_markup
   try {
     return await sendCard(chatId, snap, caption, reply_markup);
   } catch (e) {
-    if (e instanceof BotApiError && (e.code === 403 || e.code === 429 || /chat not found/i.test(e.description))) throw e;
+    if (isUnreachable(e) || isRateLimited(e)) throw e;
     console.error('card failed, sending text', e instanceof BotApiError ? `${e.code} ${e.description}` : String(e)); // no chat id: logs are public
     return api.sendMessage({
       chat_id: chatId,
