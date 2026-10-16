@@ -1,0 +1,11 @@
+{
+  "$schema": "./node_modules/@tgcloud/cli/schema/tgcloud.json",
+  "static": {
+    // Serve index.html for unknown paths (client-side routing):
+    // "spa": true,
+    // Let browsers cache content-hashed files for a year (Vite puts them here):
+    // "immutable": ["/assets/*"],
+    // The build output folder, hosted as the Mini App:
+    "source": "dist"
+  }
+}
