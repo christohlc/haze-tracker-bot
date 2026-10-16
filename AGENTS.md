@@ -39,8 +39,8 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
 - **Breaking news is sent automatically, with no one approving it.** `lib/breaking-rules.js`
   picks a story when its headline has a topic (schools closing / HBL, outdoor activities or sports
   called off, free masks, MOM advisories), mentions haze (headline or description), is under 6 h
-  old, and has no denial, maybe (“if”, “could”, “considering”), reopening, question or other
-  country in it. Only while some PSI is above 100, one event per topic per SGT day, at most 3 a
+  old, and has no denial, maybe (“if”, “could”, “considering”), reopening, question mark,
+  feature/explainer word (“what to know”, “takes a toll”, “commentary”) or other country in it. Only while some PSI is above 100, one event per topic per SGT day, at most 3 a
   day. The official 24-hour PSI rising into Very unhealthy or Hazardous is an event too, once per
   band per SGT day. Events live in `state('breaking')` for 48 h and are sent for 12 h (claims
   `breaking:<id>:<chat>`). Kill switch: `admin` `breaking_pause` / `breaking_cancel` (a cancel

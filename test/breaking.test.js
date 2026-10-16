@@ -23,6 +23,10 @@ test('headlines that change daily life are breaking', () => {
     'Haze: Pre-schools suspend outdoor play': 'schools',
     'Outdoor activities suspended at all ActiveSG venues due to haze': 'outdoor',
     'Marathon called off due to haze': 'outdoor',
+    // Live headlines from 16 Oct 2026.
+    'Purple Parade among events postponed, cancelled amid haze concerns': 'outdoor',
+    'ActiveSG closes outdoor facilities across most of Singapore as haze worsens': 'outdoor',
+    'Haze prompts closure of all outdoor and non-air-conditioned ActiveSG facilities': 'outdoor',
     'NS outdoor training halted as PSI climbs': 'outdoor',
     'Free N95 masks to be distributed to every household': 'masks',
     'MOM issues haze advisory for employers with outdoor workers': 'work',
@@ -30,8 +34,14 @@ test('headlines that change daily life are breaking', () => {
   for (const [title, topic] of Object.entries(cases)) assert.equal(storyTopic(title), topic, title);
 });
 
-test('denials, reopenings, questions and other countries are not', () => {
+test('denials, reopenings, questions, features and other countries are not', () => {
   for (const title of [
+    // Both matched on the first live run (16 Oct 2026): a feature and an explainer.
+    'Cancelled classes, lost income: Haze takes a toll on outdoor sports coaches in Singapore',
+    'Are two free N95 masks enough? What to know about wearing and reusing them amid the haze',
+    'How to protect your kids when schools close for haze',
+    'Commentary: Schools should close sooner when the haze hits',
+    'In pictures: Outdoor events called off as haze blankets Singapore',
     'Schools will not close despite haze, says MOE',
     'No plans for HBL: MOE',
     'Schools to remain open as PSI eases',
