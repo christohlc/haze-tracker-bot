@@ -2,6 +2,7 @@
 // Telegram HTML for chat replies. Pure: takes a snapshot, returns strings.
 
 import { advice, maskCard } from './advice.js';
+import { PUBLISHERS } from './news-parse.js';
 import { PSI_BANDS, psiBand } from './psi.js';
 import { sgtHour } from './time.js';
 
@@ -96,6 +97,40 @@ export function formatBandAlert(snap, fromId, toId) {
   if (tips.rightNow) lines.push(`👉 ${tips.rightNow.text}`);
   lines.push('', '<i>/alerts to change or stop these.</i>');
   return lines.join('\n');
+}
+
+/** Escape text for Telegram HTML (also safe inside an attribute). @param {string} s */
+const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+/**
+ * A breaking-news message: a story we picked from the news, or the official 24-hour PSI rising
+ * into Very unhealthy or Hazardous. Only the 24-hour PSI is called official.
+ * @param {any} event a BreakingEvent (breaking-rules.js) @param {any} snap
+ */
+export function formatBreaking(event, snap) {
+  const psi = snap.worst.psi24h;
+  const footer = ['', '<i>/alerts to change or stop these.</i>'];
+  if (event.kind === 'psi24') {
+    const band = PSI_BANDS.find((b) => b.id === event.band);
+    const mask = maskCard(event.value);
+    const tips = advice(event.value, snap.worst.pm25?.value ?? null);
+    const lines = [
+      `${band?.emoji ?? '⚪️'} <b>Official 24-hour PSI now ${band?.label ?? event.band}</b>`,
+      `NEA’s 24-hour PSI is <b>${n(event.value)}</b>, worst in ${psi?.name ?? '–'} · ${sgtTime(snap.asOf)} SGT`,
+    ];
+    if (mask) lines.push(`😷 <b>${mask.title}.</b> ${mask.text}`);
+    if (tips.rightNow) lines.push(`👉 ${tips.rightNow.text}`);
+    return [...lines, ...footer].join('\n');
+  }
+  const publisher = PUBLISHERS[/** @type {keyof typeof PUBLISHERS} */ (event.source)]?.name ?? event.source;
+  return [
+    `🚨 <b>Breaking: ${esc(event.title)}</b>`,
+    `${esc(publisher)} · <a href="${esc(event.link)}">Read the story</a>`,
+    '',
+    `Official 24-hour PSI <b>${n(psi?.value)}</b>, worst in ${psi?.name ?? '–'} · ${sgtTime(snap.asOf)} SGT`,
+    '<i>Picked from the news automatically by this bot.</i>',
+    ...footer,
+  ].join('\n');
 }
 
 /**
