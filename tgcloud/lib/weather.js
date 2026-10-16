@@ -21,29 +21,24 @@ async function getFeed(url) {
 
 /** The latest wind and rain, or the last we got if the feeds are down (null if never). Never throws. */
 export async function getWeather() {
+  let cached = null;
   try {
     const [stored, attempt] = await Promise.all([getState('weather'), getState('weather_attempt')]);
-    const cached = stored?.value?.weather ?? null;
+    cached = stored?.value?.weather ?? null;
     // Claimed before fetching, like cameras_attempt.
     if (attempt && Date.now() / 1000 - attempt.updatedAt < WEATHER_EVERY_S) return cached;
     await setState('weather_attempt', {});
     // One feed failing still leaves the others: the card shows wind without rain, or the reverse.
-    const [dir, speed, rain] = await Promise.allSettled([WEATHER_FEEDS.dir, WEATHER_FEEDS.speed, WEATHER_FEEDS.rain].map(getFeed));
-    const value = (/** @type {PromiseSettledResult<any>} */ r) => (r.status === 'fulfilled' ? r.value : null);
-    const weather = summariseWeather(value(dir), value(speed), value(rain));
-    const failed = [dir, speed, rain].flatMap((r, i) => (r.status === 'rejected' ? [`${['wind direction', 'wind speed', 'rainfall'][i]}: ${errorText(r.reason)}`] : []));
-    if (!weather) {
-      await recordSource('nea_weather', { ok: false, error: failed.join('; ') || 'No readings' });
-      return cached;
-    }
-    await Promise.all([
-      setState('weather', { weather }),
-      failed.length
-        ? recordSource('nea_weather', { ok: false, error: failed.join('; ') })
-        : recordSource('nea_weather', { ok: true, detail: `${weather.wind?.stations ?? 0} wind, ${weather.rain?.stations ?? 0} rain stations` }),
-    ]);
-    return weather;
+    const results = await Promise.allSettled(WEATHER_FEEDS.map((f) => getFeed(f.url)));
+    const [dir, speed, rain] = results.map((r) => (r.status === 'fulfilled' ? r.value : null));
+    const weather = summariseWeather(dir, speed, rain);
+    const failed = results.flatMap((r, i) => (r.status === 'rejected' ? [`${WEATHER_FEEDS[i].label}: ${errorText(r.reason)}`] : []));
+    const status = failed.length || !weather
+      ? { ok: false, error: failed.join('; ') || 'No readings' }
+      : { ok: true, detail: `${weather.wind?.stations ?? 0} wind, ${weather.rain?.stations ?? 0} rain stations` };
+    await Promise.all([weather && setState('weather', { weather }), recordSource('nea_weather', status)]);
+    return weather ?? cached;
   } catch {
-    return null;
+    return cached;
   }
 }

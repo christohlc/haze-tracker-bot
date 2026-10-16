@@ -1,5 +1,6 @@
 // Dev-only wind and rain for the Wind and rain card (see loadWeather in lib/api.ts).
-import { parseStations, summariseWeather } from '../../tgcloud/lib/weather-parse.js';
+import { REGIONS } from '../../tgcloud/lib/config.js';
+import { parseStations, summariseWeather, type RegionId } from '../../tgcloud/lib/weather-parse.js';
 import type { WeatherResult } from '../lib/api';
 import dir from '../../test/weather-wind-direction.json';
 import speed from '../../test/weather-wind-speed.json';
@@ -19,7 +20,7 @@ export function worstWeather(): WeatherResult {
     weather: {
       takenAt: ago(40),
       wind: { from: 212, kmh: 2, steady: false, stations: 3 },
-      rain: { raining: ['north', 'west', 'central', 'east', 'south'], wettest: { region: 'east', mm: 14.6 }, stations: 90 },
+      rain: { raining: REGIONS.map((r) => r.id as RegionId), stations: 90 },
     },
     serverTime: Date.now(),
   };

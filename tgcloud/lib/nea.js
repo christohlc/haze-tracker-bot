@@ -2,8 +2,7 @@
 // NEA readings via data.gov.sg (v2 real-time API). Fetch only; shaping is in snapshot.js.
 
 import { fetch } from 'sdk';
-
-const BASE = 'https://api-open.data.gov.sg/v2/real-time/api';
+import { NEA_API as BASE } from './config.js';
 
 /** YYYY-MM-DD in Singapore time, `daysAgo` days back. */
 export function sgtDate(daysAgo = 0, now = Date.now()) {

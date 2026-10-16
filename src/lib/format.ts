@@ -23,6 +23,9 @@ export function sgtDayMonth(ymd: string): string {
 }
 
 /** How long ago `iso` was, from `nowMs`: "just now", "25 min ago", "3 h ago", then "14 Oct" (SGT). */
+/** Readings older than this get a “May be out of date” note. */
+export const STALE_MS = 30 * 60_000;
+
 export function timeAgo(iso: string, nowMs: number): string {
   const t = Date.parse(iso);
   if (!Number.isFinite(t)) return '';

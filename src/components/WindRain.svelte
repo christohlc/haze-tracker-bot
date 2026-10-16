@@ -1,36 +1,35 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { REGIONS } from '../../tgcloud/lib/config.js';
-  import { compassName, smokeLine } from '../../tgcloud/lib/weather-parse.js';
+  import { REGION_NAMES, REGIONS } from '../../tgcloud/lib/config.js';
+  import { clearDirection, smokeLine, windHeadline } from '../../tgcloud/lib/weather-parse.js';
   import { loadWeather, type Snapshot, type WeatherResult } from '../lib/api';
-  import { timeAgo } from '../lib/format';
+  import { STALE_MS, timeAgo } from '../lib/format';
 
-  let { snapshot }: { snapshot: Snapshot } = $props();
+  // `first` is the request App started with the dashboard; Try again makes a new one.
+  let { snapshot, first = null }: { snapshot: Snapshot; first?: Promise<WeatherResult> | null } = $props();
 
-  const REGION_NAMES = Object.fromEntries(REGIONS.map((r) => [r.id, r.name]));
-  const STALE_MS = 30 * 60_000;
-  const list = new Intl.ListFormat('en-GB', { type: 'conjunction' });
+  const listFmt = new Intl.ListFormat('en-GB', { type: 'conjunction' });
 
   let result = $state<WeatherResult | null>(null);
   let error = $state<string | null>(null);
 
-  const w = $derived(result?.weather ?? null);
-  const wind = $derived(w?.wind ?? null);
+  const weather = $derived(result?.weather ?? null);
+  const wind = $derived(weather?.wind ?? null);
   // Only a clear direction gets an arrow; light or shifting winds would point somewhere arbitrary.
-  const arrow = $derived(wind?.steady && wind.from != null ? wind.from : null);
+  const arrow = $derived(clearDirection(wind));
   const smoke = $derived(smokeLine(wind, snapshot.worst.psi24h?.value));
-  const stale = $derived(!!w && !!result && result.serverTime - Date.parse(w.takenAt) > STALE_MS);
+  const stale = $derived(!!weather && result!.serverTime - Date.parse(weather.takenAt) > STALE_MS);
 
-  async function load() {
+  async function load(pending?: Promise<WeatherResult> | null) {
     error = null;
     try {
-      result = await loadWeather();
+      result = await (pending ?? loadWeather());
     } catch {
       error = 'Couldn’t load wind and rain. Check your connection and try again.';
     }
   }
 
-  onMount(load);
+  onMount(() => load(first));
 </script>
 
 <section class="card" aria-labelledby="wx-title">
@@ -40,14 +39,14 @@
   {#if error}
     <div class="state">
       <p class="error" role="alert">{error}</p>
-      <button type="button" onclick={load}>Try again</button>
+      <button type="button" onclick={() => load()}>Try again</button>
     </div>
   {:else if !result}
     <div class="wind" aria-busy="true" aria-label="Loading wind and rain">
       <div class="compass sk"></div>
       <div class="lines"><div class="bar sk"></div><div class="bar short sk"></div></div>
     </div>
-  {:else if !w}
+  {:else if !weather}
     <p class="note empty">NEA’s weather stations aren’t reporting right now.</p>
   {:else}
     {#if wind}
@@ -65,7 +64,7 @@
         </div>
         <div class="lines">
           <p class="headline">
-            {arrow != null ? `From the ${compassName(arrow)}` : wind.kmh < 5 ? 'Light winds' : 'Shifting winds'}
+            {windHeadline(wind)}
             · <span class="num">{wind.kmh}</span> km/h
           </p>
           {#if smoke}<p class="text">{smoke}</p>{/if}
@@ -73,14 +72,14 @@
       </div>
     {/if}
 
-    {#if w.rain}
+    {#if weather.rain}
       <p class="text rain">
-        {#if !w.rain.raining.length}
+        {#if !weather.rain.raining.length}
           No rain anywhere right now.
         {:else}
-          {w.rain.raining.length === REGIONS.length
+          {weather.rain.raining.length === REGIONS.length
             ? 'Raining now across the island.'
-            : `Raining now in the ${list.format(w.rain.raining.map((id) => REGION_NAMES[id]))}.`}
+            : `Raining now in the ${listFmt.format(weather.rain.raining.map((id) => REGION_NAMES[id]))}.`}
           Rain helps wash haze out of the air.
         {/if}
       </p>
@@ -92,7 +91,7 @@
     {/if}
 
     <p class="note meta">
-      NEA weather stations · {timeAgo(w.takenAt, result.serverTime)}{#if stale}{' · '}<span class="stale">May be out of date</span>{/if}
+      NEA weather stations · {timeAgo(weather.takenAt, result.serverTime)}{#if stale}{' · '}<span class="stale">May be out of date</span>{/if}
     </p>
   {/if}
 </section>
@@ -127,8 +126,9 @@
     height: 30px;
     fill: var(--accent);
     transform: rotate(var(--deg));
+    /* Entering eases out; turning to a new direction later is movement on screen. */
     transition:
-      transform 280ms var(--ease-out),
+      transform 280ms var(--ease-in-out),
       opacity 280ms var(--ease-out);
   }
   /* Settles into place from a little short of its angle, rather than sweeping round from north. */
@@ -206,9 +206,6 @@
     color: var(--accent-ink);
     font: inherit;
     font-weight: 600;
-    touch-action: manipulation;
-    user-select: none;
-    -webkit-user-select: none;
     transition: transform 120ms var(--ease-out);
   }
   .state button:active {

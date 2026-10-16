@@ -2,15 +2,14 @@
 // NEA's wind and rain stations from data.gov.sg, summed up for the Mini App's Wind and rain card.
 // Pure (no sdk) so tests and the Mini App can load it; lib/weather.js does the fetching and caching.
 
-import { REGIONS } from './config.js';
+import { NEA_API, REGIONS } from './config.js';
 import { psiBand } from './psi.js';
 
-const BASE = 'https://api-open.data.gov.sg/v2/real-time/api';
-export const WEATHER_FEEDS = {
-  dir: `${BASE}/wind-direction`, // degrees the wind blows from, 10-minute average
-  speed: `${BASE}/wind-speed`, // knots
-  rain: `${BASE}/rainfall`, // mm in the last 5 minutes
-};
+export const WEATHER_FEEDS = [
+  { label: 'wind direction', url: `${NEA_API}/wind-direction` }, // degrees the wind blows from, 10-minute average
+  { label: 'wind speed', url: `${NEA_API}/wind-speed` }, // knots
+  { label: 'rainfall', url: `${NEA_API}/rainfall` }, // mm in the last 5 minutes
+];
 
 /** @typedef {'north' | 'west' | 'central' | 'east' | 'south'} RegionId */
 /** @typedef {{ takenAt: string, readings: Array<{ id: string, region: RegionId, value: number }> }} Stations */
@@ -18,33 +17,25 @@ export const WEATHER_FEEDS = {
  * @typedef {{
  *   takenAt: string,
  *   wind: { from: number | null, kmh: number, steady: boolean, stations: number } | null,
- *   rain: { raining: RegionId[], wettest: { region: RegionId, mm: number } | null, stations: number } | null,
+ *   rain: { raining: RegionId[], stations: number } | null,
  * }} Weather
  */
 
-/** NEA's label point for each region (the PSI feed's regionMetadata); a station belongs to the nearest. */
-/** @type {Array<[RegionId, number, number]>} */
-const REGION_POINTS = [
-  ['north', 1.41803, 103.82],
-  ['south', 1.29587, 103.82],
-  ['east', 1.35735, 103.94],
-  ['west', 1.35735, 103.7],
-  ['central', 1.35735, 103.82],
-];
-
 const KNOTS_TO_KMH = 1.852;
+// Below this, where the wind comes from says little about where the haze goes.
+const LIGHT_KMH = 5;
 // Under 0.2 mm in 5 minutes is a few drops, or the gauge settling.
 const RAIN_MM = 0.2;
 
-/** @param {number} lat @param {number} lon @returns {RegionId} */
+/** The region whose label point is nearest. @param {number} lat @param {number} lon @returns {RegionId} */
 function nearestRegion(lat, lon) {
-  let best = REGION_POINTS[0];
+  let best = REGIONS[0];
   let bestD = Infinity;
-  for (const p of REGION_POINTS) {
-    const d = (p[1] - lat) ** 2 + (p[2] - lon) ** 2;
+  for (const p of REGIONS) {
+    const d = (p.lat - lat) ** 2 + (p.lon - lon) ** 2;
     if (d < bestD) [best, bestD] = [p, d];
   }
-  return best[0];
+  return /** @type {RegionId} */ (best.id);
 }
 
 /**
@@ -100,7 +91,7 @@ function summariseWind(dir, speed) {
   }
   const meanKt = pairs.reduce((sum, p) => sum + p.kt, 0) / pairs.length;
   const resultant = Math.hypot(east, north) / pairs.length;
-  const from = resultant > 0 ? Math.round(((Math.atan2(east, north) * 180) / Math.PI + 360) % 360) : null;
+  const from = resultant > 0 ? Math.round((Math.atan2(east, north) * 180) / Math.PI + 360) % 360 : null;
   return {
     from,
     kmh: Math.round(median(pairs.map((p) => p.kt)) * KNOTS_TO_KMH),
@@ -113,11 +104,9 @@ function summariseWind(dir, speed) {
 /** @param {Stations | null} rain */
 function summariseRain(rain) {
   if (!rain) return null;
-  const wet = rain.readings.filter((r) => r.value > RAIN_MM);
-  const top = wet.reduce((a, b) => (b.value > a.value ? b : a), wet[0]);
+  const wet = new Set(rain.readings.filter((r) => r.value > RAIN_MM).map((r) => r.region));
   return {
-    raining: REGIONS.map((r) => /** @type {RegionId} */ (r.id)).filter((id) => wet.some((r) => r.region === id)),
-    wettest: top ? { region: top.region, mm: top.value } : null,
+    raining: REGIONS.map((r) => /** @type {RegionId} */ (r.id)).filter((id) => wet.has(id)),
     stations: rain.readings.length,
   };
 }
@@ -147,6 +136,24 @@ export function compassName(deg) {
 }
 
 /**
+ * Where the wind is coming from, or null when it's too light or shifting to say.
+ * @param {Weather['wind']} wind
+ */
+export function clearDirection(wind) {
+  return wind && wind.kmh >= LIGHT_KMH && wind.steady ? wind.from : null;
+}
+
+/**
+ * “From the southwest”, or “Light winds” / “Shifting winds” when there's no clear direction.
+ * @param {NonNullable<Weather['wind']>} wind
+ */
+export function windHeadline(wind) {
+  const from = clearDirection(wind);
+  if (from != null) return `From the ${compassName(from)}`;
+  return wind.kmh < LIGHT_KMH ? 'Light winds' : 'Shifting winds';
+}
+
+/**
  * Whether the wind is coming from where the fires behind Singapore's haze usually are. Our reading, not NEA's.
  * @param {Weather['wind']} wind
  * @param {number | null | undefined} psi24h
@@ -155,12 +162,13 @@ export function compassName(deg) {
 export function smokeLine(wind, psi24h) {
   if (!wind) return null;
   const clean = psiBand(psi24h)?.id === 'good';
-  if (wind.kmh < 5) {
+  if (wind.kmh < LIGHT_KMH) {
     return clean ? 'Winds are light.' : 'Winds are light, so haze that’s already here may hang around.';
   }
-  if (wind.from == null || !wind.steady) return 'Winds are shifting, so it’s hard to say where the air is coming from.';
-  const but = clean ? ', but the air is clean right now.' : '.';
-  if (wind.from >= 200 && wind.from <= 290) return `The wind is coming from Sumatra, where most of the fires behind our haze burn${but}`;
-  if (wind.from >= 100 && wind.from <= 160) return `The wind is coming from Borneo, which can carry smoke from fires in Kalimantan${but}`;
+  const from = clearDirection(wind);
+  if (from == null) return 'Winds are shifting, so it’s hard to say where the air is coming from.';
+  const end = clean ? ', but the air is clean right now.' : '.';
+  if (from >= 200 && from <= 290) return `The wind is coming from Sumatra, where most of the fires behind our haze burn${end}`;
+  if (from >= 100 && from <= 160) return `The wind is coming from Borneo, which can carry smoke from fires in Kalimantan${end}`;
   return 'The wind isn’t coming from the usual fire areas in Sumatra or Borneo.';
 }
