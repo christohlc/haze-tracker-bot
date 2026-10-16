@@ -5,7 +5,7 @@
 
 import { decodeEntities } from './html.js';
 import { PSI_BANDS } from './psi.js';
-import { MONTHS, sgtToday, toSgtIso } from './time.js';
+import { MONTHS, sgtDateOf, toSgtIso } from './time.js';
 
 export const OUTLOOK_FEED = 'https://www.nea.gov.sg/api/advisory/latesthazesituationupdate';
 
@@ -47,7 +47,7 @@ function sgtIso(v) {
  * @param {Outlook} o @param {number} [now] ms
  */
 export function isCurrent(o, now = Date.now()) {
-  return o.forDate >= sgtToday(now) && o.forDate <= sgtToday(now + 86_400_000) && !(o.expires && Date.parse(o.expires) < now);
+  return o.forDate >= sgtDateOf(now) && o.forDate <= sgtDateOf(now + 86_400_000) && !(o.expires && Date.parse(o.expires) < now);
 }
 
 /**

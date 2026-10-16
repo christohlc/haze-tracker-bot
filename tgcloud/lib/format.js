@@ -3,6 +3,7 @@
 
 import { advice, maskCard } from './advice.js';
 import { escapeHtml } from './html.js';
+import { PUBLISHERS } from './news-parse.js';
 import { bandById, PSI_BANDS, psiBand } from './psi.js';
 import { RANGE_RECORD } from './range.js';
 import { sgtDayMonth, sgtDayName, sgtHour } from './time.js';
@@ -101,6 +102,38 @@ export function formatBandAlert(snap, fromId, toId) {
 
 /** "NEA’s 24-hr PSI forecast for tomorrow: <b>Unhealthy to Low Very Unhealthy</b>" @param {import('./outlook-parse.js').Outlook} o */
 const outlookLine = (o) => `NEA’s 24-hr PSI forecast for ${sgtDayName(o.forDate)}: <b>${escapeHtml(o.text)}</b>`;
+
+/**
+ * A breaking-news message: a story we picked from the news, or the official 24-hour PSI rising
+ * into Very unhealthy or Hazardous. Only the 24-hour PSI is called official.
+ * @param {any} event a BreakingEvent (breaking-rules.js) @param {any} snap
+ */
+export function formatBreaking(event, snap) {
+  const psi = snap.worst.psi24h;
+  const footer = ['', '<i>/alerts to change or stop these.</i>'];
+  if (event.kind === 'psi24') {
+    const band = bandById(event.band);
+    const mask = maskCard(event.value);
+    const tips = advice(event.value, snap.worst.pm25?.value ?? null);
+    const lines = [
+      `${band?.emoji ?? '⚪️'} <b>Official 24-hour PSI now ${band?.label ?? event.band}</b>`,
+      `NEA’s 24-hour PSI is <b>${n(event.value)}</b>, worst in ${psi?.name ?? '–'} · ${sgtTime(snap.asOf)} SGT`,
+    ];
+    if (mask) lines.push(`😷 <b>${mask.title}.</b> ${mask.text}`);
+    if (tips.rightNow) lines.push(`👉 ${tips.rightNow.text}`);
+    return [...lines, ...footer].join('\n');
+  }
+  const publisher = PUBLISHERS[/** @type {keyof typeof PUBLISHERS} */ (event.source)]?.name ?? event.source;
+  return [
+    `🚨 <b>Breaking: ${escapeHtml(event.title)}</b>`,
+    `${escapeHtml(publisher)} · <a href="${escapeHtml(event.link)}">Read the story</a>`,
+    '',
+    `Official 24-hour PSI <b>${n(psi?.value)}</b>, worst in ${psi?.name ?? '–'} · ${sgtTime(snap.asOf)} SGT`,
+    '<i>Picked from the news automatically by this bot.</i>',
+    ...footer,
+  ].join('\n');
+}
+
 
 /** /forecast: NEA's outlook when there is one, then our range for the next few hours. @param {import('./ahead.js').Ahead} ahead */
 export function formatForecast({ outlook, range }) {

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { DEESCALATE_HOLD_MS, dailyDue, nextAlertBand, runBatched, sgtHourOf } from '../tgcloud/lib/alert-rules.js';
-import { applyAlertAction, parseAlertInput, renderAlertSettings } from '../tgcloud/lib/alert-settings.js';
+import { applyAlertAction, isActive, parseAlertInput, renderAlertSettings } from '../tgcloud/lib/alert-settings.js';
 import { formatBandAlert } from '../tgcloud/lib/format.js';
 
 const H = 3600_000;
@@ -42,21 +42,30 @@ test('sgtHourOf converts to Singapore time', () => {
 });
 
 test('settings actions', () => {
-  assert.deepEqual(applyAlertAction(null, 'a:band'), { bandAlerts: true, dailyHour: null });
-  const sub = { bandAlerts: true, dailyHour: null };
-  assert.deepEqual(applyAlertAction(sub, 'a:band'), { bandAlerts: false, dailyHour: null });
-  assert.deepEqual(applyAlertAction(sub, 'a:daily:8'), { bandAlerts: true, dailyHour: 8 });
-  assert.deepEqual(applyAlertAction({ ...sub, dailyHour: 8 }, 'a:daily:off'), { bandAlerts: true, dailyHour: null });
+  assert.deepEqual(applyAlertAction(null, 'a:band'), { bandAlerts: true, dailyHour: null, breakingAlerts: true }, 'turning on includes breaking news');
+  const sub = { bandAlerts: true, dailyHour: null, breakingAlerts: true };
+  assert.deepEqual(applyAlertAction(sub, 'a:band'), { ...sub, bandAlerts: false });
+  assert.deepEqual(applyAlertAction(sub, 'a:breaking'), { ...sub, breakingAlerts: false });
+  assert.deepEqual(applyAlertAction(sub, 'a:daily:8'), { ...sub, dailyHour: 8 });
+  assert.deepEqual(applyAlertAction({ ...sub, dailyHour: 8 }, 'a:daily:off'), sub);
   assert.deepEqual(applyAlertAction(sub, 'a:daily:3'), sub, 'only offered hours are accepted');
   assert.equal(applyAlertAction(sub, 'a:stop'), null);
 });
 
+test('breaking news alone keeps a chat subscribed', () => {
+  assert.equal(isActive({ bandAlerts: false, dailyHour: null, breakingAlerts: true }), true);
+  assert.equal(isActive({ bandAlerts: false, dailyHour: null, breakingAlerts: false }), false);
+});
+
 test('settings view marks the chosen hour and fits callback_data limits', () => {
-  const view = renderAlertSettings({ bandAlerts: true, dailyHour: 18 });
+  const view = renderAlertSettings({ bandAlerts: true, dailyHour: 18, breakingAlerts: true });
   const buttons = view.reply_markup.inline_keyboard.flat();
   assert.ok(buttons.some((b) => b.text === '● 6 pm'));
   for (const b of buttons) assert.ok(Buffer.byteLength(b.callback_data) <= 64);
   assert.match(renderAlertSettings(null).text, /off/);
+  assert.ok(buttons.some((b) => b.text === '✅ Breaking news'));
+  const off = renderAlertSettings({ bandAlerts: true, dailyHour: null, breakingAlerts: false });
+  assert.match(off.text, /Breaking news: <b>off<\/b>/);
 });
 
 test('band alert says up/down and from what', () => {
@@ -75,9 +84,16 @@ test('band alert says up/down and from what', () => {
 });
 
 test('Mini App alert settings are validated, and all-off means unsubscribe', () => {
-  assert.deepEqual(parseAlertInput({ bandAlerts: true }), { bandAlerts: true, dailyHour: null });
-  assert.deepEqual(parseAlertInput({ bandAlerts: false, dailyHour: 8 }), { bandAlerts: false, dailyHour: 8 });
-  assert.equal(parseAlertInput({ bandAlerts: false, dailyHour: null }), null);
+  assert.deepEqual(parseAlertInput({ bandAlerts: true }), { bandAlerts: true, dailyHour: null, breakingAlerts: true });
+  assert.deepEqual(parseAlertInput({ bandAlerts: false, dailyHour: 8 }), { bandAlerts: false, dailyHour: 8, breakingAlerts: true });
+  assert.deepEqual(parseAlertInput({ bandAlerts: true, dailyHour: null, breakingAlerts: false }), { bandAlerts: true, dailyHour: null, breakingAlerts: false });
+  assert.deepEqual(parseAlertInput({ bandAlerts: false, dailyHour: null, breakingAlerts: true }), { bandAlerts: false, dailyHour: null, breakingAlerts: true });
+  assert.equal(parseAlertInput({ bandAlerts: false, dailyHour: null, breakingAlerts: false }), null);
+  assert.equal(parseAlertInput({ bandAlerts: false, dailyHour: null }), null, 'an older build’s Stop all alerts still stops everything');
+  // An older build saving band or daily keeps breaking news as the chat set it.
+  assert.equal(parseAlertInput({ bandAlerts: true }, { breakingAlerts: false })?.breakingAlerts, false);
+  assert.equal(parseAlertInput({ bandAlerts: true }, { breakingAlerts: true })?.breakingAlerts, true);
+  assert.throws(() => parseAlertInput({ bandAlerts: true, breakingAlerts: 'yes' }));
   assert.throws(() => parseAlertInput({ bandAlerts: 'yes' }));
   assert.throws(() => parseAlertInput({ bandAlerts: true, dailyHour: 9 }));
   assert.throws(() => parseAlertInput(null));

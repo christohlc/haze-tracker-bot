@@ -18,5 +18,5 @@ export function decodeEntities(s) {
   });
 }
 
-/** Text that's safe inside Telegram HTML. @param {string} s */
-export const escapeHtml = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+/** Text that's safe inside Telegram HTML, attributes included. @param {string} s */
+export const escapeHtml = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');

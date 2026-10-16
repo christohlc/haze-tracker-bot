@@ -2,11 +2,11 @@
 import { pm25ToPsi } from '../../tgcloud/lib/psi.js';
 import { islandMean } from '../../tgcloud/lib/snapshot.js';
 import { AHEAD } from '../../tgcloud/lib/range.js';
-import { sgtToday, toSgtIso, unixHour } from '../../tgcloud/lib/time.js';
+import { sgtDateOf, toSgtIso, unixHour } from '../../tgcloud/lib/time.js';
 import type { Ahead, Dashboard } from '../lib/api';
 
-const tomorrow = () => sgtToday(Date.now() + 86_400_000);
-const issued = () => `${sgtToday()}T18:19:00+08:00`;
+const tomorrow = () => sgtDateOf(Date.now() + 86_400_000);
+const issued = () => `${sgtDateOf(Date.now())}T18:19:00+08:00`;
 
 /**
  * NEA's outlook from 15 Oct 2026, and a range around the fixture's latest reading, like a hazy week

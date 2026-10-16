@@ -69,7 +69,7 @@ export function isHaze(title, description = '') {
  * or null unless the link is https on the publisher's own site.
  * @param {{ source: string, link: string }} item
  */
-function storyKey(item) {
+export function storyKey(item) {
   const m = item.link.match(HTTPS_LINK);
   if (!m || m[1].toLowerCase() !== HOSTS[item.source]) return null;
   return `${m[1].toLowerCase()}${m[2].replace(/\/+$/, '')}`;
