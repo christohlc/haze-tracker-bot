@@ -4,7 +4,7 @@
 # Needs the repo secret TGCLOUD_TOKEN (the CLI access token from @BotFather).
 #
 # Every 15 min so alerts left over from a run (time budget, rate limit) go out soon after.
-# NEA, news and the forecast are fetched about once an hour, so the extra runs are cheap.
+# NEA and news are fetched about once an hour, so the extra runs are cheap.
 # Cost note: the repo is public, so Actions minutes are free. If it ever goes private again,
 # this is ~2,900 billed min/month (over the 2,000 free); use '12,42 * * * *' instead.
 # GitHub may delay scheduled runs at busy times; /haze and the Mini App refetch on their own

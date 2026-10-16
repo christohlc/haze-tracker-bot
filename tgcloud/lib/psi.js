@@ -40,6 +40,9 @@ export const PSI_BANDS = [
   { id: 'hazardous', label: 'Hazardous', max: Infinity, emoji: '🔴' },
 ];
 
+/** @param {string | null | undefined} id */
+export const bandById = (id) => PSI_BANDS.find((b) => b.id === id) ?? null;
+
 /** @param {number | null | undefined} psi */
 export function psiBand(psi) {
   if (psi == null) return null;

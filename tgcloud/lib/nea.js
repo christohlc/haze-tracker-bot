@@ -3,11 +3,7 @@
 
 import { NEA_API } from './config.js';
 import { getJson } from './http.js';
-
-/** YYYY-MM-DD in Singapore time, `daysAgo` days back. */
-export function sgtDate(daysAgo = 0, now = Date.now()) {
-  return new Date(now + 8 * 3600_000 - daysAgo * 86_400_000).toISOString().slice(0, 10);
-}
+import { sgtDateOf } from './time.js';
 
 async function getItems(path, date) {
   const url = `${NEA_API}/${path}${date ? `?date=${date}` : ''}`;
@@ -21,7 +17,7 @@ async function getItems(path, date) {
  * @returns {Promise<Array<{ timestamp: string, readings: Record<string, number> }>>} oldest first
  */
 export async function getPm25History() {
-  const [today, yesterday] = await Promise.all([getItems('pm25', sgtDate(0)), getItems('pm25', sgtDate(1))]);
+  const [today, yesterday] = await Promise.all([getItems('pm25', sgtDateOf(Date.now())), getItems('pm25', sgtDateOf(Date.now() - 86_400_000))]);
   const byTime = new Map();
   for (const item of [...yesterday, ...today]) {
     byTime.set(item.timestamp, { timestamp: item.timestamp, readings: item.readings.pm25_one_hourly });

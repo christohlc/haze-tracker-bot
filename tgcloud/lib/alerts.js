@@ -11,9 +11,9 @@ import { isRateLimited, isUnreachable } from './bot-errors.js';
 import { cachedCardId, sendCardOrText } from './card/send.js';
 import { sendBreaking } from './breaking.js';
 import { formatBandAlert, formatHaze, formatHazeCaption } from './format.js';
-import { sgtDate } from './nea.js';
 import { psiBand } from './psi.js';
 import { getState, setState } from './store.js';
+import { sgtDateOf } from './time.js';
 import {
   bandSubscribers,
   breakingClaimedChats,
@@ -122,7 +122,7 @@ export async function runAlerts(snap, now = Date.now(), breaking = []) {
   // first if there's time; otherwise the next tick sends them.
   const deadline = end;
   if (await canGoOn(bandStopped, deadline)) {
-    const date = sgtDate(0, now);
+    const date = sgtDateOf(now);
     const hour = sgtHourOf(now);
     const [subs, claimed] = await Promise.all([dailySubscribers(), dailyClaimedChats(date)]);
     const due = subs.filter((s) => dailyDue(s.dailyHour, hour) && !claimed.has(s.chatId));

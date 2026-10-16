@@ -13,9 +13,10 @@ code and this file disagree, fix one of them.
   what set it apart; keep them.
 - **Telegram-native.** Follow Telegram’s theme, use the MainButton for the main action, add
   haptics on selections and saves, and let alerts arrive in the chat. Use what a website can’t.
-- **Honest about the numbers.** Only NEA’s 24-hour PSI is official. The 1-hour and 3-hour PSI
-  are calculated from PM2.5, and the forecast comes from a model. Wherever they appear, the copy
-  says so in a short caption (“Our calculation, not official.”).
+- **Honest about the numbers.** Only NEA’s 24-hour PSI and NEA’s own forecast are official,
+  and the forecast keeps NEA’s wording. The 1-hour and 3-hour PSI are calculated from PM2.5, and
+  the next-hours range from past readings. Wherever they appear, the copy says so in a short
+  caption (“Our calculation, not official.”).
 
 ## Brand
 
@@ -68,7 +69,7 @@ or, outside Telegram, from the OS. A new colour token needs both a light and a d
   tabs. It sits at the top, not the bottom, because Telegram’s MainButton (“Get haze alerts”)
   owns the bottom edge.
   - **Now:** hero, regions, advice, alerts, share.
-  - **Outlook:** forecast, wind and rain, history.
+  - **Outlook:** what’s ahead, wind and rain, history.
   - **More:** live views, news, cigarettes, what’s new, sources (collapsed).
 - A tab mounts the first time it’s opened and then stays mounted, hidden (laid out at zero
   height rather than `display: none`), so its controls keep their state, its cards rise in only
@@ -115,7 +116,7 @@ of the sky and the haze. Check that again whenever a sky colour changes.
 Every section handles loading, empty and failed states. To check them outside Telegram, use
 the dev toolbar (`?demo=worst|empty|error|loading`). Those last two hide every card, so a card's
 own states take `?card=<card>:<state>`, comma-separated: `cameras:error|loading` for Live views and
-`weather:error|loading|partial` for Wind and rain. `?tab=outlook|more` opens on that tab. The
+`weather:error|loading|partial` for Wind and rain, `ahead:range|outlook` for one half of What’s ahead. `?tab=outlook|more` opens on that tab. The
 worst-case data has long names, missing readings and extreme values, so use it before shipping a
 layout change.
 

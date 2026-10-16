@@ -1,11 +1,11 @@
 // @ts-check
 // Chat commands. Payload is the Message; the platform routes `message` updates here.
 
+import { getAhead } from '../lib/ahead.js';
 import { cigarettes } from '../lib/cigs.js';
 import { renderAlertSettings } from '../lib/alert-settings.js';
 import { dashboardButton } from '../lib/buttons.js';
 import { REGIONS } from '../lib/config.js';
-import { getCurrentForecast } from '../lib/forecast/run.js';
 import { sendCardOrText } from '../lib/card/send.js';
 import { sendHtml } from '../lib/messages.js';
 import { formatCigs, formatForecast, formatHaze, formatHazeCaption } from '../lib/format.js';
@@ -16,7 +16,7 @@ const HELP = [
   '<b>I’m going hazelnuts!</b>',
   '/haze: current PSI with a regional picture, plus advice',
   '/cigs [region] [% outdoors]: cigarette equivalent, e.g. <code>/cigs east 30</code>',
-  '/forecast: PSI for the next 24 hours (model, not official)',
+  '/forecast: NEA’s 24-hr PSI forecast during haze episodes, and the next few hours',
   '/subscribe: alerts when the haze band changes, and breaking haze news',
   '/alerts: change alerts, breaking news or a daily update',
   '/unsubscribe: stop all alerts',
@@ -38,18 +38,18 @@ export default async function (message) {
     case 'help':
       return reply(message, HELP, dashboardButton(message.chat.id));
     case 'haze': {
-      const snap = await getSnapshot();
-      const forecast = await getCurrentForecast(snap);
+      const refreshed = getSnapshot();
+      const [snap, ahead] = await Promise.all([refreshed, getAhead(refreshed)]);
       return sendCardOrText(message.chat.id, snap, {
-        caption: formatHazeCaption(snap, forecast),
-        text: formatHaze(snap, forecast),
+        caption: formatHazeCaption(snap, ahead),
+        text: formatHaze(snap, ahead),
         reply_markup: dashboardButton(message.chat.id),
       });
     }
     case 'forecast': {
-      const forecast = await getCurrentForecast(await getSnapshot());
-      if (!forecast) return reply(message, 'The forecast for the latest reading isn’t ready yet. It updates every hour.');
-      return reply(message, formatForecast(forecast), dashboardButton(message.chat.id));
+      const ahead = await getAhead(getSnapshot());
+      if (!ahead.outlook && !ahead.range) return reply(message, 'Nothing to show yet. NEA issues a 24-hr PSI forecast only during haze episodes, and our range for the next few hours needs three days of recent readings.');
+      return reply(message, formatForecast(ahead), dashboardButton(message.chat.id));
     }
     case 'cigs': {
       const { regionId, outdoorPct } = parseCigsArgs(args);

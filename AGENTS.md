@@ -22,14 +22,13 @@ Singapore haze bot + Mini App. User-facing overview in [README.md](README.md); v
 and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious from the code:
 
 - **The 15-minute job is `endpoints/tick`**, run by `.github/workflows/tick.yml` (the
-  platform has no scheduler). It refreshes NEA, then the news, then sends alerts while the
-  forecast runs in parallel.
+  platform has no scheduler). It refreshes NEA, then the news, then sends alerts.
   `tick` and `admin` call `requireCli(ctx)`: they're CLI-only, never Mini App endpoints.
   The repo is public (free Actions minutes); a weekly `keepalive` job in the same workflow
   stops GitHub's 60-day pause of scheduled workflows.
-  NEA is refetched only until the current hour is published, news about hourly (every run while
-  some PSI is above 100, for breaking news), the forecast once per NEA hour; the extra runs are
-  for alerts a previous run didn't reach. `{"force":true}` refetches NEA and news regardless.
+  NEA is refetched only until the current hour is published and news about hourly (every run
+  while some PSI is above 100, for breaking news); the extra runs are for alerts a previous run
+  didn't reach. `{"force":true}` refetches NEA and news regardless.
 - **Alerts go out in batches of 25/s within a ~20 s budget** (`runBatched` in `lib/alert-rules.js`).
   Whoever isn't reached (budget, 429) keeps their old `lastBand` / unclaimed key and the next tick
   resumes. Breaking news gets the first 6 s after the news fetch, band alerts run until 12 s, so
@@ -55,15 +54,18 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
 - **Wind and rain (`endpoints/getWeather`) is fetched the same way**: only when the Mini App asks,
   cached for 5 min in `state('weather')`. It reads NEA's station feeds, and the “coming from Sumatra”
   line (`smokeLine` in `lib/weather-parse.js`) is our reading, not NEA's.
-- **Open-Meteo is tried at most once per 5 min per NEA hour** (`forecast_attempt` state), since
-  /haze and the Mini App can trigger a forecast run.
+- **What's ahead (`lib/ahead.js`) has no model.** NEA's 24-hr PSI forecast comes from the
+  undocumented JSON behind haze.gov.sg (`lib/outlook.js`, cached 30 min in `state('outlook')`,
+  fetched only by /haze, /forecast and the dashboard). NEA issues it about 6 pm, during haze
+  episodes only, so null is the usual answer. The next-hours range (`lib/range.js`) is worked out
+  from the last 14 days of `readings`.
 - **Some `tgcloud/lib/` modules are shared with the front-end and tests**
   (`psi`, `cigs`, `advice`, `alert-settings`, `alert-rules`, `breaking-rules`, `format`, `snapshot`,
-  `forecast/features|predict|model`, `news-parse`, `cameras-parse`, `weather-parse`,
+  `outlook-parse`, `range`, `html`, `time`, `news-parse`, `cameras-parse`, `weather-parse`,
   `card/geometry|png|raster|summary|glyphs|art`). Keep these pure: no `sdk` import, no DB, so
   Vite and `node --test` can load them. Modules that touch `sdk`, directly or via `store`, are
-  `store`, `nea`, `refresh`, `alerts`, `breaking`, `subscriptions`, `cli-only`, `forecast/inputs`,
-  `forecast/run`, `news`, `cameras`, `weather`, `bot-errors`, `messages`, `card/send`, `http`, `feed-cache`.
+  `store`, `nea`, `refresh`, `alerts`, `breaking`, `subscriptions`, `cli-only`, `outlook`, `ahead`,
+  `news`, `cameras`, `weather`, `bot-errors`, `messages`, `card/send`, `http`, `feed-cache`.
 - **The summary picture (`tgcloud/lib/card/`) is drawn in plain JS**: the runtime has no canvas,
   fonts or zlib, so `png.js` has its own deflate and `glyphs.js` / `art.js` are pre-rendered
   bitmaps **generated** by `npm run card:assets` (fonts in `scripts/card/fonts/`, island outline
@@ -72,10 +74,8 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   Check a layout change with `node scripts/card/preview.mjs <dir>`.
 - **Secrets live in the `settings` DB table**, set only via `endpoints/admin` from the
   CLI. Never commit or echo a key.
-- **`tgcloud/lib/forecast/model.js` is generated** by `scripts/train/train.py`. Don't
-  edit it by hand; retrain, and keep `test/forecast-vectors.json` passing.
-- **1-hour and 3-hour PSI and the forecast are our own calculations**, not NEA's.
-  Copy must keep saying so; only the 24-hour PSI is official.
+- **1-hour and 3-hour PSI and the next-hours range are our own calculations**, not NEA's.
+  Copy must keep saying so; only the 24-hour PSI and NEA's forecast are official.
 - **Outside Telegram**, `npm run dev` serves fixture data (`src/dev/`), with a
   `?demo=worst|empty|error|loading` toggle. Use it to check UI changes in the preview.
 - **User-facing changes get a “What’s new” entry** in `src/lib/changelog.ts`

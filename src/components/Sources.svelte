@@ -5,17 +5,18 @@
 
   let { sources }: { sources: SourceStatus[] } = $props();
 
-  const failing = $derived(sources.filter((s) => s.lastError).length);
-
   const NAMES: Record<string, { name: string; role: string }> = {
     nea_pm25: { name: 'NEA PM2.5 readings', role: 'Hourly readings by region, history and everything calculated from PM2.5' },
     nea_psi: { name: 'NEA PSI', role: 'Official 24-hour PSI by region' },
-    openmeteo: { name: 'Open-Meteo', role: 'Weather forecast inputs for the haze forecast' },
+    nea_outlook: { name: 'NEA haze update', role: 'NEA’s 24-hr PSI forecast, during haze episodes' },
     ...Object.fromEntries(Object.entries(PUBLISHERS).map(([id, p]) => [`news_${id}`, { name: p.name, role: 'Haze headlines' }])),
     nea_weather: { name: 'NEA weather stations', role: 'Wind and rain' },
     lta_cameras: { name: 'LTA traffic cameras', role: 'Live views from Woodlands, Tuas and Sentosa' },
-    firms: { name: 'NASA FIRMS', role: 'Satellite fire detections for the forecast' },
   };
+  // Feeds we no longer use keep their old rows in the database.
+  const RETIRED = ['openmeteo', 'firms'];
+  const known = $derived(sources.filter((s) => !RETIRED.includes(s.source)));
+  const failing = $derived(known.filter((s) => s.lastError).length);
 </script>
 
 {#snippet status(ok: boolean, text: string)}
@@ -27,17 +28,17 @@
 
 <section class="card" aria-labelledby="sources-title">
   <h2 id="sources-title" class="section-title">Data sources</h2>
-  {#if !sources.length}
+  {#if !known.length}
     <p class="note">No feeds have reported yet. They’re checked every hour.</p>
   {:else}
     <details>
       <summary>
-        {@render status(!failing, failing ? `${failing} of ${sources.length} feeds failing` : 'All feeds working')}
+        {@render status(!failing, failing ? `${failing} of ${known.length} feeds failing` : 'All feeds working')}
         <span class="more" aria-hidden="true"><span class="show">Details</span><span class="hide">Hide</span></span>
       </summary>
       <p class="note">Which feeds are working right now, and what each one contributes.</p>
       <ul>
-        {#each sources as s (s.source)}
+        {#each known as s (s.source)}
           {@const meta = NAMES[s.source] ?? { name: s.source, role: '' }}
           {@const ok = !s.lastError}
           <li>

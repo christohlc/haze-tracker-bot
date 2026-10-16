@@ -1,9 +1,14 @@
 <script lang="ts">
-  import { psiBand } from '../../tgcloud/lib/psi.js';
+  import { bandById, psiBand } from '../../tgcloud/lib/psi.js';
 
-  let { value, showLabel = false, size = 'sm' }: { value: number | null; showLabel?: boolean; size?: 'sm' | 'lg' } =
-    $props();
-  const band = $derived(psiBand(value));
+  // NEA's outlook gives bands, not numbers: pass `bandId` with `showLabel`.
+  let {
+    value = null,
+    bandId = null,
+    showLabel = false,
+    size = 'sm',
+  }: { value?: number | null; bandId?: string | null; showLabel?: boolean; size?: 'sm' | 'lg' } = $props();
+  const band = $derived(bandId ? bandById(bandId) : psiBand(value));
 </script>
 
 {#if band}

@@ -19,9 +19,17 @@ export function sgtHour(iso, withMinutes = false) {
   return withMinutes ? `${h12}:${m} ${suffix}` : `${h12}${m === '00' ? '' : `:${m}`} ${suffix}`;
 }
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+export const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /** "2026-10-16" (an SGT date, or an SGT timestamp) → "16 Oct". @param {string} ymd */
 export function sgtDayMonth(ymd) {
   return `${Number(ymd.slice(8, 10))} ${MONTHS[Number(ymd.slice(5, 7)) - 1]}`;
+}
+
+
+/** "today" or "tomorrow" for an SGT date, else "on 18 Oct". @param {string} ymd @param {number} [now] ms */
+export function sgtDayName(ymd, now = Date.now()) {
+  if (ymd === sgtDateOf(now)) return 'today';
+  if (ymd === sgtDateOf(now + 86_400_000)) return 'tomorrow';
+  return `on ${sgtDayMonth(ymd)}`;
 }
