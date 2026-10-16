@@ -96,9 +96,11 @@ In short, the bot is the same page re-skinned with Telegram colours. Nothing on 
 6. **Telegram-native structure** — section headers outside cards (Telegram settings style),
    collapsible Data sources, BackButton for detail views (e.g. tap a region for its own chart),
    haptics on slider and region taps, remember region/period in `CloudStorage`.
+   *(Collapsible Data sources, and BackButton from the Outlook/More tabs: done.)*
 7. **Re-order** — Now → Forecast → Regions → What to do → Cigarettes → History → Sources, so
    advice sits near the answer. *(Wait for the forecast merge; it touches the same lines of
-   `App.svelte`.)*
+   `App.svelte`.)* *(Superseded: the cards are now in Now / Outlook / More tabs, with advice
+   on Now; see docs/design.md#layout.)*
 8. **Reframe the cigarette calculator** — keep the joke, change the presentation (e.g. a row of
    cigarette glyphs filling up, share-to-chat button via `switchInlineQuery`).
 

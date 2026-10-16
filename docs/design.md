@@ -44,8 +44,7 @@ which is described below.
 | Regions | `--region-north` … `--region-south` | Fixed order matching `REGIONS`. Never cycled or reassigned |
 | Status | `--status-good`, `--status-critical` | Feed health, errors, “Stop all alerts” |
 | Shape | `--radius` 16px, `--gutter` 16px | |
-| Motion | `--ease-out`, `--ease-in-out`, `--ease-drawer` | `--ease-drawer` for bottom sheets |
-| Overlay | `--scrim` | Behind modal sheets |
+| Motion | `--ease-out`, `--ease-in-out` | |
 
 Dark mode sets `:root[data-theme='dark']`. `src/lib/telegram.ts` takes the scheme from Telegram
 or, outside Telegram, from the OS. A new colour token needs both a light and a dark value.
@@ -65,9 +64,17 @@ or, outside Telegram, from the OS. A new colour token needs both a light and a d
 - One column, at most 720px wide, with 16px gutters and 12px between cards. Padding respects
   Telegram’s safe-area insets.
 - Each section is a `.card` with a `.section-title`, an optional `.note` and its content.
-- Section order: header, hero, alerts, regions, cigarettes, forecast, wind and rain, history, advice, news, sources.
-  [ui-audit.md](ui-audit.md) proposes moving advice and the forecast up; that change is still
-  open.
+- Under the header, a sticky tab bar (`Segmented` with `kind="tab"`) splits the cards into three
+  tabs. It sits at the top, not the bottom, because Telegram’s MainButton (“Get haze alerts”)
+  owns the bottom edge.
+  - **Now:** hero, regions, advice, alerts, share.
+  - **Outlook:** forecast, wind and rain, history.
+  - **More:** live views, news, cigarettes, what’s new, sources (collapsed).
+- A tab mounts the first time it’s opened and then stays mounted, hidden (laid out at zero
+  height rather than `display: none`), so its controls keep their state, its cards rise in only
+  once, charts keep their width, and Live views loads its pictures only once More is opened.
+  The tab bar takes arrow keys, Home and End. Switching keeps the
+  header scrolled away if it already was. Away from Now, Telegram’s back arrow returns to Now.
 - Tap targets are at least 44px. Segmented controls and chips switch on `pointerdown` so they
   respond straight away.
 
@@ -81,7 +88,8 @@ of the sky and the haze. Check that again whenever a sky colour changes.
 
 ## Motion
 
-- Short and purposeful: cards rise 8px over 280ms with a small stagger. The hero number counts
+- Short and purposeful: cards rise 8px over 280ms with a small stagger, the first time a tab is
+  shown; showing a tab fades it in (150ms). The hero number counts
   up once on first load (600ms) and moves quickly when the period changes (220ms). Buttons
   scale to 0.97 when pressed.
 - Use `--ease-out` for things entering and `--ease-in-out` for things moving on screen.
@@ -102,8 +110,9 @@ of the sky and the haze. Check that again whenever a sky colour changes.
 Every section handles loading, empty and failed states. To check them outside Telegram, use
 the dev toolbar (`?demo=worst|empty|error|loading`). Those last two hide every card, so a card's
 own states take `?card=<card>:<state>`, comma-separated: `cameras:error|loading` for Live views and
-`weather:error|loading|partial` for Wind and rain. The worst-case data has long names,
-missing readings and extreme values, so use it before shipping a layout change.
+`weather:error|loading|partial` for Wind and rain. `?tab=outlook|more` opens on that tab. The
+worst-case data has long names, missing readings and extreme values, so use it before shipping a
+layout change.
 
 ## Summary card
 
@@ -128,13 +137,14 @@ newspaper graphic:
 ## What’s new
 
 User-facing changes are listed in [`src/lib/changelog.ts`](../src/lib/changelog.ts), newest
-first, and shown in a sheet opened from the header. Entries are written for users, not
-developers:
+first, and shown as a card in the More tab (the latest three, older ones under “Earlier
+updates”). Entries are written for users, not developers:
 
 - A title of a few words saying what someone can now do (“Turn on alerts from here”).
 - One or two sentences of detail. No file names, model versions or “refactor”.
 - Behind-the-scenes changes get an entry only when users would notice them (e.g. a better
   forecast).
 
-Each entry needs a new, unique `id`. The latest entry’s `id` is saved in Telegram `CloudStorage` (`localStorage` outside Telegram)
-once the sheet has been opened. Until then, the header button shows a dot.
+Each entry needs a new, unique `id`. The latest entry’s `id` is saved in Telegram `CloudStorage`
+(`localStorage` outside Telegram) once the More tab has been opened. Until then, the More tab
+shows a dot, and entries added since the last visit get a “New” label.
