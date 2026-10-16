@@ -33,7 +33,8 @@ code and this file disagree, fix one of them.
 ## Tokens
 
 Every colour, radius and easing is a CSS custom property in [`src/app.css`](../src/app.css).
-Components use the tokens and never hard-code a hex value. The one exception is the hero sky,
+Components use the tokens and never hard-code a hex value. The exceptions are the game's nut
+art (see *Easter egg*) and the hero sky,
 which is described below.
 
 | Group | Tokens | Notes |
@@ -154,3 +155,11 @@ updates”). Entries are written for users, not developers:
 Each entry needs a new, unique `id`. The latest entry’s `id` is saved in Telegram `CloudStorage`
 (`localStorage` outside Telegram) once the More tab has been opened. Until then, the More tab
 shows a dot, and entries added since the last visit get a “New” label.
+
+## Easter egg
+
+Tapping the header’s logo or name opens **Hazelnut Ninja** (`src/components/HazelnutNinja.svelte`,
+engine in `src/lib/ninja.ts`, ported from GameKit UI’s Fruit Ninja, MIT): slice hazelnuts, dodge
+haze clouds, 60 seconds. It’s a secret, so it has **no What’s new entry** and isn't mentioned in
+`/help`. The nuts copy the logo's colours; the field, blade and text follow the tokens. The code
+loads only when the game is opened.

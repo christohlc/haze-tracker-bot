@@ -149,3 +149,10 @@ export function callEndpoint<T>(name: string, input: Record<string, unknown> = {
     );
   });
 }
+
+/** Stop a downward swipe from minimising the Mini App (games). Returns a cleanup that allows it again. */
+export function lockVerticalSwipes(): () => void {
+  if (!inTelegram || !tg.disableVerticalSwipes) return () => {};
+  tg.disableVerticalSwipes();
+  return () => tg.enableVerticalSwipes?.();
+}
