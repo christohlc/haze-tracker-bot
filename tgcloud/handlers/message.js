@@ -5,7 +5,7 @@ import { api } from 'sdk';
 import { cigarettes } from '../lib/cigs.js';
 import { MINI_APP_URL, REGIONS } from '../lib/config.js';
 import { formatCigs, formatHaze } from '../lib/format.js';
-import { loadSnapshot } from '../lib/live.js';
+import { getSnapshot } from '../lib/refresh.js';
 
 const HELP = [
   '<b>Haze Tracker SG</b>',
@@ -27,12 +27,12 @@ export default async function (message) {
     case 'help':
       return reply(message, HELP, dashboardButton(message));
     case 'haze': {
-      const snap = await loadSnapshot();
+      const snap = await getSnapshot();
       return reply(message, formatHaze(snap), dashboardButton(message));
     }
     case 'cigs': {
       const { regionId, outdoorPct } = parseCigsArgs(args);
-      const snap = await loadSnapshot();
+      const snap = await getSnapshot();
       const region = snap.regions.find((r) => r.id === regionId);
       const pm = region ? { now: region.pm25, mean24h: region.pm25Mean24h } : snap.island;
       const c = cigarettes(pm, outdoorPct / 100);

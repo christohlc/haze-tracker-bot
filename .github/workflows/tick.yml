@@ -1,0 +1,33 @@
+# Hourly heartbeat. Telegram Serverless has no built-in scheduler, so GitHub Actions
+# runs endpoints/tick in the bot's cloud environment (pattern from telegram-assistant-bot).
+#
+# Needs the repo secret TGCLOUD_TOKEN (the CLI access token from @BotFather).
+#
+# Cost note: on a private repo each run uses ~1 billed Actions minute, so hourly is
+# ~720 min/month, inside the 2,000 free minutes. GitHub may delay scheduled runs at
+# busy times; /haze and the Mini App refetch on their own when the snapshot is stale.
+name: tick
+
+on:
+  schedule:
+    - cron: '12 * * * *' # NEA publishes ~15 min past the hour; off the congested :00 slot
+  workflow_dispatch:
+
+concurrency:
+  group: tick
+  cancel-in-progress: false
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npx tgcloud run endpoints/tick
+        env:
+          TGCLOUD_TOKEN: ${{ secrets.TGCLOUD_TOKEN }}

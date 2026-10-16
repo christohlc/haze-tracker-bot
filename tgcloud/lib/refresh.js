@@ -1,0 +1,55 @@
+// @ts-check
+// Keep the DB's snapshot current. The hourly tick calls refreshNea(); chat commands and
+// the Mini App call getSnapshot(), which refetches itself if the tick is late
+// (the GitHub Actions cron can be delayed or skipped).
+
+import { getLatestPsi, getPm25History } from './nea.js';
+import { buildSnapshot } from './snapshot.js';
+import { getState, recentReadings, recordSource, setState, upsertReadings } from './store.js';
+
+const STALE_MS = 80 * 60_000; // NEA publishes ~15 min past the hour
+const RETRY_MS = 5 * 60_000; // don't hammer NEA when it's down
+
+/** Fetch NEA, store readings and the new snapshot. Feed errors are recorded, not thrown, if cached data exists. */
+export async function refreshNea() {
+  await setState('last_fetch_attempt', Date.now());
+  const [pm25, psi] = await Promise.allSettled([getPm25History(), getLatestPsi()]);
+
+  if (pm25.status === 'fulfilled') {
+    await upsertReadings(pm25.value);
+    await recordSource('nea_pm25', { ok: true, detail: `latest ${pm25.value.at(-1)?.timestamp}` });
+  } else {
+    await recordSource('nea_pm25', { ok: false, error: pm25.reason?.message ?? pm25.reason });
+  }
+  if (psi.status === 'fulfilled') {
+    const latest = { timestamp: psi.value.timestamp, readings: { psi_twenty_four_hourly: psi.value.readings.psi_twenty_four_hourly } };
+    await setState('psi', latest);
+    await recordSource('nea_psi', { ok: true, detail: `latest ${psi.value.timestamp}` });
+  } else {
+    await recordSource('nea_psi', { ok: false, error: psi.reason?.message ?? psi.reason });
+  }
+
+  const history = await recentReadings(25);
+  const psiState = (await getState('psi'))?.value;
+  if (!history.length || !psiState) throw new Error('No NEA data yet (fetch failed and nothing cached)');
+  const snap = buildSnapshot(history, psiState);
+  await setState('snapshot', snap);
+  return snap;
+}
+
+/** Latest snapshot, refetching when stale. `stale: true` means NEA couldn't be reached. */
+export async function getSnapshot() {
+  const cached = (await getState('snapshot'))?.value;
+  const fresh = cached && Date.now() - Date.parse(cached.asOf) < STALE_MS;
+  if (fresh) return { ...cached, stale: false };
+
+  const lastAttempt = (await getState('last_fetch_attempt'))?.value ?? 0;
+  if (cached && Date.now() - lastAttempt < RETRY_MS) return { ...cached, stale: true };
+  try {
+    const snap = await refreshNea();
+    return { ...snap, stale: Date.now() - Date.parse(snap.asOf) >= STALE_MS };
+  } catch (e) {
+    if (cached) return { ...cached, stale: true };
+    throw e;
+  }
+}
