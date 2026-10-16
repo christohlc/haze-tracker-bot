@@ -126,7 +126,7 @@ select {
   color: var(--muted);
 }
 
-/* The main action in a card, and an error under it (AlertsCard, ShareCard). */
+/* The main action in a card, and an error under it (AlertsCard, ShareCard, a .state's Try again). */
 .primary {
   min-height: 48px;
   border: 0;
@@ -167,4 +167,33 @@ select {
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
+}
+
+/* Loading, failed and retry states, shared by the dashboard, Live views and Wind and rain. */
+.sk {
+  animation: pulse 1.2s ease-in-out infinite alternate;
+}
+@keyframes pulse {
+  to {
+    opacity: 0.55;
+  }
+}
+.state {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+}
+.state p {
+  margin: 0;
+}
+.state .primary {
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sk {
+    animation: none;
+  }
 }

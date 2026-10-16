@@ -2,7 +2,7 @@
 // Fetch live forecast inputs from Open-Meteo and assemble the raw window (see features.js).
 // Only the inputs the current model uses (MODEL.needs) are requested.
 
-import { fetch } from 'sdk';
+import { getJson } from '../http.js';
 import { islandMean } from '../snapshot.js';
 import { unixHour } from '../time.js';
 import { MODEL } from './model.js';
@@ -15,13 +15,6 @@ const WEATHER_VARS = {
   precip: 'precipitation',
   blh: 'boundary_layer_height',
 };
-
-/** @param {string} url */
-async function getJson(url) {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Open-Meteo ${res.status}`);
-  return res.json();
-}
 
 /**
  * Hourly Open-Meteo series → 25 values at hours t..t+24 (NaN where missing).
@@ -57,11 +50,13 @@ export async function fetchInputs(snap) {
     weather.length
       ? getJson(
           `${WX}?latitude=${points.sg[0]}&longitude=${points.sg[1]}&hourly=${weather.map((k) => WEATHER_VARS[k]).join(',')}&past_days=1&forecast_days=2&timezone=GMT`,
+          'Open-Meteo',
         )
       : null,
     aq.length
       ? getJson(
           `${AQ}?latitude=${aq.map((/** @type {string} */ p) => points[p][0]).join(',')}&longitude=${aq.map((/** @type {string} */ p) => points[p][1]).join(',')}&hourly=pm2_5&past_days=1&forecast_days=2&timezone=GMT`,
+          'Open-Meteo',
         )
       : null,
   ]);

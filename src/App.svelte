@@ -55,7 +55,7 @@
   {#if error && !data}
     <div class="card state">
       <p>{error}</p>
-      <button type="button" onclick={load}>Try again</button>
+      <button type="button" class="primary" onclick={load}>Try again</button>
     </div>
   {:else if !data}
     <div class="skeleton" aria-busy="true" aria-label="Loading">
@@ -119,45 +119,15 @@
   .sk {
     height: 120px;
     background: var(--card);
-    animation: pulse 1.2s ease-in-out infinite alternate;
   }
   .sk.tall {
     height: 220px;
-  }
-  @keyframes pulse {
-    to {
-      opacity: 0.55;
-    }
   }
   .stale {
     margin-bottom: 12px;
     font-size: 0.875rem;
     color: var(--ink-2);
     box-shadow: inset 3px 0 0 var(--band-unhealthy);
-  }
-  .state {
-    display: grid;
-    gap: 12px;
-    justify-items: start;
-  }
-  .state p {
-    margin: 0;
-  }
-  .state button {
-    min-height: 40px;
-    padding: 0 16px;
-    border: 0;
-    border-radius: 10px;
-    background: var(--accent);
-    color: var(--accent-ink);
-    font: inherit;
-    font-weight: 600;
-  }
-  .state button {
-    transition: transform 120ms var(--ease-out);
-  }
-  .state button:active {
-    transform: scale(0.97);
   }
   @media (prefers-reduced-motion: reduce) {
     .sections > :global(*) {
@@ -167,9 +137,6 @@
       from {
         opacity: 0;
       }
-    }
-    .sk {
-      animation: none;
     }
   }
 </style>
