@@ -47,25 +47,27 @@ export const SEND_INTERVAL_MS = 1000;
  * `intervalMs`. Stops when a task returns 'limited' (rate limited: the rest wait for the next
  * run), or before a batch that might not finish by `deadline` (the slowest batch so far, or one
  * interval, is the estimate). Without `sleep` (no timers), batches run back to back.
+ * `firstAlone` runs the first item as a batch of its own, e.g. so it can upload a photo that the
+ * rest then send by file id.
  * @template T
  * @param {T[]} items
  * @param {(item: T) => Promise<string>} task
- * @param {{ deadline: number, size?: number, intervalMs?: number, now?: () => number, sleep?: ((ms: number) => Promise<void>) | null }} opts
+ * @param {{ deadline: number, size?: number, intervalMs?: number, now?: () => number, sleep?: ((ms: number) => Promise<void>) | null, firstAlone?: boolean }} opts
  * @returns {Promise<{ results: string[], stopped: null | 'limited' | 'budget' }>}
  */
-export async function runBatched(items, task, { deadline, size = SEND_BATCH, intervalMs = SEND_INTERVAL_MS, now = Date.now, sleep = null }) {
+export async function runBatched(items, task, { deadline, size = SEND_BATCH, intervalMs = SEND_INTERVAL_MS, now = Date.now, sleep = null, firstAlone = false }) {
   /** @type {string[]} */
   const results = [];
   let slowest = intervalMs;
-  for (let i = 0; i < items.length; i += size) {
+  for (let i = 0, n = firstAlone ? 1 : size; i < items.length; i += n, n = size) {
     const start = now();
     if (start + slowest > deadline) return { results, stopped: 'budget' };
-    const batch = await Promise.all(items.slice(i, i + size).map(task));
+    const batch = await Promise.all(items.slice(i, i + n).map(task));
     results.push(...batch);
     if (batch.includes('limited')) return { results, stopped: 'limited' };
     const took = now() - start;
     slowest = Math.max(slowest, took);
-    if (sleep && took < intervalMs && i + size < items.length) await sleep(intervalMs - took);
+    if (sleep && took < intervalMs && i + n < items.length) await sleep(intervalMs - took);
   }
   return { results, stopped: null };
 }

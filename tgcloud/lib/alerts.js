@@ -4,10 +4,11 @@
 // rate-limited or unreached send isn't retried in-process: its claim is released (or never
 // made) and the subscriber's lastBand stays behind, so the next tick catches them up.
 
-import { api, BotApiError } from 'sdk';
+import { BotApiError } from 'sdk';
 import { dailyDue, nextAlertBand, runBatched, SEND_INTERVAL_MS, sgtHourOf } from './alert-rules.js';
 import { dashboardButton } from './buttons.js';
-import { formatBandAlert, formatHaze } from './format.js';
+import { cachedCardId, sendCardOrText } from './card/send.js';
+import { formatBandAlert, formatHaze, formatHazeCaption } from './format.js';
 import { sgtDate } from './nea.js';
 import { psiBand } from './psi.js';
 import { getState, setState } from './store.js';
@@ -42,9 +43,9 @@ export async function runAlerts(snap, now = Date.now()) {
     if (stopped) out.deferred = true;
     return stopped;
   };
-  /** @param {number} chatId @param {string} key @param {string} text */
-  const sendNoting429 = async (chatId, key, text) => {
-    const { result, retryAfterS } = await send(chatId, key, text);
+  /** @param {number} chatId @param {string} key @param {{ caption: string, text: string }} message */
+  const sendNoting429 = async (chatId, key, message) => {
+    const { result, retryAfterS } = await send(chatId, key, snap, message);
     if (retryAfterS) retryAfter = Math.max(retryAfter, retryAfterS * 1000);
     return result;
   };
@@ -52,6 +53,8 @@ export async function runAlerts(snap, now = Date.now()) {
   const raw = psiBand(snap.worst.psi3h?.value)?.id ?? null;
   const prev = (await getState('alert_band'))?.value ?? null;
   const band = nextAlertBand(prev, raw, now);
+  // Until the summary card is uploaded, send to one chat first so the rest reuse its file id.
+  const firstAlone = async () => !(await cachedCardId(snap));
   if (band && band !== prev) await setState('alert_band', band);
   out.band = band?.id ?? null;
 
@@ -62,11 +65,12 @@ export async function runAlerts(snap, now = Date.now()) {
     const res = await runBatched(
       subs,
       async (sub) => {
-        const r = await sendNoting429(sub.chatId, `band:${sub.chatId}:${band.id}:${band.at}`, formatBandAlert(snap, sub.lastBand, band.id));
+        const text = formatBandAlert(snap, sub.lastBand, band.id);
+        const r = await sendNoting429(sub.chatId, `band:${sub.chatId}:${band.id}:${band.at}`, { caption: text, text });
         if (r === 'sent' || r === 'duplicate') await setLastBand(sub.chatId, band.id);
         return r;
       },
-      { deadline: now + BAND_BUDGET_MS, sleep },
+      { deadline: now + BAND_BUDGET_MS, sleep, firstAlone: await firstAlone() },
     );
     bandStopped = tally(res, 'sent');
   }
@@ -83,8 +87,12 @@ export async function runAlerts(snap, now = Date.now()) {
     const due = subs.filter((s) => dailyDue(s.dailyHour, hour) && !claimed.has(s.chatId));
     const res = await runBatched(
       due,
-      (sub) => sendNoting429(sub.chatId, `daily:${sub.chatId}:${date}`, `☀️ <b>Daily haze update</b>\n\n${formatHaze(snap)}`),
-      { deadline, sleep },
+      (sub) =>
+        sendNoting429(sub.chatId, `daily:${sub.chatId}:${date}`, {
+          caption: `☀️ <b>Daily haze update</b>\n\n${formatHazeCaption(snap)}`,
+          text: `☀️ <b>Daily haze update</b>\n\n${formatHaze(snap)}`,
+        }),
+      { deadline, sleep, firstAlone: await firstAlone() },
     );
     tally(res, 'daily');
   } else {
@@ -96,21 +104,15 @@ export async function runAlerts(snap, now = Date.now()) {
 }
 
 /**
- * Claim, then send. 'duplicate' means another run already sent it.
- * @param {number} chatId @param {string} key @param {string} text
+ * Claim, then send the summary card with `caption` (or `text` if the card fails). 'duplicate'
+ * means another run already sent it.
+ * @param {number} chatId @param {string} key @param {any} snap @param {{ caption: string, text: string }} message
  * @returns {Promise<{ result: 'sent' | 'duplicate' | 'removed' | 'limited' | 'failed', retryAfterS?: number }>}
  */
-async function send(chatId, key, text) {
+async function send(chatId, key, snap, message) {
   if (!(await claimAlert(key, chatId))) return { result: 'duplicate' };
   try {
-    const reply_markup = dashboardButton(chatId);
-    await api.sendMessage({
-      chat_id: chatId,
-      text,
-      parse_mode: 'HTML',
-      link_preview_options: { is_disabled: true },
-      ...(reply_markup && { reply_markup }),
-    });
+    await sendCardOrText(chatId, snap, { ...message, reply_markup: dashboardButton(chatId) });
     return { result: 'sent' };
   } catch (e) {
     if (isUnreachable(e)) {

@@ -16,8 +16,12 @@ const n = (v, digits = 0) => (v == null ? '–' : v.toFixed(digits));
 /** @param {string | number} s @param {number} w */
 const pad = (s, w) => String(s).padStart(w);
 
-/** @param {any} snap @param {any} [forecast] */
-export function formatHaze(snap, forecast) {
+/**
+ * The /haze and daily-update text. With `table: false` it's the caption under the summary card,
+ * which already shows each region's readings (photo captions are capped at 1,024 characters).
+ * @param {any} snap @param {any} [forecast] @param {{ table?: boolean }} [opts]
+ */
+export function formatHaze(snap, forecast, { table: withTable = true } = {}) {
   const head = snap.worst.psi3h;
   const band = psiBand(head?.value);
   const mask = maskCard(head?.value);
@@ -35,8 +39,9 @@ export function formatHaze(snap, forecast) {
     `<i>3-hour PSI, worst region (${head?.name ?? '–'}) · ${sgtTime(snap.asOf)} SGT</i>`,
     ...(snap.stale ? ['⚠️ <i>NEA hasn’t updated recently, so this may be out of date.</i>'] : []),
     '',
-    `<pre>${table}</pre>`,
-    '<i>PM2.5 in µg/m³. 1h/3h PSI computed from PM2.5; 24h PSI is NEA’s.</i>',
+    ...(withTable
+      ? [`<pre>${table}</pre>`, '<i>PM2.5 in µg/m³. 1h/3h PSI computed from PM2.5; 24h PSI is NEA’s.</i>']
+      : ['<i>3-hour PSI is our calculation from PM2.5. The picture shows NEA’s readings.</i>']),
     '',
     `🚬 <b>${n(snap.cigs.past24h, 1)}</b> cigarettes over the past 24h (island-wide, outdoors all day)`,
   ];
@@ -48,6 +53,16 @@ export function formatHaze(snap, forecast) {
   }
   lines.push('', '<i>Not official. Check haze.gov.sg for NEA advisories.</i>');
   return lines.join('\n');
+}
+
+/** Caption for the summary card. @param {any} snap @param {any} [forecast] */
+export const formatHazeCaption = (snap, forecast) => formatHaze(snap, forecast, { table: false });
+
+/** Short caption for a card shared from the Mini App into another chat. @param {any} snap */
+export function formatShareCaption(snap) {
+  const worst = snap.worst.psi24h;
+  const band = psiBand(worst?.value);
+  return `${band?.emoji ?? '⚪️'} <b>Singapore haze</b> · ${sgtTime(snap.asOf)} SGT\n24-hour PSI up to <b>${n(worst?.value)}</b> (${band?.label ?? 'no reading'}), NEA’s reading.`;
 }
 
 /**

@@ -9,6 +9,7 @@
   import HistoryChart from './components/HistoryChart.svelte';
   import NewsCard from './components/NewsCard.svelte';
   import RegionTable from './components/RegionTable.svelte';
+  import ShareCard from './components/ShareCard.svelte';
   import Sources from './components/Sources.svelte';
   import { loadDashboard, type Dashboard } from './lib/api';
   import type { Period } from './lib/period';
@@ -66,6 +67,7 @@
       <Hero snapshot={data.snapshot} bind:period />
       <AlertsCard />
       <RegionTable snapshot={data.snapshot} {period} />
+      <ShareCard snapshot={data.snapshot} />
       <CigCalc snapshot={data.snapshot} />
       {#if data.forecast}<ForecastSection forecast={data.forecast} history={data.history} />{/if}
       <HistoryChart snapshot={data.snapshot} history={data.history} />
