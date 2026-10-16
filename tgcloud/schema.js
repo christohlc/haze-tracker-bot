@@ -1,4 +1,4 @@
-import { integer, json, table, text } from 'sdk/db';
+import { boolean, index, integer, json, table, text } from 'sdk/db';
 
 // One row per NEA hour. `pm25` is { north, west, central, east, south } in µg/m³.
 export const readings = table('readings', {
@@ -28,3 +28,24 @@ export const sourceStatus = table('source_status', {
   lastError: text('last_error'),
   detail: text('detail'),
 });
+
+// Chats that asked for alerts. `lastBand` is the band this chat was last told about,
+// so a chat missed in one tick (rate limit, downtime) is caught up on the next.
+export const subscribers = table('subscribers', {
+  chatId: integer('chat_id').primaryKey(),
+  bandAlerts: boolean('band_alerts').notNull().default(true),
+  dailyHour: integer('daily_hour'), // SGT hour 0–23; null = no daily update
+  lastBand: text('last_band'),
+  createdAt: integer('created_at').notNull(),
+});
+
+// Claimed before sending, so the cron and a manual tick can't both send the same alert.
+export const alertsSent = table(
+  'alerts_sent',
+  {
+    key: text('key').primaryKey(),
+    chatId: integer('chat_id').notNull(),
+    sentAt: integer('sent_at').notNull(),
+  },
+  (t) => ({ sentIdx: index('idx_alerts_sent_at').on(t.sentAt) }),
+);

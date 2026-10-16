@@ -3,14 +3,21 @@
 
 import { api } from 'sdk';
 import { cigarettes } from '../lib/cigs.js';
-import { MINI_APP_URL, REGIONS } from '../lib/config.js';
+import { renderAlertSettings } from '../lib/alert-settings.js';
+import { dashboardButton } from '../lib/buttons.js';
+import { REGIONS } from '../lib/config.js';
 import { formatCigs, formatHaze } from '../lib/format.js';
 import { getSnapshot } from '../lib/refresh.js';
+import { getState } from '../lib/store.js';
+import { deleteSubscriber, getSubscriber, saveSubscriber } from '../lib/subscriptions.js';
 
 const HELP = [
   '<b>Haze Tracker SG</b>',
   '/haze: current PSI, regions and advice',
   '/cigs [region] [% outdoors]: cigarette equivalent, e.g. <code>/cigs east 30</code>',
+  '/subscribe: alerts when the haze band changes',
+  '/alerts: change alerts or add a daily update',
+  '/unsubscribe: stop all alerts',
 ].join('\n');
 
 export default async function (message) {
@@ -25,10 +32,10 @@ export default async function (message) {
   switch (cmd) {
     case 'start':
     case 'help':
-      return reply(message, HELP, dashboardButton(message));
+      return reply(message, HELP, dashboardButton(message.chat.id));
     case 'haze': {
       const snap = await getSnapshot();
-      return reply(message, formatHaze(snap), dashboardButton(message));
+      return reply(message, formatHaze(snap), dashboardButton(message.chat.id));
     }
     case 'cigs': {
       const { regionId, outdoorPct } = parseCigsArgs(args);
@@ -38,6 +45,21 @@ export default async function (message) {
       const c = cigarettes(pm, outdoorPct / 100);
       return reply(message, formatCigs(c, { place: region?.name ?? 'Island-wide average', outdoorPct }));
     }
+    case 'subscribe': {
+      const existing = await getSubscriber(message.chat.id);
+      const band = (await getState('alert_band'))?.value?.id ?? null;
+      const sub = await saveSubscriber(message.chat.id, { bandAlerts: true, dailyHour: existing?.dailyHour ?? null }, band);
+      const view = renderAlertSettings(sub ?? null);
+      return reply(message, `✅ You’ll get a message when the haze band changes.\n\n${view.text}`, view.reply_markup);
+    }
+    case 'alerts': {
+      const view = renderAlertSettings((await getSubscriber(message.chat.id)) ?? null);
+      return reply(message, view.text, view.reply_markup);
+    }
+    case 'unsubscribe':
+    case 'stop':
+      await deleteSubscriber(message.chat.id);
+      return reply(message, '🔕 Alerts are off. Send /subscribe to turn them back on.');
     default:
       if (message.chat.type === 'private') return reply(message, HELP);
   }
@@ -53,12 +75,6 @@ export function parseCigsArgs(args) {
     else regionId = REGIONS.find((r) => r.id === a.toLowerCase())?.id ?? regionId;
   }
   return { regionId, outdoorPct };
-}
-
-// web_app buttons only work in private chats.
-function dashboardButton(message) {
-  if (message.chat.type !== 'private') return undefined;
-  return { inline_keyboard: [[{ text: '📊 Open dashboard', web_app: { url: MINI_APP_URL } }]] };
 }
 
 function reply(message, text, reply_markup) {

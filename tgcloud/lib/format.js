@@ -2,7 +2,7 @@
 // Telegram HTML for chat replies. Pure: takes a snapshot, returns strings.
 
 import { advice, maskCard } from './advice.js';
-import { psiBand } from './psi.js';
+import { PSI_BANDS, psiBand } from './psi.js';
 
 /** "2026-10-16T13:00:00+08:00" → "1:00 pm" (the timestamp is already in SGT). */
 export function sgtTime(iso) {
@@ -50,4 +50,27 @@ export function formatCigs(c, { place, outdoorPct }) {
     `<b>${n(c.lastHour, 2)}</b> in the last hour · <b>${n(c.perDayAtCurrent, 1)}</b>/day if this hour’s level continued`,
     `<i>${place}, ${outdoorPct}% of the time outdoors. Rule of thumb: 22 µg/m³ of PM2.5 over 24h ≈ 1 cigarette (Berkeley Earth). Indoors assumed 40% of outdoor.</i>`,
   ].join('\n');
+}
+
+/**
+ * Short alert when the headline band changes.
+ * @param {any} snap
+ * @param {string} fromId previous band id
+ * @param {string} toId new band id
+ */
+export function formatBandAlert(snap, fromId, toId) {
+  const to = PSI_BANDS.find((b) => b.id === toId);
+  const from = PSI_BANDS.find((b) => b.id === fromId);
+  const head = snap.worst.psi3h;
+  const worse = PSI_BANDS.indexOf(/** @type {any} */ (to)) > PSI_BANDS.indexOf(/** @type {any} */ (from));
+  const tips = advice(snap.worst.psi24h?.value ?? null, snap.worst.pm25?.value ?? null);
+  const mask = maskCard(head?.value ?? null);
+  const lines = [
+    `${to?.emoji ?? '⚪️'} <b>Haze ${worse ? 'up' : 'down'} to ${to?.label ?? toId}</b> (was ${from?.label ?? fromId})`,
+    `3-hour PSI <b>${n(head?.value)}</b>, worst in ${head?.name ?? '–'} · ${sgtTime(snap.asOf)} SGT`,
+  ];
+  if (mask) lines.push(`😷 <b>${mask.title}.</b> ${mask.text}`);
+  if (tips.rightNow) lines.push(`👉 ${tips.rightNow.text}`);
+  lines.push('', '<i>/alerts to change or stop these.</i>');
+  return lines.join('\n');
 }
