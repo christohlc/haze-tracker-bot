@@ -57,8 +57,9 @@
   </g>
 
   <g font-family="-apple-system, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif" fill="#fff" filter="url(#shadow)">
-    <text x="318" y="112" font-size="46" font-weight="800" letter-spacing="-1">Haze Tracker</text>
-    <text x="320" y="150" font-size="22" font-weight="600" >Singapore PSI, live</text>
-    <text x="320" y="182" font-size="18" font-weight="500" >Alerts when the haze rolls in</text>
+    <text x="318" y="92" font-size="40" font-weight="800" letter-spacing="-1">I’m going</text>
+    <text x="318" y="136" font-size="40" font-weight="800" letter-spacing="-1">hazelnuts!</text>
+    <text x="320" y="172" font-size="22" font-weight="600" >Singapore PSI, live</text>
+    <text x="320" y="202" font-size="18" font-weight="500" >Alerts when the haze rolls in</text>
   </g>
 </svg>

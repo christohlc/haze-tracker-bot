@@ -12,7 +12,7 @@ import { getState } from '../lib/store.js';
 import { deleteSubscriber, getSubscriber, saveSubscriber } from '../lib/subscriptions.js';
 
 const HELP = [
-  '<b>Haze Tracker SG</b>',
+  '<b>I’m going hazelnuts!</b>',
   '/haze: current PSI, regions and advice',
   '/cigs [region] [% outdoors]: cigarette equivalent, e.g. <code>/cigs east 30</code>',
   '/subscribe: alerts when the haze band changes',

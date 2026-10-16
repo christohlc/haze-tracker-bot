@@ -55,5 +55,5 @@ export async function loadDashboard(): Promise<Dashboard> {
     if (demo === 'loading') return new Promise(() => {});
     return (await import('../dev/fixture.json')).default as Dashboard;
   }
-  throw new Error('Open this dashboard from the Haze Tracker bot in Telegram.');
+  throw new Error('Open this dashboard from the bot in Telegram.');
 }
