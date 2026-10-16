@@ -51,6 +51,7 @@
     visited[tab] = true;
   });
   let tabsAnchor = $state<HTMLElement>();
+  let tabbar = $state<HTMLElement>();
 
   // Latest What's new id the user had seen when the app opened; undefined until storage answers.
   let seen = $state<string | null | undefined>(undefined);
@@ -72,9 +73,11 @@
   $effect(() => {
     tab;
     untrack(() => {
-      if (!tabsAnchor || window.scrollY === 0) return;
-      const y = tabsAnchor.getBoundingClientRect().top + window.scrollY;
-      if (window.scrollY > y) window.scrollTo({ top: y, behavior: 'instant' });
+      if (!tabsAnchor || !tabbar) return;
+      // The anchor sits right above the bar, so it's only higher than the bar once the bar is stuck.
+      if (tabsAnchor.getBoundingClientRect().top < tabbar.getBoundingClientRect().top) {
+        tabsAnchor.scrollIntoView({ block: 'start', behavior: 'instant' });
+      }
     });
   });
 
@@ -122,8 +125,8 @@
         NEA hasn’t published a new reading recently, so these numbers may be out of date.
       </div>
     {/if}
-    <div bind:this={tabsAnchor}></div>
-    <div class="tabbar">
+    <div class="tabs-anchor" bind:this={tabsAnchor}></div>
+    <div class="tabbar" bind:this={tabbar}>
       <Segmented
         kind="tab"
         id="tab"
@@ -173,8 +176,11 @@
   main {
     max-width: 720px;
     margin: 0 auto;
-    padding: calc(12px + var(--tg-content-safe-area-inset-top, 0px)) var(--gutter)
-      calc(24px + var(--tg-safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
+    padding: calc(12px + var(--inset-top)) var(--pad-right) calc(24px + var(--inset-bottom)) var(--pad-left);
+  }
+  /* Scrolled to, the tab lands just below the stuck bar, which sits below the inset. */
+  .tabs-anchor {
+    scroll-margin-top: var(--inset-top);
   }
   .sections,
   .skeleton {
@@ -184,7 +190,7 @@
   }
   .tabbar {
     position: sticky;
-    top: var(--tg-content-safe-area-inset-top, 0px);
+    top: var(--inset-top);
     z-index: 2;
     margin: 0 calc(-1 * var(--gutter)) 12px;
     padding: 6px var(--gutter);

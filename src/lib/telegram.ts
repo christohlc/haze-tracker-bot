@@ -6,6 +6,8 @@ export const tg: any = (window as any).Telegram?.WebApp;
 /** True only when opened inside Telegram (init data present). */
 export const inTelegram = Boolean(tg?.initData);
 
+const MOBILE = new Set(['ios', 'android', 'android_x']);
+
 export function initTelegram() {
   applyScheme();
   // Outside Telegram the SDK still reports colorScheme 'light', so follow the OS there.
@@ -13,6 +15,8 @@ export function initTelegram() {
   if (!tg) return;
   tg.ready();
   tg.expand();
+  // On phones the app takes the whole screen (Bot API 8.0+). Desktop keeps its window.
+  if (MOBILE.has(tg.platform) && tg.isVersionAtLeast?.('8.0')) tg.requestFullscreen?.();
   tg.onEvent?.('themeChanged', applyScheme);
   try {
     tg.setHeaderColor?.('secondary_bg_color');
