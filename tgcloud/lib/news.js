@@ -5,14 +5,12 @@
 
 import { fetch } from 'sdk';
 import { mergeNews, parseFeed, PUBLISHERS } from './news-parse.js';
+import { errorText, USER_AGENT } from './http.js';
 import { getState, recordSource, setState } from './store.js';
-
-/** @param {unknown} e */
-const errorText = (e) => (e instanceof Error ? e.message : String(e));
 
 /** @param {keyof typeof PUBLISHERS} source */
 async function fetchFeed(source) {
-  const res = await fetch(PUBLISHERS[source].feed, { headers: { 'user-agent': 'Mozilla/5.0 (compatible; HazeTrackerBot)' } });
+  const res = await fetch(PUBLISHERS[source].feed, { headers: { 'user-agent': USER_AGENT } });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const items = parseFeed(await res.text(), source);
   if (!items.length) throw new Error('Feed had no stories we could read');
