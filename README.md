@@ -5,7 +5,8 @@
 A Telegram bot and Mini App for haze in Singapore. It shows current PSI by region (also as a
 shareable picture of the island), a cigarette
 equivalent, NEA’s 24-hour PSI forecast during haze episodes, a likely range for the next few hours,
-NEA’s health advice and the latest haze headlines from The Straits Times, CNA and Mothership, and
+NEA’s health advice, wind and rain from NEA’s weather stations, LTA’s checkpoint and Sentosa
+camera pictures and the latest haze headlines from The Straits Times, CNA and Mothership, and
 sends alerts to a chat when the haze band changes or there’s breaking haze news (schools closing,
 outdoor activities called off, NEA’s 24-hour PSI turning Very unhealthy or Hazardous).
 
@@ -21,28 +22,28 @@ the bot’s own rules and sent without anyone checking it first; the operator ca
 ## How it fits together
 
 ```
-GitHub Actions (hourly, :12)
+GitHub Actions (every 15 min: :12, :27, :42, :57)
   └─ npx tgcloud run endpoints/tick
        ├─ refresh NEA PM2.5 + PSI  → readings, state(snapshot)
        ├─ refresh news (every run while there's haze) → state(news), breaking events → state(breaking)
        └─ send breaking news, band-change and daily alerts → subscribers, alerts_sent
 
 Telegram ─ message / callback_query ─▶ tgcloud/handlers/*      (bot commands)
-Mini App  ─ Serverless.call(...)     ─▶ tgcloud/endpoints/*     (getDashboard, alerts)
+Mini App  ─ Serverless.call(...)     ─▶ tgcloud/endpoints/*     (getDashboard, getWeather, getCameras, alerts, shareCard)
 ```
 
 It runs on Telegram Serverless (tgcloud). There is no server to host: `tgcloud/` holds the
 modules that run in the cloud, and `src/` is the Svelte front-end, built to `dist/` and served
 as the Mini App. Telegram Serverless has no scheduler, so
-[`.github/workflows/tick.yml`](.github/workflows/tick.yml) runs the hourly job. If a run is
+[`.github/workflows/tick.yml`](.github/workflows/tick.yml) runs the 15-minute job. If a run is
 late, `/haze` and the Mini App fetch fresh data themselves when the snapshot is stale.
 
 | Path | What it is |
 |---|---|
 | `tgcloud/schema.js` | Database tables |
 | `tgcloud/handlers/` | Bot commands and inline buttons |
-| `tgcloud/endpoints/` | `getDashboard`, `alerts`, `shareCard` (Mini App), `tick`, `admin` (CLI only) |
-| `tgcloud/lib/` | NEA fetch, PSI maths, alerts, formatting, NEA’s outlook and the next-hours range |
+| `tgcloud/endpoints/` | `getDashboard`, `getWeather`, `getCameras`, `alerts`, `shareCard` (Mini App), `tick`, `admin` (CLI only) |
+| `tgcloud/lib/` | NEA fetch, PSI maths, alerts, breaking news, formatting, NEA’s outlook and the next-hours range, weather and cameras |
 | `src/` | Mini App (Svelte 5 + Vite + TypeScript) |
 | `scripts/fixture.mjs` | Builds `src/dev/fixture.json` from live data for local UI work |
 | `scripts/card/` | Builds the summary picture’s glyphs, map and logo (`npm run card:assets`); `preview.mjs` writes sample PNGs |
