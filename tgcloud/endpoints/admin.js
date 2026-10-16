@@ -4,7 +4,7 @@
 //   npx tgcloud run endpoints/admin "{ action: 'status' }"
 //   npx tgcloud run endpoints/admin "{ action: 'unset', key: 'firms_map_key' }"
 //   npx tgcloud run endpoints/admin "{ action: 'rewind_band', band: 'unhealthy' }"  (test: next tick alerts the change)
-//   npx tgcloud run endpoints/admin "{ action: 'backfill', days: 14 }"  (NEA's hourly PM2.5 for past days; rerun until remaining is empty)
+//   npx tgcloud run endpoints/admin "{ action: 'backfill', days: 14 }"  (NEA's hourly PM2.5 for past days; rerun a minute later until remaining is empty)
 // Breaking news is sent without anyone checking it first, so:
 //   npx tgcloud run endpoints/admin "{ action: 'breaking_pause', on: true }"   (no new events, nothing sent; false resumes)
 //   npx tgcloud run endpoints/admin "{ action: 'breaking_cancel', id: 'n1a2b3c' }"  (stop sending one event; ids in status)
@@ -25,9 +25,25 @@ const SECRET_KEYS = ['firms_map_key'];
 
 // Backfill: one NEA request per SGT day, spaced out for data.gov.sg's rate limit, and stopped
 // before the (undocumented) run limit; days already complete are skipped, so a rerun resumes.
+// The runtime may have no setTimeout (the tick's `alerts.paced`); then Atomics.wait blocks for the
+// pause without spinning, and if that's missing too, a run fetches at most BACKFILL_UNPACED_MAX days
+// back to back (16 Oct 2026: the 7th request in 4 s got a 429).
 const BACKFILL_PAUSE_MS = 1000;
 const BACKFILL_BUDGET_MS = 20_000;
-const sleep = typeof setTimeout === 'function' ? (/** @type {number} */ ms) => new Promise((r) => setTimeout(r, ms)) : null;
+const BACKFILL_UNPACED_MAX = 5;
+const { sleep, paced } = pauser();
+
+/** @returns {{ sleep: ((ms: number) => Promise<void>) | null, paced: 'timers' | 'atomics' | false }} */
+function pauser() {
+  if (typeof setTimeout === 'function') return { sleep: (ms) => new Promise((r) => setTimeout(r, ms)), paced: 'timers' };
+  try {
+    const cell = new Int32Array(new SharedArrayBuffer(4));
+    Atomics.wait(cell, 0, 0, 0); // throws where blocking isn't allowed
+    return { sleep: async (ms) => void Atomics.wait(cell, 0, 0, ms), paced: 'atomics' };
+  } catch {
+    return { sleep: null, paced: false };
+  }
+}
 
 /** @param {number} days before today; today is refetched too */
 async function backfill(days) {
@@ -43,7 +59,7 @@ async function backfill(days) {
       done[date] = 'complete';
       continue;
     }
-    if (Date.now() + (fetched ? BACKFILL_PAUSE_MS : 0) >= deadline) {
+    if (Date.now() + (fetched ? BACKFILL_PAUSE_MS : 0) >= deadline || (!sleep && fetched >= BACKFILL_UNPACED_MAX)) {
       remaining.push(date);
       continue;
     }
@@ -59,7 +75,7 @@ async function backfill(days) {
       deadline = 0;
     }
   }
-  return { ok: true, days: done, remaining, readings: await countReadings() };
+  return { ok: true, paced, days: done, remaining, readings: await countReadings() };
 }
 
 export default async function (input, ctx) {
