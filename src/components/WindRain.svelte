@@ -39,7 +39,7 @@
   {#if error}
     <div class="state">
       <p class="error" role="alert">{error}</p>
-      <button type="button" onclick={() => load()}>Try again</button>
+      <button type="button" class="primary" onclick={() => load()}>Try again</button>
     </div>
   {:else if !result}
     <div class="wind" aria-busy="true" aria-label="Loading wind and rain">
@@ -179,45 +179,12 @@
   .bar.short {
     width: 60%;
   }
-  .sk {
-    animation: pulse 1.2s ease-in-out infinite alternate;
-  }
-  @keyframes pulse {
-    to {
-      opacity: 0.55;
-    }
-  }
   .state {
-    display: grid;
-    gap: 12px;
-    justify-items: start;
     margin-top: 12px;
   }
-  .error {
-    font-size: 0.875rem;
-    color: var(--status-critical);
-  }
-  .state button {
-    min-height: 40px;
-    padding: 0 16px;
-    border: 0;
-    border-radius: 10px;
-    background: var(--accent);
-    color: var(--accent-ink);
-    font: inherit;
-    font-weight: 600;
-    transition: transform 120ms var(--ease-out);
-  }
-  .state button:active {
-    transform: scale(0.97);
-  }
   @media (prefers-reduced-motion: reduce) {
-    .arrow,
-    .state button {
+    .arrow {
       transition: none;
-    }
-    .sk {
-      animation: none;
     }
   }
 </style>

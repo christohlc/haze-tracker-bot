@@ -108,9 +108,11 @@ of the sky and the haze. Check that again whenever a sky colour changes.
 ## States
 
 Every section handles loading, empty and failed states. To check them outside Telegram, use
-the dev toolbar (`?demo=worst|empty|error|loading`); `?tab=outlook|more` opens on that tab. Those last two hide every card, so Live
-views also takes `?cams=error|loading` and Wind and rain `?wx=error|loading|partial` for their own. The worst-case data has long names,
-missing readings and extreme values, so use it before shipping a layout change.
+the dev toolbar (`?demo=worst|empty|error|loading`). Those last two hide every card, so a card's
+own states take `?card=<card>:<state>`, comma-separated: `cameras:error|loading` for Live views and
+`weather:error|loading|partial` for Wind and rain. `?tab=outlook|more` opens on that tab. The
+worst-case data has long names, missing readings and extreme values, so use it before shipping a
+layout change.
 
 ## Summary card
 

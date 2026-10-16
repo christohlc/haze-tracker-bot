@@ -3,16 +3,13 @@
 // Stories are merged into the stored list, so ones that drop out of a short feed
 // (Mothership only lists its last 10 posts) stay for 14 days.
 
-import { fetch } from 'sdk';
 import { mergeNews, parseFeed, PUBLISHERS } from './news-parse.js';
-import { errorText, USER_AGENT } from './http.js';
+import { errorText, getText } from './http.js';
 import { getState, recordSource, setState } from './store.js';
 
 /** @param {keyof typeof PUBLISHERS} source */
 async function fetchFeed(source) {
-  const res = await fetch(PUBLISHERS[source].feed, { headers: { 'user-agent': USER_AGENT } });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const items = parseFeed(await res.text(), source);
+  const items = parseFeed(await getText(PUBLISHERS[source].feed), source);
   if (!items.length) throw new Error('Feed had no stories we could read');
   return items;
 }
