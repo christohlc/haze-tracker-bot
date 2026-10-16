@@ -5,8 +5,7 @@
 // out instead.
 
 import { api, BotApiError, InputFile } from 'sdk';
-import { isRateLimited, isUnreachable } from '../bot-errors.js';
-import { targetParams } from '../chat-rules.js';
+import { isRateLimited, isTopicGone, isUnreachable, movedTo } from '../bot-errors.js';
 import { sendHtml } from '../messages.js';
 import { getState, setState } from '../store.js';
 import { summaryCardPng } from './summary.js';
@@ -55,7 +54,7 @@ export async function sendCard(to, snap, caption, reply_markup) {
     }
   }
   const msg = await api.sendPhoto({
-    ...targetParams(to),
+    ...to,
     photo: c.fileId ?? new InputFile(/** @type {Uint8Array} */ (c.png), 'haze.png', { type: 'image/png' }),
     caption,
     parse_mode: 'HTML',
@@ -72,7 +71,8 @@ export async function sendCard(to, snap, caption, reply_markup) {
 
 /**
  * The card with `caption`, or `text` as a plain message if the card fails for any reason
- * other than the chat (blocked, gone) or a rate limit, which are rethrown for the caller.
+ * other than the chat (blocked, gone, moved, topic deleted) or a rate limit, which are rethrown
+ * for the caller.
  * @param {import('../chat-rules.js').Target} to @param {any} snap @param {{ caption: string, text: string, reply_markup?: any }} message
  */
 export async function sendCardOrText(to, snap, { caption, text, reply_markup }) {
@@ -80,7 +80,7 @@ export async function sendCardOrText(to, snap, { caption, text, reply_markup }) 
   try {
     return await sendCard(to, snap, caption, reply_markup);
   } catch (e) {
-    if (isUnreachable(e) || isRateLimited(e)) throw e;
+    if (isUnreachable(e) || isRateLimited(e) || movedTo(e) || isTopicGone(e)) throw e;
     console.error('card failed, sending text', e instanceof BotApiError ? `${e.code} ${e.description}` : String(e)); // no chat id: logs are public
     return sendHtml(to, text, reply_markup);
   }

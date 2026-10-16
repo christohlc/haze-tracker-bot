@@ -11,6 +11,6 @@ import { botInfo } from './groups.js';
 export async function dashboardButton(chatId) {
   const text = '📊 Open dashboard';
   if (!isGroupChat(chatId)) return { inline_keyboard: [[{ text, web_app: { url: MINI_APP_URL } }]] };
-  const bot = await botInfo().catch(() => null);
+  const bot = await botInfo();
   return bot?.username ? { inline_keyboard: [[{ text, url: groupDashboardUrl(bot) }]] } : undefined;
 }

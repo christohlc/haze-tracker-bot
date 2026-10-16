@@ -1,37 +1,35 @@
 // @ts-check
 // Chat commands. Payload is the Message; the platform routes `message` updates here.
 
-import { BotApiError } from 'sdk';
 import { getAhead } from '../lib/ahead.js';
 import { cigarettes } from '../lib/cigs.js';
 import { renderAlertSettings } from '../lib/alert-settings.js';
 import { dashboardButton } from '../lib/buttons.js';
-import { isGroupChat, parseCommand, replyTo, toSenderOnly, topicOf } from '../lib/chat-rules.js';
+import { ADMINS_ONLY, COMMANDS, isGroupChat, parseCommand, topicOf } from '../lib/chat-rules.js';
 import { REGIONS } from '../lib/config.js';
 import { sendCardOrText } from '../lib/card/send.js';
 import { botInfo, canManageAlerts } from '../lib/groups.js';
-import { sendHtml } from '../lib/messages.js';
+import { answer, sendHtml } from '../lib/messages.js';
 import { formatCigs, formatForecast, formatHaze, formatHazeCaption } from '../lib/format.js';
 import { getSnapshot } from '../lib/refresh.js';
 import { deleteSubscriber, getSubscriber, moveSubscriber, saveSubscriber } from '../lib/subscriptions.js';
 
-/** @param {boolean} group */
-const help = (group) =>
+/** Copy that depends on whether the chat is a group. */
+const PRIVATE = { will: 'You’ll', whose: 'your', note: 'if you subscribe, the bot keeps your chat ID and alert settings, nothing else.' };
+const GROUP = {
+  will: 'This group will',
+  whose: 'this group’s',
+  note: 'only admins can change a group’s alerts, which go to the topic /subscribe was sent in. The bot keeps the group’s chat ID and alert settings, nothing else.',
+};
+
+/** @param {typeof PRIVATE} copy */
+const help = (copy) =>
   [
     '<b>I’m going hazelnuts!</b>',
-    '/haze: current PSI with a regional picture, plus advice',
-    '/cigs [region] [% outdoors]: cigarette equivalent, e.g. <code>/cigs east 30</code>',
-    '/forecast: NEA’s 24-hr PSI forecast during haze episodes, and the next few hours',
-    '/subscribe: alerts when the haze band changes, and breaking haze news',
-    '/alerts: change alerts, breaking news or a daily update',
-    '/unsubscribe: stop all alerts',
+    ...COMMANDS.filter((c) => c.help).map((c) => `/${c.command}${c.usage ? ` ${c.usage}` : ''}: ${c.help}`),
     '',
-    group
-      ? '<i>In a group, only admins can change alerts, and they go to the topic /subscribe was sent in. Privacy: the bot keeps the group’s chat ID and alert settings, nothing else. /stop deletes them.</i>'
-      : '<i>Privacy: if you subscribe, the bot keeps your chat ID and alert settings, nothing else. /stop deletes them.</i>',
+    `<i>Privacy: ${copy.note} /stop deletes them.</i>`,
   ].join('\n');
-
-const ADMINS_ONLY = 'Only this group’s admins can change its alerts.';
 
 export default async function (message) {
   // The group became a supergroup; this service message arrives in the old one.
@@ -39,10 +37,12 @@ export default async function (message) {
 
   const text = message.text ?? '';
   const group = isGroupChat(message.chat.id);
-  const bot = text.startsWith('/') && group ? await botInfo().catch(() => null) : null;
+  const copy = group ? GROUP : PRIVATE;
+  // Only a command addressed to a bot by name needs to know the bot's name.
+  const bot = /^\/\S*@/.test(text) ? await botInfo() : null;
   const command = parseCommand(text, bot?.username ?? null);
   if (!command) {
-    if (!group && !text.startsWith('/')) await reply(message, help(false));
+    if (!group && !text.startsWith('/')) await reply(message, help(copy));
     return;
   }
   const { cmd, args } = command;
@@ -50,15 +50,12 @@ export default async function (message) {
   switch (cmd) {
     case 'start':
     case 'help':
-      return reply(message, help(group), await dashboardButton(message.chat.id));
+      return reply(message, help(copy), await dashboardButton(message.chat.id));
     case 'haze': {
       const refreshed = getSnapshot();
-      const [snap, ahead] = await Promise.all([refreshed, getAhead(refreshed)]);
-      return sendCardOrText(replyTo(message), snap, {
-        caption: formatHazeCaption(snap, ahead),
-        text: formatHaze(snap, ahead),
-        reply_markup: await dashboardButton(message.chat.id),
-      });
+      const [snap, ahead, reply_markup] = await Promise.all([refreshed, getAhead(refreshed), dashboardButton(message.chat.id)]);
+      const caption = formatHazeCaption(snap, ahead);
+      return answer(message, (to) => sendCardOrText(to, snap, { caption, text: formatHaze(snap, ahead), reply_markup }));
     }
     case 'forecast': {
       const ahead = await getAhead(getSnapshot());
@@ -73,26 +70,26 @@ export default async function (message) {
       const c = cigarettes(pm, outdoorPct / 100);
       return reply(message, formatCigs(c, { place: region?.name ?? 'Island-wide average', outdoorPct }));
     }
-    case 'subscribe': {
-      if (!(await canManageAlerts(message))) return replyToSenderOnly(message, ADMINS_ONLY);
+    case 'alerts': {
+      const [allowed, sub] = await Promise.all([canManageAlerts(message), getSubscriber(message.chat.id)]);
+      const view = renderAlertSettings(sub ?? null);
+      return allowed ? reply(message, view.text, view.reply_markup) : reply(message, `${view.text}\n\n<i>${ADMINS_ONLY}</i>`);
+    }
+    case 'subscribe':
+    case 'unsubscribe':
+    case 'stop': {
+      if (!(await canManageAlerts(message))) return answer(message, (to) => sendHtml(to, ADMINS_ONLY), true);
+      if (cmd !== 'subscribe') {
+        await deleteSubscriber(message.chat.id);
+        return reply(message, `🔕 Alerts are off, and ${copy.whose} chat ID and alert settings are deleted. Send /subscribe to turn them back on.`);
+      }
       const existing = await getSubscriber(message.chat.id);
       const { sub } = await saveSubscriber(message.chat.id, { bandAlerts: true, dailyHour: existing?.dailyHour ?? null, threadId: topicOf(message) });
       const view = renderAlertSettings(sub);
-      const who = group ? 'This group will' : 'You’ll';
-      return reply(message, `✅ ${who} get a message when the haze band changes${sub.breakingAlerts ? ', and breaking haze news' : ''}.\n\n${view.text}`, view.reply_markup);
+      return reply(message, `✅ ${copy.will} get a message when the haze band changes${sub.breakingAlerts ? ', and breaking haze news' : ''}.\n\n${view.text}`, view.reply_markup);
     }
-    case 'alerts': {
-      const view = renderAlertSettings((await getSubscriber(message.chat.id)) ?? null);
-      if (await canManageAlerts(message)) return reply(message, view.text, view.reply_markup);
-      return reply(message, `${view.text}\n\n<i>${ADMINS_ONLY}</i>`);
-    }
-    case 'unsubscribe':
-    case 'stop':
-      if (!(await canManageAlerts(message))) return replyToSenderOnly(message, ADMINS_ONLY);
-      await deleteSubscriber(message.chat.id);
-      return reply(message, `🔕 Alerts are off, and ${group ? 'this group’s' : 'your'} chat ID and alert settings are deleted. Send /subscribe to turn them back on.`);
     default:
-      if (!group) return reply(message, help(false));
+      if (!group) return reply(message, help(copy));
   }
 }
 
@@ -108,17 +105,7 @@ export function parseCigsArgs(args) {
   return { regionId, outdoorPct };
 }
 
-/** Where the message came from: its topic, and privately if the command was ephemeral. */
+/** Answer where the message came from: its topic, and privately if the command was ephemeral. */
 function reply(message, text, reply_markup) {
-  return sendHtml(replyTo(message), text, reply_markup);
-}
-
-/** Seen only by the sender if Telegram allows it (the bot is a group admin), else a normal reply. */
-async function replyToSenderOnly(message, text) {
-  try {
-    return await sendHtml(toSenderOnly(message), text);
-  } catch (e) {
-    if (!(e instanceof BotApiError && e.code === 400)) throw e;
-    return reply(message, text);
-  }
+  return answer(message, (to) => sendHtml(to, text, reply_markup));
 }

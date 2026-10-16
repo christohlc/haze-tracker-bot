@@ -140,13 +140,11 @@ export default async function (input, ctx) {
     case 'commands': {
       // Private chats: the plain list. Groups: is_ephemeral, so the command and the reply are
       // seen only by the sender and the bot.
-      const plain = COMMANDS.map(({ command, description }) => ({ command, description }));
-      await api.setMyCommands({ commands: plain, scope: { type: 'all_private_chats' } });
-      await api.setMyCommands({
-        commands: COMMANDS.map(({ command, description, ephemeral }) => ({ command, description, ...(ephemeral && { is_ephemeral: true }) })),
-        scope: { type: 'all_group_chats' },
-      });
-      return { ok: true, ephemeralInGroups: COMMANDS.filter((c) => c.ephemeral).map((c) => c.command) };
+      /** @param {boolean} group */
+      const commands = (group) => COMMANDS.map(({ command, description, ephemeral }) => ({ command, description, ...(group && ephemeral && { is_ephemeral: true }) }));
+      await api.setMyCommands({ commands: commands(false), scope: { type: 'all_private_chats' } });
+      await api.setMyCommands({ commands: commands(true), scope: { type: 'all_group_chats' } });
+      return { ok: true };
     }
     case 'breaking_pause': {
       if (typeof input.on !== 'boolean') throw new EndpointError('on must be true or false');
@@ -170,7 +168,7 @@ export default async function (input, ctx) {
         link: 'https://www.straitstimes.com/singapore',
         at: Date.now(),
       };
-      await sendBreaking(chatId, event, await getSnapshot());
+      await sendBreaking({ chat_id: chatId }, event, await getSnapshot());
       return { ok: true, sent: event.id };
     }
     default:

@@ -103,15 +103,21 @@ The tick workflow needs the repository secret `TGCLOUD_TOKEN`.
 Add the bot to a group and an admin sends `/subscribe` (in the topic the alerts should go to, if
 the group has topics). Only the group’s admins can change or stop its alerts. In groups,
 `/haze`, `/cigs`, `/forecast`, `/alerts` and `/help` are ephemeral: picked from the command menu,
-the command and the reply are seen only by the person who sent it. After deploying a change to
-the command list, set the menus again:
+the command and the reply are seen only by the person who sent it. The list, and `/help`, come
+from `COMMANDS` in [`tgcloud/lib/chat-rules.js`](tgcloud/lib/chat-rules.js); after deploying a
+change to it, set the menus again:
 
 ```bash
 npx tgcloud run endpoints/admin "{ action: 'commands' }"
 ```
 
 If the bot is a group admin, it can also send an ephemeral “admins only” answer to an ordinary
-command; otherwise that answer is visible to the group.
+command, and still answer an ephemeral command after Telegram’s 15-second reply window; otherwise
+the first is visible to the group and the second gets no answer.
+
+In groups the dashboard button is a `t.me` link: it opens the Mini App directly if it’s set as
+the bot’s main Mini App in BotFather (Bot Settings → Configure Mini App), otherwise the bot’s
+private chat. The bot reads that setting once per isolate, so a change shows after the next deploy.
 
 ### Operator settings
 

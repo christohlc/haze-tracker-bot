@@ -6,7 +6,6 @@
 import { api } from 'sdk';
 import { hazeGateOpen, pickBreaking, pruneEvents, psiCrossing, sendableEvents } from './breaking-rules.js';
 import { dashboardButton } from './buttons.js';
-import { targetChat, targetParams } from './chat-rules.js';
 import { formatBreaking } from './format.js';
 import { getState, setState } from './store.js';
 
@@ -50,9 +49,9 @@ export async function updateBreaking(snap, fresh, now = Date.now()) {
  * a forwarded channel post. @param {import('./chat-rules.js').Target} to @param {BreakingEvent} event @param {any} snap
  */
 export async function sendBreaking(to, event, snap) {
-  const reply_markup = await dashboardButton(targetChat(to));
+  const reply_markup = await dashboardButton(to.chat_id);
   return api.sendMessage({
-    ...targetParams(to),
+    ...to,
     text: formatBreaking(event, snap),
     parse_mode: 'HTML',
     link_preview_options: event.kind === 'news' ? { url: event.link, prefer_large_media: true, show_above_text: true } : { is_disabled: true },

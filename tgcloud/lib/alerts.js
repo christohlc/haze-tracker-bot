@@ -7,7 +7,7 @@
 import { BotApiError } from 'sdk';
 import { dailyDue, nextAlertBand, runBatched, SEND_INTERVAL_MS, sgtHourOf } from './alert-rules.js';
 import { dashboardButton } from './buttons.js';
-import { isRateLimited, isUnreachable } from './bot-errors.js';
+import { isRateLimited, isTopicGone, isUnreachable, movedTo } from './bot-errors.js';
 import { subscriberTarget } from './chat-rules.js';
 import { cachedCardId, sendCardOrText } from './card/send.js';
 import { sendBreaking } from './breaking.js';
@@ -162,13 +162,10 @@ async function send(chatId, key, deliver) {
     await releaseAlert(key);
     // The group became a supergroup (new id), or the topic alerts went to was deleted: fix the
     // subscription, and the next tick sends to the right place.
-    const movedTo = e instanceof BotApiError ? e.parameters?.migrate_to_chat_id : undefined;
-    if (movedTo) {
-      await moveSubscriber(chatId, movedTo);
-      return { result: 'failed' };
-    }
-    if (e instanceof BotApiError && /thread not found/i.test(e.description)) {
-      await clearThread(chatId);
+    const to = movedTo(e);
+    const fix = to ? moveSubscriber(chatId, to) : isTopicGone(e) ? clearThread(chatId) : null;
+    if (fix) {
+      await fix;
       return { result: 'failed' };
     }
     if (isRateLimited(e)) return { result: 'limited', retryAfterS: /** @type {any} */ (e).parameters?.retry_after };
