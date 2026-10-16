@@ -4,11 +4,17 @@
 //   npx tgcloud run endpoints/admin "{ action: 'status' }"
 //   npx tgcloud run endpoints/admin "{ action: 'unset', key: 'firms_map_key' }"
 //   npx tgcloud run endpoints/admin "{ action: 'rewind_band', band: 'unhealthy' }"  (test: next tick alerts the change)
+// Breaking news is sent without anyone checking it first, so:
+//   npx tgcloud run endpoints/admin "{ action: 'breaking_pause', on: true }"   (no new events, nothing sent; false resumes)
+//   npx tgcloud run endpoints/admin "{ action: 'breaking_cancel', id: 'n1a2b3c' }"  (stop sending one event; ids in status)
+//   npx tgcloud run endpoints/admin "{ action: 'breaking_test', chatId: 123 }"  (send the latest event, or a sample, to one chat)
 
 import { EndpointError } from 'sdk';
+import { cancelEvent, getBreaking, isBreakingPaused, sendBreaking } from '../lib/breaking.js';
 import { requireCli } from '../lib/cli-only.js';
 import { PSI_BANDS } from '../lib/psi.js';
-import { countSubscribers, setAllLastBand } from '../lib/subscriptions.js';
+import { getSnapshot } from '../lib/refresh.js';
+import { breakingClaimedChats, countSubscribers, setAllLastBand } from '../lib/subscriptions.js';
 import { allSourceStatus, countReadings, deleteSetting, getSetting, getState, setSetting, setState, toSgtIso } from '../lib/store.js';
 
 const SECRET_KEYS = ['firms_map_key'];
@@ -36,6 +42,20 @@ export default async function (input, ctx) {
       status.readings = await countReadings();
       status.subscribers = await countSubscribers();
       status.alertBand = (await getState('alert_band'))?.value ?? null;
+      const breaking = await getBreaking();
+      status.breaking = {
+        paused: await isBreakingPaused(),
+        psiBand: breaking.psiBand,
+        events: await Promise.all(
+          breaking.events.map(async (e) => ({
+            id: e.id,
+            at: toSgtIso(Math.floor(e.at / 1000)),
+            what: e.kind === 'news' ? `${e.topic}: ${e.title}` : `official 24h PSI ${e.band} (${e.value})`,
+            cancelled: Boolean(e.cancelled),
+            sent: (await breakingClaimedChats(e.id)).size,
+          })),
+        ),
+      };
       status.sources = (await allSourceStatus()).map((s) => ({
         source: s.source,
         lastOk: s.lastOkAt ? toSgtIso(s.lastOkAt) : null,
@@ -51,7 +71,32 @@ export default async function (input, ctx) {
       await setAllLastBand(input.band);
       return { ok: true, band: input.band };
     }
+    case 'breaking_pause': {
+      if (typeof input.on !== 'boolean') throw new EndpointError('on must be true or false');
+      await setState('breaking_paused', input.on);
+      return { ok: true, paused: input.on };
+    }
+    case 'breaking_cancel': {
+      if (!(await cancelEvent(String(input.id)))) throw new EndpointError('No such event; see status for ids');
+      return { ok: true, id: input.id };
+    }
+    case 'breaking_test': {
+      const chatId = Number(input.chatId);
+      if (!Number.isInteger(chatId) || chatId === 0) throw new EndpointError('chatId must be a chat id');
+      /** @type {import('../lib/breaking.js').BreakingEvent} */
+      const event = (await getBreaking()).events.findLast((e) => !e.cancelled) ?? {
+        id: 'test',
+        kind: 'news',
+        topic: 'schools',
+        source: 'st',
+        title: 'Test: this is what breaking haze news looks like',
+        link: 'https://www.straitstimes.com/singapore',
+        at: Date.now(),
+      };
+      await sendBreaking(chatId, event, await getSnapshot());
+      return { ok: true, sent: event.id };
+    }
     default:
-      throw new EndpointError("action must be 'set', 'unset', 'status' or 'rewind_band'");
+      throw new EndpointError("action must be 'set', 'unset', 'status', 'rewind_band', 'breaking_pause', 'breaking_cancel' or 'breaking_test'");
   }
 }

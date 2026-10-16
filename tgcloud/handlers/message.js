@@ -17,8 +17,8 @@ const HELP = [
   '/haze: current PSI with a regional picture, plus advice',
   '/cigs [region] [% outdoors]: cigarette equivalent, e.g. <code>/cigs east 30</code>',
   '/forecast: PSI for the next 24 hours (model, not official)',
-  '/subscribe: alerts when the haze band changes',
-  '/alerts: change alerts or add a daily update',
+  '/subscribe: alerts when the haze band changes, and breaking haze news',
+  '/alerts: change alerts, breaking news or a daily update',
   '/unsubscribe: stop all alerts',
   '',
   '<i>Privacy: if you subscribe, the bot keeps your chat ID and alert settings, nothing else. /stop deletes them.</i>',
@@ -63,7 +63,7 @@ export default async function (message) {
       const existing = await getSubscriber(message.chat.id);
       const { sub } = await saveSubscriber(message.chat.id, { bandAlerts: true, dailyHour: existing?.dailyHour ?? null });
       const view = renderAlertSettings(sub);
-      return reply(message, `✅ You’ll get a message when the haze band changes.\n\n${view.text}`, view.reply_markup);
+      return reply(message, `✅ You’ll get a message when the haze band changes${sub.breakingAlerts ? ', and breaking haze news' : ''}.\n\n${view.text}`, view.reply_markup);
     }
     case 'alerts': {
       const view = renderAlertSettings((await getSubscriber(message.chat.id)) ?? null);

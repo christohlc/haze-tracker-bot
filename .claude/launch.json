@@ -4,8 +4,25 @@
     {
       "name": "mini-app",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["vite", "--port", "5174", "--strictPort"],
+      "runtimeArgs": [
+        "vite",
+        "--port",
+        "5174",
+        "--strictPort"
+      ],
       "port": 5174
+    },
+    {
+      "name": "ninja-worktree",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "vite",
+        "/Users/christophertoh/Documents/GitHub/haze-tracker-bot-ninja",
+        "--port",
+        "5175",
+        "--strictPort"
+      ],
+      "port": 5175
     }
   ]
 }

@@ -17,7 +17,7 @@ export async function getSubscriber(chatId) {
  * Create or update. A new subscriber starts at the current alert band, so subscribing never
  * triggers an immediate "band changed" alert.
  * @param {number} chatId
- * @param {{ bandAlerts?: boolean, dailyHour?: number | null }} patch
+ * @param {{ bandAlerts?: boolean, dailyHour?: number | null, breakingAlerts?: boolean }} patch
  */
 export async function saveSubscriber(chatId, patch) {
   const existing = await getSubscriber(chatId);
@@ -26,7 +26,7 @@ export async function saveSubscriber(chatId, patch) {
     return { sub: { ...existing, ...patch }, created: false };
   }
   const lastBand = (await getState('alert_band'))?.value?.id ?? null;
-  const sub = { chatId, bandAlerts: true, dailyHour: null, ...patch, lastBand, createdAt: nowSec() };
+  const sub = { chatId, bandAlerts: true, dailyHour: null, breakingAlerts: true, ...patch, lastBand, createdAt: nowSec() };
   await db.insert(subscribers).values(sub).run();
   return { sub, created: true };
 }
@@ -41,6 +41,10 @@ export async function deleteSubscriber(chatId) {
 
 export async function bandSubscribers() {
   return db.select().from(subscribers).where(eq(subscribers.bandAlerts, true)).all();
+}
+
+export async function breakingSubscribers() {
+  return db.select().from(subscribers).where(eq(subscribers.breakingAlerts, true)).all();
 }
 
 export async function dailySubscribers() {
@@ -61,11 +65,17 @@ export async function seedLastBand(band) {
     .run();
 }
 
-/** Chats whose daily update for `date` (YYYY-MM-DD) is already claimed. @param {string} date */
-export async function dailyClaimedChats(date) {
-  const rows = await db.select({ chatId: alertsSent.chatId }).from(alertsSent).where(like(alertsSent.key, `daily:%:${date}`)).all();
+/** Chats with an alert claimed under a key matching `pattern` (SQL LIKE). @param {string} pattern */
+async function claimedChats(pattern) {
+  const rows = await db.select({ chatId: alertsSent.chatId }).from(alertsSent).where(like(alertsSent.key, pattern)).all();
   return new Set(rows.map((r) => r.chatId));
 }
+
+/** Chats whose daily update for `date` (YYYY-MM-DD) is already claimed. @param {string} date */
+export const dailyClaimedChats = (date) => claimedChats(`daily:%:${date}`);
+
+/** Chats that already have (or are being sent) breaking event `id`; keys are `breaking:<id>:<chat>`. @param {string} id */
+export const breakingClaimedChats = (id) => claimedChats(`breaking:${id}:%`);
 
 /** Testing aid: pretend every band subscriber was last told about `band`. @param {string} band */
 export async function setAllLastBand(band) {

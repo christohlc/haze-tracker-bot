@@ -4,6 +4,7 @@ import { callEndpoint, inTelegram, withWriteAccess } from './telegram';
 export interface AlertSettings {
   bandAlerts: boolean;
   dailyHour: number | null;
+  breakingAlerts: boolean;
 }
 
 // Outside Telegram (dev preview) there's no endpoint: keep settings in memory.
@@ -15,7 +16,7 @@ export async function getAlerts(): Promise<AlertSettings | null> {
   throw new Error('Open this from Telegram to manage alerts.');
 }
 
-/** Save settings; both off unsubscribes. Asks for permission to message the user if needed. */
+/** Save settings; all off unsubscribes. Asks for permission to message the user if needed. */
 export async function saveAlerts(next: AlertSettings): Promise<AlertSettings | null> {
   if (!inTelegram) {
     if (!import.meta.env.DEV) throw new Error('Open this from Telegram to manage alerts.');

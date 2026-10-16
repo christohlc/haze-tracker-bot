@@ -9,6 +9,12 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-16-breaking-news',
+    date: '2026-10-16',
+    title: 'Hear about school closures first',
+    body: 'Alerts now include breaking haze news the bot picks from the headlines: schools closing, outdoor activities called off, free masks, and NEA’s 24-hour PSI turning Very unhealthy or Hazardous. It’s on if you have alerts, and you can turn it off under Alerts.',
+  },
+  {
     id: '2026-10-16-tabs',
     date: '2026-10-16',
     title: 'Find things faster with tabs',

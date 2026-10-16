@@ -35,6 +35,7 @@ export const subscribers = table('subscribers', {
   chatId: integer('chat_id').primaryKey(),
   bandAlerts: boolean('band_alerts').notNull().default(true),
   dailyHour: integer('daily_hour'), // SGT hour 0–23; null = no daily update
+  breakingAlerts: boolean('breaking_alerts').notNull().default(true),
   lastBand: text('last_band'),
   createdAt: integer('created_at').notNull(),
 });

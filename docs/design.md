@@ -104,6 +104,11 @@ of the sky and the haze. Check that again whenever a sky colour changes.
   a Try again button.
 - Bot messages use Telegram HTML. Keep them short enough to read in a notification. Commands
   in `/help` follow the pattern “/command: what it does”.
+- Breaking news (`formatBreaking` in `tgcloud/lib/format.js`): “🚨 Breaking:” plus the
+  publisher’s headline as it is, the publisher and a “Read the story” link (with the story’s
+  large preview above), then the official 24-hour PSI. It says the bot picked the story itself.
+  The PSI version says “Official 24-hour PSI now Hazardous”: only NEA’s 24-hour PSI is ever
+  called official.
 
 ## States
 

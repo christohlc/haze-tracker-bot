@@ -44,7 +44,7 @@
     }
   }
 
-  const turnOn = () => save({ bandAlerts: true, dailyHour: null });
+  const turnOn = () => save({ bandAlerts: true, dailyHour: null, breakingAlerts: true });
 
   // Alerts off: the Telegram MainButton is the call to action. Not after a failed load: we
   // don't know the current settings, and turning on would reset an existing daily update.
@@ -77,7 +77,7 @@
       <p class="note">
         {#if status === 'loading'}Checking your alerts…
         {:else if settings}Messages arrive in this chat. You can also change them with /alerts.
-        {:else}Get a message in this chat when the haze band changes, plus an optional daily update.{/if}
+        {:else}Get a message in this chat when the haze band changes or there’s breaking haze news, plus an optional daily update.{/if}
       </p>
     </div>
   </div>
@@ -104,6 +104,20 @@
         />
       </label>
 
+      <label class="row">
+        <span>
+          <span class="row-title">Breaking news</span>
+          <span class="note">School closures, events called off, official 24-hour PSI over 200</span>
+        </span>
+        <input
+          type="checkbox"
+          role="switch"
+          checked={settings.breakingAlerts}
+          disabled={busy}
+          onchange={(e) => save({ ...settings!, breakingAlerts: e.currentTarget.checked })}
+        />
+      </label>
+
       <div class="row daily">
         <span class="row-title" id="daily-label">Daily update (SGT)</span>
         <div class="chips" role="radiogroup" aria-labelledby="daily-label">
@@ -123,7 +137,7 @@
       </div>
     </div>
 
-    <button type="button" class="stop" disabled={busy} onclick={() => save({ bandAlerts: false, dailyHour: null })}>
+    <button type="button" class="stop" disabled={busy} onclick={() => save({ bandAlerts: false, dailyHour: null, breakingAlerts: false })}>
       Stop all alerts
     </button>
   {/if}
@@ -184,6 +198,13 @@
   }
   .row > span {
     display: grid;
+  }
+  /* The whole switch row is the control: no long-press text selection, no tap delay. */
+  label.row {
+    cursor: pointer;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
   }
   .row-title {
     font-weight: 600;

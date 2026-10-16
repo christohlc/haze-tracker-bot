@@ -22,20 +22,33 @@ Singapore haze bot + Mini App. User-facing overview in [README.md](README.md); v
 and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious from the code:
 
 - **The 15-minute job is `endpoints/tick`**, run by `.github/workflows/tick.yml` (the
-  platform has no scheduler). It refreshes NEA, then sends alerts, runs the forecast and
-  refreshes news in parallel.
+  platform has no scheduler). It refreshes NEA, then the news, then sends alerts while the
+  forecast runs in parallel.
   `tick` and `admin` call `requireCli(ctx)`: they're CLI-only, never Mini App endpoints.
   The repo is public (free Actions minutes); a weekly `keepalive` job in the same workflow
   stops GitHub's 60-day pause of scheduled workflows.
-  NEA is refetched only until the current hour is published, news about hourly, the forecast
-  once per NEA hour; the extra runs are for alerts a previous run didn't reach. `{"force":true}`
-  refetches NEA and news regardless.
+  NEA is refetched only until the current hour is published, news about hourly (every run while
+  some PSI is above 100, for breaking news), the forecast once per NEA hour; the extra runs are
+  for alerts a previous run didn't reach. `{"force":true}` refetches NEA and news regardless.
 - **Alerts go out in batches of 25/s within a ~20 s budget** (`runBatched` in `lib/alert-rules.js`).
   Whoever isn't reached (budget, 429) keeps their old `lastBand` / unclaimed key and the next tick
-  resumes. Band alerts get the first 12 s so daily updates aren't starved. The run limit of
+  resumes. Breaking news gets the first 6 s after the news fetch, band alerts run until 12 s, so
+  daily updates aren't starved. The run limit of
   `tgcloud run` isn't documented; tune `BUDGET_MS` in `lib/alerts.js`. Pacing needs
   `setTimeout`: the tick's `alerts.paced` says whether the runtime has it (if not, batches run
   back to back and a 429 ends the run).
+- **Breaking news is sent automatically, with no one approving it.** `lib/breaking-rules.js`
+  picks a story when its headline has a topic (schools closing / HBL, outdoor activities or sports
+  called off, free masks, MOM advisories), mentions haze (headline or description), is under 6 h
+  old, and has no denial, maybe (“if”, “could”, “considering”), reopening, question or other
+  country in it. Only while some PSI is above 100, one event per topic per SGT day, at most 3 a
+  day. The official 24-hour PSI rising into Very unhealthy or Hazardous is an event too, once per
+  band per SGT day. Events live in `state('breaking')` for 48 h and are sent for 12 h (claims
+  `breaking:<id>:<chat>`). Kill switch: `admin` `breaking_pause` / `breaking_cancel` (a cancel
+  can lose a race with a running tick's write; check `status`); `breaking_test` sends one to a
+  single chat. When a misfire is reported, add the headline to `test/breaking.test.js` and
+  tighten the rules. **Run `npx tgcloud migrate` before pushing** a build that reads
+  `breaking_alerts`, or the alert queries fail.
 - **Camera pictures (`endpoints/getCameras`) are fetched only when the Mini App asks**, cached
   for 60 s in `state('cameras')`, never by the tick. Since 30 June 2026 LTA runs only the 8
   checkpoint and Sentosa cameras; names come from `CAMERAS` in `lib/cameras-parse.js`.
@@ -45,11 +58,11 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
 - **Open-Meteo is tried at most once per 5 min per NEA hour** (`forecast_attempt` state), since
   /haze and the Mini App can trigger a forecast run.
 - **Some `tgcloud/lib/` modules are shared with the front-end and tests**
-  (`psi`, `cigs`, `advice`, `alert-settings`, `alert-rules`, `format`, `snapshot`,
+  (`psi`, `cigs`, `advice`, `alert-settings`, `alert-rules`, `breaking-rules`, `format`, `snapshot`,
   `forecast/features|predict|model`, `news-parse`, `cameras-parse`, `weather-parse`,
   `card/geometry|png|raster|summary|glyphs|art`). Keep these pure: no `sdk` import, no DB, so
   Vite and `node --test` can load them. Modules that touch `sdk`, directly or via `store`, are
-  `store`, `nea`, `refresh`, `alerts`, `subscriptions`, `cli-only`, `forecast/inputs`,
+  `store`, `nea`, `refresh`, `alerts`, `breaking`, `subscriptions`, `cli-only`, `forecast/inputs`,
   `forecast/run`, `news`, `cameras`, `weather`, `bot-errors`, `messages`, `card/send`, `http`, `feed-cache`.
 - **The summary picture (`tgcloud/lib/card/`) is drawn in plain JS**: the runtime has no canvas,
   fonts or zlib, so `png.js` has its own deflate and `glyphs.js` / `art.js` are pre-rendered

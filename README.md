@@ -5,14 +5,18 @@
 A Telegram bot and Mini App for haze in Singapore. It shows current PSI by region (also as a
 shareable picture of the island), a cigarette
 equivalent, a 24-hour PSI forecast, NEA’s health advice and the latest haze headlines from The
-Straits Times, CNA and Mothership, and sends alerts to a chat when the haze band changes.
+Straits Times, CNA and Mothership, and sends alerts to a chat when the haze band changes or
+there’s breaking haze news (schools closing, outdoor activities called off, NEA’s 24-hour PSI
+turning Very unhealthy or Hazardous).
 
 - **Bot:** `/haze`, `/cigs [region] [% outdoors]`, `/forecast`, `/subscribe`, `/alerts`,
   `/unsubscribe`
 - **Mini App:** <https://app8809761337.tgcloud.ai/>, opened from the bot’s button
 
 Readings come from NEA (via data.gov.sg). The 1-hour and 3-hour PSI and the forecast are this
-project’s own calculations, not official figures.
+project’s own calculations, not official figures. Breaking news is picked from the headlines by
+the bot’s own rules and sent without anyone checking it first; the operator can pause it with
+`endpoints/admin` (`breaking_pause`).
 
 ## How it fits together
 
@@ -20,7 +24,8 @@ project’s own calculations, not official figures.
 GitHub Actions (hourly, :12)
   └─ npx tgcloud run endpoints/tick
        ├─ refresh NEA PM2.5 + PSI  → readings, state(snapshot)
-       ├─ send band-change and daily alerts → subscribers, alerts_sent
+       ├─ refresh news (every run while there's haze) → state(news), breaking events → state(breaking)
+       ├─ send breaking news, band-change and daily alerts → subscribers, alerts_sent
        └─ run the forecast (Open-Meteo inputs) → state(forecast)
 
 Telegram ─ message / callback_query ─▶ tgcloud/handlers/*      (bot commands)
