@@ -65,7 +65,7 @@ or, outside Telegram, from the OS. A new colour token needs both a light and a d
 - One column, at most 720px wide, with 16px gutters and 12px between cards. Padding respects
   Telegram’s safe-area insets.
 - Each section is a `.card` with a `.section-title`, an optional `.note` and its content.
-- Section order: header, hero, alerts, regions, cigarettes, forecast, history, advice, news, sources.
+- Section order: header, hero, alerts, regions, cigarettes, forecast, wind and rain, history, advice, news, sources.
   [ui-audit.md](ui-audit.md) proposes moving advice and the forecast up; that change is still
   open.
 - Tap targets are at least 44px. Segmented controls and chips switch on `pointerdown` so they
@@ -101,7 +101,7 @@ of the sky and the haze. Check that again whenever a sky colour changes.
 
 Every section handles loading, empty and failed states. To check them outside Telegram, use
 the dev toolbar (`?demo=worst|empty|error|loading`). Those last two hide every card, so Live
-views also takes `?cams=error|loading` for its own. The worst-case data has long names,
+views also takes `?cams=error|loading` and Wind and rain `?wx=error|loading|partial` for their own. The worst-case data has long names,
 missing readings and extreme values, so use it before shipping a layout change.
 
 ## Summary card

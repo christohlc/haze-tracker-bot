@@ -1,12 +1,10 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { REGIONS } from '../../tgcloud/lib/config.js';
+  import { REGION_NAMES } from '../../tgcloud/lib/config.js';
   import { loadCameras, type CamerasResult } from '../lib/api';
-  import { timeAgo } from '../lib/format';
+  import { STALE_MS, timeAgo } from '../lib/format';
   import { openLink } from '../lib/telegram';
 
-  const REGION_NAMES = Object.fromEntries(REGIONS.map((r) => [r.id, r.name]));
-  const STALE_MS = 30 * 60_000;
   const SATELLITE = [
     { title: 'Satellite pictures of the smoke', meta: 'Himawari images of Sumatra and Malaysia, from ASMC', link: 'https://asmc.asean.org/satellite-geo-sat/' },
     { title: 'Fire hotspots around the region', meta: 'Daily hotspot map, from ASMC', link: 'https://asmc.asean.org/asmc-hotspot/' },

@@ -12,7 +12,8 @@
   import RegionTable from './components/RegionTable.svelte';
   import ShareCard from './components/ShareCard.svelte';
   import Sources from './components/Sources.svelte';
-  import { loadDashboard, type Dashboard } from './lib/api';
+  import WindRain from './components/WindRain.svelte';
+  import { loadDashboard, loadWeather, type Dashboard, type WeatherResult } from './lib/api';
   import type { Period } from './lib/period';
   import { inTelegram } from './lib/telegram';
 
@@ -22,6 +23,8 @@
   let error = $state<string | null>(null);
   let period = $state<Period>('3h');
   let loadedAt = 0;
+  // Started alongside the dashboard rather than when its card mounts, so it isn't a second round trip.
+  let weatherFirst = $state<Promise<WeatherResult> | null>(null);
 
   async function load() {
     try {
@@ -34,6 +37,8 @@
   }
 
   onMount(() => {
+    weatherFirst = loadWeather();
+    weatherFirst.catch(() => {}); // the card shows the error
     load();
     // Coming back to the app after a while: refresh quietly.
     const onVisible = () => {
@@ -71,6 +76,7 @@
       <ShareCard snapshot={data.snapshot} />
       <CigCalc snapshot={data.snapshot} />
       {#if data.forecast}<ForecastSection forecast={data.forecast} history={data.history} />{/if}
+      <WindRain snapshot={data.snapshot} first={weatherFirst} />
       <HistoryChart snapshot={data.snapshot} history={data.history} />
       <Advice snapshot={data.snapshot} />
       <LiveViews />

@@ -10,6 +10,7 @@
     nea_psi: { name: 'NEA PSI', role: 'Official 24-hour PSI by region' },
     openmeteo: { name: 'Open-Meteo', role: 'Weather forecast inputs for the haze forecast' },
     ...Object.fromEntries(Object.entries(PUBLISHERS).map(([id, p]) => [`news_${id}`, { name: p.name, role: 'Haze headlines' }])),
+    nea_weather: { name: 'NEA weather stations', role: 'Wind and rain' },
     lta_cameras: { name: 'LTA traffic cameras', role: 'Live views from Woodlands, Tuas and Sentosa' },
     firms: { name: 'NASA FIRMS', role: 'Satellite fire detections for the forecast' },
   };
