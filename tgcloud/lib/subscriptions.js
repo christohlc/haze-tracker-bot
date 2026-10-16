@@ -4,6 +4,7 @@
 import { db } from 'sdk';
 import { eq, isNotNull, lt } from 'sdk/db';
 import { alertsSent, subscribers } from '../schema.js';
+import { getState } from './store.js';
 
 const nowSec = () => Math.floor(Date.now() / 1000);
 
@@ -13,23 +14,21 @@ export async function getSubscriber(chatId) {
 }
 
 /**
- * Create or update. A new subscriber starts at the current band, so subscribing never
+ * Create or update. A new subscriber starts at the current alert band, so subscribing never
  * triggers an immediate "band changed" alert.
  * @param {number} chatId
  * @param {{ bandAlerts?: boolean, dailyHour?: number | null }} patch
- * @param {string | null} currentBand
  */
-export async function saveSubscriber(chatId, patch, currentBand) {
+export async function saveSubscriber(chatId, patch) {
   const existing = await getSubscriber(chatId);
   if (existing) {
     await db.update(subscribers).set(patch).where(eq(subscribers.chatId, chatId)).run();
-  } else {
-    await db
-      .insert(subscribers)
-      .values({ chatId, bandAlerts: true, dailyHour: null, ...patch, lastBand: currentBand, createdAt: nowSec() })
-      .run();
+    return { sub: { ...existing, ...patch }, created: false };
   }
-  return getSubscriber(chatId);
+  const lastBand = (await getState('alert_band'))?.value?.id ?? null;
+  const sub = { chatId, bandAlerts: true, dailyHour: null, ...patch, lastBand, createdAt: nowSec() };
+  await db.insert(subscribers).values(sub).run();
+  return { sub, created: true };
 }
 
 /** @param {number} chatId */

@@ -8,7 +8,6 @@ import { dashboardButton } from '../lib/buttons.js';
 import { REGIONS } from '../lib/config.js';
 import { formatCigs, formatHaze } from '../lib/format.js';
 import { getSnapshot } from '../lib/refresh.js';
-import { getState } from '../lib/store.js';
 import { deleteSubscriber, getSubscriber, saveSubscriber } from '../lib/subscriptions.js';
 
 const HELP = [
@@ -47,9 +46,8 @@ export default async function (message) {
     }
     case 'subscribe': {
       const existing = await getSubscriber(message.chat.id);
-      const band = (await getState('alert_band'))?.value?.id ?? null;
-      const sub = await saveSubscriber(message.chat.id, { bandAlerts: true, dailyHour: existing?.dailyHour ?? null }, band);
-      const view = renderAlertSettings(sub ?? null);
+      const { sub } = await saveSubscriber(message.chat.id, { bandAlerts: true, dailyHour: existing?.dailyHour ?? null });
+      const view = renderAlertSettings(sub);
       return reply(message, `✅ You’ll get a message when the haze band changes.\n\n${view.text}`, view.reply_markup);
     }
     case 'alerts': {

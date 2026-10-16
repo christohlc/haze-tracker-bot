@@ -4,11 +4,12 @@
   import AlertsCard from './components/AlertsCard.svelte';
   import BrandHeader from './components/BrandHeader.svelte';
   import CigCalc from './components/CigCalc.svelte';
-  import Hero, { type Period } from './components/Hero.svelte';
+  import Hero from './components/Hero.svelte';
   import HistoryChart from './components/HistoryChart.svelte';
   import RegionTable from './components/RegionTable.svelte';
   import Sources from './components/Sources.svelte';
   import { loadDashboard, type Dashboard } from './lib/api';
+  import type { Period } from './lib/period';
   import { inTelegram } from './lib/telegram';
 
   const DevToggle = import.meta.env.DEV && !inTelegram ? import('./dev/DevDataToggle.svelte') : null;

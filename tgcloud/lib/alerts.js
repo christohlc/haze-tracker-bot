@@ -77,7 +77,7 @@ async function send(chatId, key, text) {
     });
     return 'sent';
   } catch (e) {
-    if (e instanceof BotApiError && (e.code === 403 || /chat not found/i.test(e.description))) {
+    if (isUnreachable(e)) {
       // Blocked the bot, left the group, or deleted the account.
       await deleteSubscriber(chatId);
       return 'removed';
@@ -87,4 +87,9 @@ async function send(chatId, key, text) {
     console.error('alert send failed', chatId, e);
     return 'failed';
   }
+}
+
+/** The bot can't message this chat (blocked, never started, left, deleted). @param {unknown} e */
+export function isUnreachable(e) {
+  return e instanceof BotApiError && (e.code === 403 || /chat not found/i.test(e.description));
 }

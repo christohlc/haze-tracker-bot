@@ -69,5 +69,10 @@ export function parseAlertInput(input) {
     throw new Error(`dailyHour must be one of ${DAILY_HOURS.join(', ')} or null`);
   }
   const settings = { bandAlerts: o.bandAlerts, dailyHour: /** @type {number | null} */ (dailyHour) };
-  return settings.bandAlerts || settings.dailyHour != null ? settings : null;
+  return isActive(settings) ? settings : null;
+}
+
+/** Any alert on? All off means unsubscribed. @param {{ bandAlerts: boolean, dailyHour: number | null } | null} sub */
+export function isActive(sub) {
+  return Boolean(sub && (sub.bandAlerts || sub.dailyHour != null));
 }

@@ -1,3 +1,4 @@
+import { isActive } from '../../tgcloud/lib/alert-settings.js';
 import { callEndpoint, EndpointCallError, inTelegram, requestWriteAccess } from './telegram';
 
 export interface AlertSettings {
@@ -19,7 +20,7 @@ export async function saveAlerts(next: AlertSettings): Promise<AlertSettings | n
   if (!inTelegram) {
     if (!import.meta.env.DEV) throw new Error('Open this from Telegram to manage alerts.');
     await new Promise((r) => setTimeout(r, 400));
-    devSettings = next.bandAlerts || next.dailyHour != null ? next : null;
+    devSettings = isActive(next) ? next : null;
     return devSettings;
   }
   const call = () => callEndpoint<AlertSettings | null>('alerts', { action: 'save', ...next });

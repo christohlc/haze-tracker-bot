@@ -1,7 +1,3 @@
-<script lang="ts" module>
-  export type Period = '1h' | '3h' | '24h';
-</script>
-
 <script lang="ts">
   import { Tween } from 'svelte/motion';
   import { cubicOut } from 'svelte/easing';
@@ -9,11 +5,12 @@
   import { psiBand } from '../../tgcloud/lib/psi.js';
   import type { Snapshot } from '../lib/api';
   import { reducedMotion } from '../lib/motion';
+  import { PERIODS, psiKey, type Period } from '../lib/period';
   import Segmented from './Segmented.svelte';
 
   let { snapshot, period = $bindable('3h') }: { snapshot: Snapshot; period?: Period } = $props();
 
-  const worst = $derived(snapshot.worst[`psi${period}`]);
+  const worst = $derived(snapshot.worst[psiKey(period)]);
   const band = $derived(psiBand(worst?.value ?? null));
   const mask = $derived(maskCard(worst?.value ?? null));
   // First open counts up once (rare, so it can take a little longer); period switches retarget quickly.
@@ -26,17 +23,11 @@
     shown.set(target, { duration });
   });
 
-  const EYEBROWS: Record<Period, string> = { '1h': 'Last hour', '3h': 'Last 3 hours', '24h': 'Past 24 hours' };
-  const CAPTIONS: Record<Period, string> = {
-    '1h': 'Last hour, worked out from NEA’s PM2.5. Our calculation, not official.',
-    '3h': 'Last 3 hours of PM2.5, averaged. Our calculation, not official.',
-    '24h': 'NEA’s official 24-hour PSI.',
-  };
 </script>
 
 <section class="hero sky-{band?.id ?? 'none'}" aria-labelledby="hero-title">
   <h2 id="hero-title" class="eyebrow">
-    {EYEBROWS[period]}{#if worst}<span class="where">&nbsp;· highest in {worst.name}</span>{/if}
+    {PERIODS[period].eyebrow}{#if worst}<span class="where">&nbsp;· highest in {worst.name}</span>{/if}
   </h2>
 
   {#if worst}
@@ -61,13 +52,9 @@
     <Segmented
       label="PSI period"
       bind:value={period}
-      options={[
-        { value: '1h', label: '1 hr' },
-        { value: '3h', label: '3 hr' },
-        { value: '24h', label: '24 hr' },
-      ]}
+      options={(Object.keys(PERIODS) as Period[]).map((p) => ({ value: p, label: PERIODS[p].short }))}
     />
-    <p class="caption">{CAPTIONS[period]}</p>
+    <p class="caption">{PERIODS[period].caption}</p>
   </div>
 </section>
 
@@ -94,7 +81,6 @@
     background:
       radial-gradient(120% 60% at 20% 105%, var(--haze), transparent 70%),
       linear-gradient(180deg, var(--sky-top), var(--sky-bottom));
-    transition: background 400ms ease;
   }
   .sky-moderate { --sky-top: #a6c1db; --sky-bottom: #e6e2d3; --haze: rgba(240, 232, 214, 0.55); }
   .sky-unhealthy { --sky-top: #c3c0b2; --sky-bottom: #ebcd78; --haze: rgba(245, 226, 170, 0.6); }
@@ -185,10 +171,5 @@
     margin: 0;
     font-size: 0.8125rem;
     color: var(--ink-2);
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .hero {
-      transition: none;
-    }
   }
 </style>

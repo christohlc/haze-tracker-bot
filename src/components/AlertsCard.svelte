@@ -1,30 +1,38 @@
+<script lang="ts" module>
+  import { getAlerts } from '../lib/alerts';
+
+  // Start on import so it runs alongside the dashboard load instead of after it.
+  const initial = getAlerts();
+  initial.catch(() => {}); // handled in onMount
+</script>
+
 <script lang="ts">
   import { onMount } from 'svelte';
   import { DAILY_HOURS, hourLabel } from '../../tgcloud/lib/alert-settings.js';
-  import { getAlerts, saveAlerts, type AlertSettings } from '../lib/alerts';
+  import { saveAlerts, type AlertSettings } from '../lib/alerts';
   import { inTelegram, notifyHaptic, selectionHaptic, setMainButtonBusy, showMainButton } from '../lib/telegram';
 
   let settings = $state<AlertSettings | null>(null);
-  let loaded = $state(false);
+  let status = $state<'loading' | 'failed' | 'ready'>('loading');
   let busy = $state(false);
-  let loadFailed = $state(false);
   let error = $state<string | null>(null);
 
   onMount(async () => {
     try {
-      settings = await getAlerts();
+      settings = await initial;
+      status = 'ready';
     } catch (e) {
       error = e instanceof Error ? e.message : 'Couldn’t load your alerts.';
-      loadFailed = true;
+      status = 'failed';
     }
-    loaded = true;
   });
+
+  $effect(() => setMainButtonBusy(busy));
 
   async function save(next: AlertSettings) {
     if (busy) return;
     busy = true;
     error = null;
-    setMainButtonBusy(true);
     try {
       settings = await saveAlerts(next);
       notifyHaptic('success');
@@ -33,7 +41,6 @@
       notifyHaptic('error');
     } finally {
       busy = false;
-      setMainButtonBusy(false);
     }
   }
 
@@ -42,7 +49,7 @@
   // Alerts off: the Telegram MainButton is the call to action. Not after a failed load: we
   // don't know the current settings, and turning on would reset an existing daily update.
   $effect(() => {
-    if (!loaded || loadFailed || settings) return;
+    if (status !== 'ready' || settings) return;
     return showMainButton('🔔 Get haze alerts', turnOn);
   });
 
@@ -65,17 +72,17 @@
     </span>
     <div>
       <h2 id="alerts-title" class="section-title">
-        {#if !loaded}Haze alerts{:else if settings}Alerts are on{:else}Know before you go out{/if}
+        {#if status === 'loading'}Haze alerts{:else if settings}Alerts are on{:else}Know before you go out{/if}
       </h2>
       <p class="note">
-        {#if !loaded}Checking your alerts…
+        {#if status === 'loading'}Checking your alerts…
         {:else if settings}Messages arrive in this chat. You can also change them with /alerts.
         {:else}Get a message in this chat when the haze band changes, plus an optional daily update.{/if}
       </p>
     </div>
   </div>
 
-  {#if import.meta.env.DEV && loaded && !loadFailed && !settings && !inTelegram}
+  {#if import.meta.env.DEV && !inTelegram && status === 'ready' && !settings}
     <button type="button" class="primary" onclick={turnOn} disabled={busy}>
       {busy ? 'Turning on…' : '🔔 Get haze alerts'}
     </button>

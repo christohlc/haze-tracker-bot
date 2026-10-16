@@ -8,6 +8,8 @@ export const inTelegram = Boolean(tg?.initData);
 
 export function initTelegram() {
   applyScheme();
+  // Outside Telegram the SDK still reports colorScheme 'light', so follow the OS there.
+  if (!inTelegram) darkQuery.addEventListener('change', applyScheme);
   if (!tg) return;
   tg.ready();
   tg.expand();
@@ -21,8 +23,6 @@ export function initTelegram() {
 }
 
 const darkQuery = matchMedia('(prefers-color-scheme: dark)');
-// Outside Telegram the SDK still reports colorScheme 'light', so only trust it in Telegram.
-if (!inTelegram) darkQuery.addEventListener('change', applyScheme);
 
 function applyScheme() {
   const scheme = inTelegram ? tg.colorScheme : darkQuery.matches ? 'dark' : 'light';

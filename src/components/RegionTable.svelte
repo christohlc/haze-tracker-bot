@@ -2,12 +2,11 @@
   import { psiBand } from '../../tgcloud/lib/psi.js';
   import type { Snapshot } from '../lib/api';
   import { fmt } from '../lib/format';
-  import type { Period } from './Hero.svelte';
+  import { PERIODS, psiKey, type Period } from '../lib/period';
 
   let { snapshot, period = '3h' }: { snapshot: Snapshot; period?: Period } = $props();
 
-  const PERIOD_LABEL: Record<Period, string> = { '1h': '1-hour', '3h': '3-hour', '24h': '24-hour' };
-  const key = $derived(`psi${period}` as const);
+  const key = $derived(psiKey(period));
   const rows = $derived(
     snapshot.regions.map((r) => {
       const v = r[key];
@@ -20,7 +19,7 @@
 
 <section class="card" aria-labelledby="regions-title">
   <h2 id="regions-title" class="section-title">Around the island</h2>
-  <p class="note">{PERIOD_LABEL[period]} PSI by NEA region. PM2.5 is the latest hourly reading.</p>
+  <p class="note">{PERIODS[period].adj} PSI by NEA region. PM2.5 is the latest hourly reading.</p>
 
   <ul>
     {#each rows as r (r.id)}
@@ -28,10 +27,10 @@
         <span class="name">{r.name}</span>
         <span class="track" aria-hidden="true">
           {#if r.v != null}
-            <span class="bar" style:width="{(r.v / max) * 100}%" style:background="var(--band-{r.band?.id})"></span>
+            <span class="bar" style:transform="scaleX({r.v / max})" style:background="var(--band-{r.band?.id})"></span>
           {/if}
         </span>
-        <span class="value num"><span class="visually-hidden">{PERIOD_LABEL[period]} PSI </span>{fmt(r.v)}</span>
+        <span class="value num"><span class="visually-hidden">{PERIODS[period].adj} PSI </span>{fmt(r.v)}</span>
         <span class="sub">
           {r.band?.label ?? 'No reading'} · PM2.5 <span class="num">{fmt(r.pm25)}</span> µg/m³
         </span>
@@ -69,7 +68,8 @@
     display: block;
     height: 100%;
     border-radius: inherit;
-    transition: width 300ms var(--ease-out);
+    transform-origin: left;
+    transition: transform 300ms var(--ease-out);
   }
   .value {
     font-family: var(--font-display);

@@ -1,7 +1,3 @@
-<script lang="ts" module>
-  export const BRAND_NAME = 'I’m going hazelnuts!';
-</script>
-
 <script lang="ts">
   import type { Snapshot } from '../lib/api';
   import { sgtHour } from '../lib/format';
@@ -12,7 +8,7 @@
 <header>
   <img class="logo" src="/logo.svg" alt="" width="40" height="40" />
   <div class="text">
-    <h1>{BRAND_NAME}</h1>
+    <h1>I’m going hazelnuts!</h1>
     <p class="status">
       {#if snapshot}
         <span class="dot" class:stale={snapshot.stale} aria-hidden="true"></span>
@@ -57,15 +53,15 @@
     color: var(--muted);
   }
   .dot {
+    --c: var(--status-good);
     flex: none;
     width: 7px;
     height: 7px;
     border-radius: 50%;
-    background: var(--status-good);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--status-good) 22%, transparent);
+    background: var(--c);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 22%, transparent);
   }
   .dot.stale {
-    background: var(--band-unhealthy);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--band-unhealthy) 22%, transparent);
+    --c: var(--band-unhealthy);
   }
 </style>
