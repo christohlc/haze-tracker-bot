@@ -95,6 +95,7 @@ body {
 
 button,
 [role='radio'],
+[role='tab'],
 summary {
   touch-action: manipulation;
   user-select: none;

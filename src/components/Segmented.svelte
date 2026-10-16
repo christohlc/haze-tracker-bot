@@ -5,7 +5,16 @@
     options,
     value = $bindable(),
     label,
-  }: { options: { value: T; label: string }[]; value: T; label: string } = $props();
+    kind = 'radio',
+    controls,
+  }: {
+    options: { value: T; label: string; dot?: boolean }[];
+    value: T;
+    label: string;
+    /** 'tab' switches panels: tablist semantics, and `controls(v)` names each option's panel. */
+    kind?: 'radio' | 'tab';
+    controls?: (v: T) => string;
+  } = $props();
 
   const index = $derived(Math.max(0, options.findIndex((o) => o.value === value)));
 
@@ -16,18 +25,20 @@
   }
 </script>
 
-<div class="seg" role="radiogroup" aria-label={label} style:--n={options.length}>
+<div class="seg" role={kind === 'tab' ? 'tablist' : 'radiogroup'} aria-label={label} style:--n={options.length}>
   <span class="thumb" style:transform="translateX({index * 100}%)" aria-hidden="true"></span>
   {#each options as o (o.value)}
     <button
       type="button"
-      role="radio"
-      aria-checked={o.value === value}
+      role={kind}
+      aria-checked={kind === 'radio' ? o.value === value : undefined}
+      aria-selected={kind === 'tab' ? o.value === value : undefined}
+      aria-controls={controls?.(o.value)}
       class:on={o.value === value}
       onpointerdown={() => pick(o.value)}
       onclick={() => pick(o.value)}
     >
-      {o.label}
+      {o.label}{#if o.dot}<span class="dot" aria-hidden="true"></span><span class="visually-hidden">{' (new updates)'}</span>{/if}
     </button>
   {/each}
 </div>
@@ -66,6 +77,15 @@
     transition:
       color 150ms ease,
       transform 120ms var(--ease-out);
+  }
+  .dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    margin-left: 5px;
+    vertical-align: 0.15em;
+    border-radius: 50%;
+    background: var(--accent);
   }
   button.on {
     color: var(--ink);
