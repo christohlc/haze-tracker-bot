@@ -4,6 +4,7 @@
 //   npx tgcloud run endpoints/admin "{ action: 'status' }"
 //   npx tgcloud run endpoints/admin "{ action: 'unset', key: 'firms_map_key' }"
 //   npx tgcloud run endpoints/admin "{ action: 'rewind_band', band: 'unhealthy' }"  (test: next tick alerts the change)
+//   npx tgcloud run endpoints/admin "{ action: 'backfill', days: 14 }"  (NEA's hourly PM2.5 for past days; rerun until remaining is empty)
 // Breaking news is sent without anyone checking it first, so:
 //   npx tgcloud run endpoints/admin "{ action: 'breaking_pause', on: true }"   (no new events, nothing sent; false resumes)
 //   npx tgcloud run endpoints/admin "{ action: 'breaking_cancel', id: 'n1a2b3c' }"  (stop sending one event; ids in status)
@@ -12,12 +13,54 @@
 import { EndpointError } from 'sdk';
 import { cancelEvent, getBreaking, isBreakingPaused, sendBreaking } from '../lib/breaking.js';
 import { requireCli } from '../lib/cli-only.js';
+import { errorText } from '../lib/http.js';
+import { getPm25Day } from '../lib/nea.js';
 import { PSI_BANDS } from '../lib/psi.js';
 import { getSnapshot } from '../lib/refresh.js';
 import { breakingClaimedChats, countSubscribers, setAllLastBand } from '../lib/subscriptions.js';
-import { allSourceStatus, countReadings, deleteSetting, getSetting, getState, setSetting, setState, toSgtIso } from '../lib/store.js';
+import { sgtDatesBack, sgtDayStart } from '../lib/time.js';
+import { allSourceStatus, countReadings, countReadingsBetween, deleteSetting, getSetting, getState, setSetting, setState, toSgtIso, upsertReadings } from '../lib/store.js';
 
 const SECRET_KEYS = ['firms_map_key'];
+
+// Backfill: one NEA request per SGT day, spaced out for data.gov.sg's rate limit, and stopped
+// before the (undocumented) run limit; days already complete are skipped, so a rerun resumes.
+const BACKFILL_PAUSE_MS = 1000;
+const BACKFILL_BUDGET_MS = 20_000;
+const sleep = typeof setTimeout === 'function' ? (/** @type {number} */ ms) => new Promise((r) => setTimeout(r, ms)) : null;
+
+/** @param {number} days before today; today is refetched too */
+async function backfill(days) {
+  let deadline = Date.now() + BACKFILL_BUDGET_MS;
+  const today = sgtDatesBack(1)[0];
+  /** @type {Record<string, number | string>} */
+  const done = {};
+  const remaining = [];
+  let fetched = 0;
+  // Newest first: the range needs the latest 72 hours most.
+  for (const date of sgtDatesBack(days + 1)) {
+    if (date !== today && (await countReadingsBetween(sgtDayStart(date), sgtDayStart(date) + 86_400)) >= 24) {
+      done[date] = 'complete';
+      continue;
+    }
+    if (Date.now() + (fetched ? BACKFILL_PAUSE_MS : 0) >= deadline) {
+      remaining.push(date);
+      continue;
+    }
+    if (fetched++ && sleep) await sleep(BACKFILL_PAUSE_MS);
+    try {
+      const items = await getPm25Day(date);
+      await upsertReadings(items);
+      done[date] = items.length;
+    } catch (e) {
+      // e.g. data.gov.sg's rate limit (code 24): stop here, a rerun picks up the rest.
+      done[date] = errorText(e);
+      remaining.push(date);
+      deadline = 0;
+    }
+  }
+  return { ok: true, days: done, remaining, readings: await countReadings() };
+}
 
 export default async function (input, ctx) {
   requireCli(ctx);
@@ -71,6 +114,11 @@ export default async function (input, ctx) {
       await setAllLastBand(input.band);
       return { ok: true, band: input.band };
     }
+    case 'backfill': {
+      const days = input.days ?? 14; // 14 × 24 = range.js's HISTORY_HOURS
+      if (!Number.isInteger(days) || days < 1 || days > 14) throw new EndpointError('days must be 1 to 14');
+      return backfill(days);
+    }
     case 'breaking_pause': {
       if (typeof input.on !== 'boolean') throw new EndpointError('on must be true or false');
       await setState('breaking_paused', input.on);
@@ -97,6 +145,6 @@ export default async function (input, ctx) {
       return { ok: true, sent: event.id };
     }
     default:
-      throw new EndpointError("action must be 'set', 'unset', 'status', 'rewind_band', 'breaking_pause', 'breaking_cancel' or 'breaking_test'");
+      throw new EndpointError("action must be 'set', 'unset', 'status', 'rewind_band', 'backfill', 'breaking_pause', 'breaking_cancel' or 'breaking_test'");
   }
 }

@@ -58,7 +58,9 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   undocumented JSON behind haze.gov.sg (`lib/outlook.js`, cached 30 min in `state('outlook')`,
   fetched only by /haze, /forecast and the dashboard). NEA issues it about 6 pm, during haze
   episodes only, so null is the usual answer. The next-hours range (`lib/range.js`) is worked out
-  from the last 14 days of `readings`.
+  from the last 14 days of `readings` and needs at least 72 hours; the tick stores only today and
+  yesterday, so after a fresh start or a gap fill it with `admin` `{ action: 'backfill', days: 14 }`
+  (one NEA request per day, 1 s apart, ~20 s budget; rerun until `remaining` is empty).
 - **Some `tgcloud/lib/` modules are shared with the front-end and tests**
   (`psi`, `cigs`, `advice`, `alert-settings`, `alert-rules`, `breaking-rules`, `format`, `snapshot`,
   `outlook-parse`, `range`, `html`, `time`, `news-parse`, `cameras-parse`, `weather-parse`,

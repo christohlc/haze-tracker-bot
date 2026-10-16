@@ -4,6 +4,12 @@
 /** YYYY-MM-DD in Singapore at `ms`. @param {number} ms */
 export const sgtDateOf = (ms) => new Date(ms + 8 * 3_600_000).toISOString().slice(0, 10);
 
+/** The last `days` SGT dates up to and including today's, newest first. @param {number} days @param {number} [now] ms */
+export const sgtDatesBack = (days, now = Date.now()) => Array.from({ length: days }, (_, i) => sgtDateOf(now - i * 86_400_000));
+
+/** Unix seconds at midnight SGT starting the SGT date "2026-10-16". @param {string} ymd */
+export const sgtDayStart = (ymd) => Date.parse(`${ymd}T00:00:00+08:00`) / 1000;
+
 /** ISO timestamp (any offset) → unix hour (hours since epoch, UTC). @param {string} iso */
 export const unixHour = (iso) => Math.floor(Date.parse(iso) / 3_600_000);
 

@@ -115,7 +115,15 @@ Two parts, with no model to train:
 - **The next few hours** (`lib/range.js`): the island-wide 1-hour PSI now, widened by the 10th
   and 90th percentiles of how far it moved over 1, 3 and 6 hours in the past two weeks. On NEA
   readings from 2022 to 2026 the actual value landed inside it 81–83% of the time (80–86%
-  during haze); rerun with `node scripts/range-backtest.mjs <dir of NEA day files>`.
+  during haze); rerun with `node scripts/range-backtest.mjs <dir of NEA day files>`. It needs
+  three days of readings and the tick only ever fetches today and yesterday, so after a fresh start
+  or a gap backfill them once:
+
+  ```bash
+  npx tgcloud run endpoints/admin "{ action: 'backfill', days: 14 }"
+  ```
+
+  It skips days already complete and stops before the run limit; rerun until `remaining` is empty.
 
 ## Releasing a user-facing change
 
