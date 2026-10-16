@@ -1,10 +1,11 @@
 // @ts-check
-// Send band-change and daily alerts. Called by the hourly tick.
-// No timers in this runtime, so a rate-limited send isn't retried in-process: the claim is
-// released and the subscriber's lastBand stays behind, and the next tick catches them up.
+// Send band-change and daily alerts. Called by the tick.
+// Sends go out in paced parallel batches (alert-rules.js runBatched) within a time budget. A
+// rate-limited or unreached send isn't retried in-process: its claim is released (or never
+// made) and the subscriber's lastBand stays behind, so the next tick catches them up.
 
 import { api, BotApiError } from 'sdk';
-import { dailyDue, nextAlertBand, sgtHourOf } from './alert-rules.js';
+import { dailyDue, nextAlertBand, runBatched, sgtHourOf } from './alert-rules.js';
 import { dashboardButton } from './buttons.js';
 import { formatBandAlert, formatHaze } from './format.js';
 import { sgtDate } from './nea.js';
@@ -20,8 +21,17 @@ import {
   setLastBand,
 } from './subscriptions.js';
 
+/** Stop sending this long after the run starts so the tick returns before the platform cuts it
+ *  off; whoever isn't reached yet keeps their old lastBand / unclaimed key for the next run. */
+const BUDGET_MS = 20_000;
+/** The band loop may use this share of the budget, so daily updates still go out in a backlog. */
+const BAND_SHARE = 0.6;
+
+const sleep = typeof setTimeout === 'function' ? (/** @type {number} */ ms) => new Promise((r) => setTimeout(r, ms)) : null;
+
 /** @param {any} snap @param {number} [now] */
 export async function runAlerts(snap, now = Date.now()) {
+  const started = Date.now();
   const out = { band: null, sent: 0, daily: 0, removed: 0, deferred: false };
 
   const raw = psiBand(snap.worst.psi3h?.value)?.id ?? null;
@@ -31,33 +41,43 @@ export async function runAlerts(snap, now = Date.now()) {
   out.band = band?.id ?? null;
 
   if (band) {
-    for (const sub of await bandSubscribers()) {
-      if (sub.lastBand === band.id) continue;
-      if (!sub.lastBand) {
-        await setLastBand(sub.chatId, band.id);
-        continue;
-      }
-      const r = await send(sub.chatId, `band:${sub.chatId}:${band.id}:${band.at}`, formatBandAlert(snap, sub.lastBand, band.id));
-      if (r === 'sent') out.sent++;
-      if (r === 'sent' || r === 'duplicate') await setLastBand(sub.chatId, band.id);
-      if (r === 'removed') out.removed++;
-      if (r === 'limited') return { ...out, deferred: true };
-    }
+    const subs = (await bandSubscribers()).filter((s) => s.lastBand !== band.id);
+    const { results, stopped } = await runBatched(
+      subs,
+      async (sub) => {
+        if (!sub.lastBand) {
+          await setLastBand(sub.chatId, band.id);
+          return 'skipped';
+        }
+        const r = await send(sub.chatId, `band:${sub.chatId}:${band.id}:${band.at}`, formatBandAlert(snap, sub.lastBand, band.id));
+        if (r === 'sent' || r === 'duplicate') await setLastBand(sub.chatId, band.id);
+        return r;
+      },
+      { deadline: started + BUDGET_MS * BAND_SHARE, sleep },
+    );
+    out.sent += count(results, 'sent');
+    out.removed += count(results, 'removed');
+    if (stopped) out.deferred = true;
   }
 
   const hour = sgtHourOf(now);
   const date = sgtDate(0, now);
-  for (const sub of await dailySubscribers()) {
-    if (!dailyDue(sub.dailyHour, hour)) continue;
-    const r = await send(sub.chatId, `daily:${sub.chatId}:${date}`, `☀️ <b>Daily haze update</b>\n\n${formatHaze(snap)}`);
-    if (r === 'sent') out.daily++;
-    if (r === 'removed') out.removed++;
-    if (r === 'limited') return { ...out, deferred: true };
-  }
+  const daily = (await dailySubscribers()).filter((s) => dailyDue(s.dailyHour, hour));
+  const { results, stopped } = await runBatched(
+    daily,
+    (sub) => send(sub.chatId, `daily:${sub.chatId}:${date}`, `☀️ <b>Daily haze update</b>\n\n${formatHaze(snap)}`),
+    { deadline: started + BUDGET_MS, sleep },
+  );
+  out.daily += count(results, 'sent');
+  out.removed += count(results, 'removed');
+  if (stopped) out.deferred = true;
 
-  await pruneAlerts();
+  if (!out.deferred) await pruneAlerts();
   return out;
 }
+
+/** @param {string[]} results @param {string} r */
+const count = (results, r) => results.filter((x) => x === r).length;
 
 /**
  * Claim, then send. 'duplicate' means another run already sent it.

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { DEESCALATE_HOLD_MS, dailyDue, nextAlertBand, sgtHourOf } from '../tgcloud/lib/alert-rules.js';
+import { DEESCALATE_HOLD_MS, dailyDue, nextAlertBand, runBatched, sgtHourOf } from '../tgcloud/lib/alert-rules.js';
 import { applyAlertAction, parseAlertInput, renderAlertSettings } from '../tgcloud/lib/alert-settings.js';
 import { formatBandAlert } from '../tgcloud/lib/format.js';
 
@@ -81,4 +81,67 @@ test('Mini App alert settings are validated, and all-off means unsubscribe', () 
   assert.throws(() => parseAlertInput({ bandAlerts: 'yes' }));
   assert.throws(() => parseAlertInput({ bandAlerts: true, dailyHour: 9 }));
   assert.throws(() => parseAlertInput(null));
+});
+
+/** A fake clock: each task takes `costMs`, sleep advances time. */
+function fakeClock(costMs) {
+  let t = 0;
+  const batches = [];
+  return {
+    now: () => t,
+    sleep: async (ms) => {
+      t += ms;
+    },
+    task: (outcome = () => 'sent') => async (item) => {
+      if (!batches.length || batches.at(-1).at !== t) batches.push({ at: t, items: [] });
+      batches.at(-1).items.push(item);
+      await Promise.resolve();
+      t = Math.max(t, batches.at(-1).at + costMs);
+      return outcome(item);
+    },
+    batches,
+  };
+}
+
+const range = (n) => Array.from({ length: n }, (_, i) => i);
+
+test('batches are parallel, sized, and paced to one per second', async () => {
+  const c = fakeClock(200);
+  const { results, stopped } = await runBatched(range(60), c.task(), { deadline: 60_000, now: c.now, sleep: c.sleep });
+  assert.equal(stopped, null);
+  assert.equal(results.length, 60);
+  assert.deepEqual(c.batches.map((b) => b.items.length), [25, 25, 10]);
+  assert.deepEqual(c.batches.map((b) => b.at), [0, 1000, 2000]);
+});
+
+test('stops before a batch that would overrun the budget, leaving the rest for the next run', async () => {
+  const c = fakeClock(200);
+  const { results, stopped } = await runBatched(range(200), c.task(), { deadline: 2500, now: c.now, sleep: c.sleep });
+  assert.equal(stopped, 'budget');
+  assert.equal(results.length, 50); // batches at 0 and 1000; one starting at 2000 is estimated to end at 3000
+  assert.ok(c.now() <= 2500);
+});
+
+test('a slow batch raises the estimate for the next one', async () => {
+  const c = fakeClock(1800);
+  const { results, stopped } = await runBatched(range(100), c.task(), { deadline: 3000, now: c.now, sleep: c.sleep });
+  assert.equal(stopped, 'budget');
+  assert.equal(results.length, 25); // first ends at 1800; 1800 + 1800 > 3000
+});
+
+test('a rate-limited send stops the run after its batch', async () => {
+  const c = fakeClock(100);
+  const { results, stopped } = await runBatched(range(100), c.task((i) => (i === 30 ? 'limited' : 'sent')), {
+    deadline: 60_000,
+    now: c.now,
+    sleep: c.sleep,
+  });
+  assert.equal(stopped, 'limited');
+  assert.equal(results.length, 50);
+});
+
+test('without timers, batches run back to back', async () => {
+  const c = fakeClock(100);
+  await runBatched(range(60), c.task(), { deadline: 60_000, now: c.now });
+  assert.deepEqual(c.batches.map((b) => b.at), [0, 100, 200]);
 });

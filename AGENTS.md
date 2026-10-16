@@ -24,6 +24,12 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
 - **The hourly job is `endpoints/tick`**, run by `.github/workflows/tick.yml` (the
   platform has no scheduler). It refreshes NEA, sends alerts, then runs the forecast.
   `tick` and `admin` call `requireCli(ctx)`: they're CLI-only, never Mini App endpoints.
+  It runs every 15 min; NEA and the forecast are cached per NEA hour, so only alerts do new work.
+- **Alerts go out in batches of 25/s within a ~20 s budget** (`runBatched` in `lib/alert-rules.js`).
+  Whoever isn't reached (budget, 429) keeps their old `lastBand` / unclaimed key and the next tick
+  resumes. The run limit of `tgcloud run` isn't documented; tune `BUDGET_MS` in `lib/alerts.js`.
+- **Open-Meteo is tried at most once per 5 min per NEA hour** (`forecast_attempt` state), since
+  /haze and the Mini App can trigger a forecast run.
 - **Some `tgcloud/lib/` modules are shared with the front-end and tests**
   (`psi`, `cigs`, `advice`, `alert-settings`, `alert-rules`, `format`, `snapshot`,
   `forecast/features|predict|model`, `news-parse`). Keep these pure: no `sdk` import, no DB, so
