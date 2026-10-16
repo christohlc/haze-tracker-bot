@@ -61,7 +61,7 @@
           <tr>
             <th scope="row">{s.h} {s.h === 1 ? 'hour' : 'hours'} <span class="when">{sgtHour(s.t)}</span></th>
             <td class="r">
-              <span class="num">{s.lo === s.hi ? s.lo : `${s.lo}–${s.hi}`}</span>
+              <span class="num range">{s.lo === s.hi ? s.lo : `${s.lo}–${s.hi}`}</span>
               <span class="band-text">{rangeBand(s.lo, s.hi)}</span>
             </td>
           </tr>
@@ -110,6 +110,7 @@
     white-space: nowrap;
     touch-action: manipulation;
     -webkit-touch-callout: none;
+    transition: opacity 100ms var(--ease-out);
   }
   .note a:active {
     opacity: 0.6;
@@ -147,6 +148,10 @@
   }
   .r {
     text-align: right;
+  }
+  /* A range is one value: never "412–" on one line and "1000" on the next. */
+  .range {
+    white-space: nowrap;
   }
   .band-text {
     display: block;
