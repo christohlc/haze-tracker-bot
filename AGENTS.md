@@ -66,7 +66,8 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
 - **Outside Telegram**, `npm run dev` serves fixture data (`src/dev/`), with a
   `?demo=worst|empty|error|loading` toggle. Use it to check UI changes in the preview.
 - **User-facing changes get a “What’s new” entry** in `src/lib/changelog.ts`
-  (rules: docs/design.md#whats-new).
+  (rules: docs/design.md#whats-new). The exception is the hidden Hazelnut Ninja game
+  (tap the header; `src/lib/ninja.ts`, docs/design.md#easter-egg), which stays a secret.
 - **New or changed UI gets a pass with the UI skills** before it's committed:
   `emil-design-eng` (polish, motion) and `mobile-native` (touch, safe areas), plus
   `break-ui` for components that show data. Keep the result consistent with docs/design.md.

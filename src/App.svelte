@@ -28,6 +28,10 @@
     { value: 'more', label: 'More' },
   ];
 
+  // The hidden game behind the header; loaded only once someone finds it.
+  let ninja = $state(false);
+  const loadNinja = () => import('./components/HazelnutNinja.svelte');
+
   const DevToggle = import.meta.env.DEV && !inTelegram ? import('./dev/DevDataToggle.svelte') : null;
 
   let data = $state<Dashboard | null>(null);
@@ -56,9 +60,11 @@
     if (visited.more && behind) markSeen();
   });
 
-  // Away from Now, Telegram's back arrow returns to it, like a native screen.
+  // Away from Now, Telegram's back arrow returns to it, like a native screen. With the game
+  // open it closes the game instead. One effect, so the two never both hold the button.
   const away = $derived(tab !== 'now');
   $effect(() => {
+    if (ninja) return showBackButton(() => (ninja = false));
     if (away) return showBackButton(() => (tab = 'now'));
   });
 
@@ -97,7 +103,7 @@
 </script>
 
 <main>
-  <BrandHeader snapshot={data?.snapshot ?? null} />
+  <BrandHeader snapshot={data?.snapshot ?? null} onsecret={() => (ninja = true)} />
 
   {#if error && !data}
     <div class="card state">
@@ -154,6 +160,10 @@
     {/if}
   {/if}
 </main>
+
+{#if ninja}
+  {#await loadNinja() then m}<m.default onclose={() => (ninja = false)} />{/await}
+{/if}
 
 {#if DevToggle}
   {#await DevToggle then m}<m.default />{/await}
