@@ -59,6 +59,45 @@ export function setMainButtonBusy(busy: boolean) {
   else mb.hideProgress();
 }
 
+/** Show Telegram's header BackButton. Returns a cleanup that hides it and drops the handler. */
+export function showBackButton(onClick: () => void): () => void {
+  const bb = tg?.BackButton;
+  if (!inTelegram || !bb) return () => {};
+  bb.onClick(onClick);
+  bb.show();
+  return () => {
+    bb.offClick(onClick);
+    bb.hide();
+  };
+}
+
+// CloudStorage needs Bot API 6.9+; older clients throw, so they use localStorage too.
+const cloudStorage = inTelegram && tg.isVersionAtLeast?.('6.9') ? tg.CloudStorage : null;
+
+/** Read a small per-user value: Telegram CloudStorage in Telegram, localStorage otherwise. */
+export async function getStored(key: string): Promise<string | null> {
+  if (cloudStorage) {
+    return new Promise((resolve) =>
+      cloudStorage.getItem(key, (err: unknown, value?: string) => resolve(err ? null : value || null)),
+    );
+  }
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null; // storage blocked (private mode)
+  }
+}
+
+/** Write a small per-user value. Best effort: failures are ignored. */
+export function setStored(key: string, value: string) {
+  try {
+    if (cloudStorage) cloudStorage.setItem(key, value);
+    else localStorage.setItem(key, value);
+  } catch {
+    // storage blocked (private mode)
+  }
+}
+
 /** Ask the user to let the bot message them. Resolves true if allowed. */
 export function requestWriteAccess(): Promise<boolean> {
   return new Promise((resolve) => {

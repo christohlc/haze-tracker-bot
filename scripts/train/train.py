@@ -19,8 +19,13 @@ CACHE = HERE / ".cache"
 ROOT = HERE.parent.parent
 REGIONS = ["north", "west", "central", "east", "south"]
 
-TRAIN_END = datetime(2026, 8, 1, tzinfo=timezone.utc)
-CALIB_END = datetime(2026, 10, 1, tzinfo=timezone.utc)
+TRAIN_END = datetime(2026, 9, 16, tzinfo=timezone.utc)  # includes the start of the 2026 episode
+CALIB_END = datetime(2026, 10, 1, tzinfo=timezone.utc)  # 16–30 Sep tunes the range; October is unseen
+HAZE_UG = 35  # PM2.5 above this (≈ PSI 75) counts as a haze hour for weighting
+HAZE_WEIGHT = 10.0
+# Groups that beat persistence in the October 2026 ablation. "recent" (beyond the current
+# reading) and "upstream" pulled forecasts toward clean air; mixing height didn't help.
+USE_GROUPS = {"time", "cams", "wind", "rain"}
 
 
 def hour_key(dt: datetime) -> int:
@@ -103,25 +108,38 @@ def psi(pm25):
     return np.round(out)
 
 
+USE = np.array([g in USE_GROUPS for _, g in FEATURES])
+
+
 def fit_horizon(X, y, ts):
     tr = ts < hour_key(TRAIN_END)
     ca = (ts >= hour_key(TRAIN_END)) & (ts < hour_key(CALIB_END))
     te = ts >= hour_key(CALIB_END)
     mu, sd = X[tr].mean(0), X[tr].std(0) + 1e-9
+    # Unused features get mean 0 / scale 1 / weight 0, so the JS side can stay generic.
+    mu = np.where(USE, mu, 0.0)
+    sd = np.where(USE, sd, 1.0)
     Z = (X - mu) / sd
-    # Subsample training hours for speed; consecutive hours are highly correlated anyway.
-    idx = np.where(tr)[0][::2]
+    # Predict the change from the current reading (log space), not the level: in a mostly-clean
+    # history the level model learns "fall back to clean air", which is wrong during haze.
+    d = y - X[:, 0]
+    # Subsample clean hours for speed (consecutive hours are highly correlated); keep every haze hour.
+    haze_row = np.expm1(X[:, 0]) > HAZE_UG
+    idx = np.where(tr & (haze_row | (np.arange(len(y)) % 2 == 0)))[0]
+    weight = np.where(haze_row[idx], HAZE_WEIGHT, 1.0)
     models = {}
     for q in QUANTILES:
-        m = QuantileRegressor(quantile=q, alpha=1e-4, solver="highs").fit(Z[idx], y[idx])
-        models[q] = (m.intercept_, m.coef_)
+        m = QuantileRegressor(quantile=q, alpha=1e-4, solver="highs").fit(Z[idx][:, USE], d[idx], sample_weight=weight)
+        coef = np.zeros(X.shape[1])
+        coef[USE] = m.coef_
+        models[q] = (m.intercept_, coef)
 
-    def pred(q, Zs):
+    def pred(q, Zs, rows):
         b, w = models[q]
-        return b + Zs @ w
+        return X[rows, 0] + b + Zs @ w
 
     # Conformalised widening (CQR) so the 10–90% band covers ~80% on unseen hours.
-    lo, hi = pred(0.1, Z[ca]), pred(0.9, Z[ca])
+    lo, hi = pred(0.1, Z[ca], ca), pred(0.9, Z[ca], ca)
     scores = np.maximum(lo - y[ca], y[ca] - hi)
     widen = float(np.quantile(scores, 0.8)) if ca.any() else 0.0
 
@@ -129,9 +147,9 @@ def fit_horizon(X, y, ts):
         if not mask.any():
             return None
         obs = psi(np.expm1(y[mask]))
-        med = psi(np.expm1(pred(0.5, Z[mask])))
-        lo_ = psi(np.expm1(pred(0.1, Z[mask]) - widen))
-        hi_ = psi(np.expm1(pred(0.9, Z[mask]) + widen))
+        med = psi(np.expm1(pred(0.5, Z[mask], mask)))
+        lo_ = psi(np.expm1(pred(0.1, Z[mask], mask) - widen))
+        hi_ = psi(np.expm1(pred(0.9, Z[mask], mask) + widen))
         persist = psi(np.expm1(X[mask][:, 0]))
         return {
             "n": int(mask.sum()),
@@ -148,11 +166,12 @@ def fit_horizon(X, y, ts):
 def export(fitted, reports, n_rows):
     groups = sorted({g for _, g in FEATURES})
     model = {
-        "version": 1,
+        "version": 3,
+        "target": "delta",  # prediction = y0 + b + w·z (log1p PM2.5)
         "trainedAt": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "trainEnd": TRAIN_END.date().isoformat(),
         "features": NAMES,
-        "groups": {g: [i for i, (_, gg) in enumerate(FEATURES) if gg == g] for g in groups},
+        "groups": {g: [i for i, (_, gg) in enumerate(FEATURES) if gg == g] for g in groups if g in USE_GROUPS},
         "groupLabels": GROUP_LABELS,
         "horizons": {},
     }
@@ -194,7 +213,7 @@ def export_parity_vectors(pm, weather, aq, fitted):
             b, w = f["models"][0.5]
             x = np.array(features(raw, h))
             z = (x - mu) / sd
-            exp[str(h)] = {"features": x.tolist(), "q50_log": float(round(float(b), 6) + z @ np.round(w, 6))}
+            exp[str(h)] = {"features": x.tolist(), "q50_log": float(x[0] + round(float(b), 6) + z @ np.round(w, 6))}
         picked.append({"raw": raw, "expected": exp})
         if len(picked) == 3:
             break

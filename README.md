@@ -1,47 +1,122 @@
-# Svelte + TS + Vite
+# I’m going hazelnuts!
 
-This template should help get you started developing with Svelte and TypeScript in Vite.
+<img src="public/logo.svg" alt="" width="72" align="right" />
 
-## Recommended IDE Setup
+A Telegram bot and Mini App for haze in Singapore. It shows current PSI by region, a cigarette
+equivalent, a 24-hour PSI forecast and NEA’s health advice, and sends alerts to a chat when the
+haze band changes.
 
-[VS Code](https://code.visualstudio.com/) + [Svelte](https://marketplace.visualstudio.com/items?itemName=svelte.svelte-vscode).
+- **Bot:** `/haze`, `/cigs [region] [% outdoors]`, `/forecast`, `/subscribe`, `/alerts`,
+  `/unsubscribe`
+- **Mini App:** <https://app8809761337.tgcloud.ai/>, opened from the bot’s button
 
-## Need an official Svelte framework?
+Readings come from NEA (via data.gov.sg). The 1-hour and 3-hour PSI and the forecast are this
+project’s own calculations, not official figures.
 
-Check out [SvelteKit](https://github.com/sveltejs/kit#readme), which is also powered by Vite. Deploy anywhere with its serverless-first approach and adapt to various platforms, with out of the box support for TypeScript, SCSS, and Less, and easily-added support for mdsvex, GraphQL, PostCSS, Tailwind CSS, and more.
+## How it fits together
 
-## Technical considerations
-
-**Why use this over SvelteKit?**
-
-- It brings its own routing solution which might not be preferable for some users.
-- It is first and foremost a framework that just happens to use Vite under the hood, not a Vite app.
-
-This template contains as little as possible to get started with Vite + TypeScript + Svelte, while taking into account the developer experience with regards to HMR and intellisense. It demonstrates capabilities on par with the other `create-vite` templates and is a good starting point for beginners dipping their toes into a Vite + Svelte project.
-
-Should you later need the extended capabilities and extensibility provided by SvelteKit, the template has been structured similarly to SvelteKit so that it is easy to migrate.
-
-**Why `global.d.ts` instead of `compilerOptions.types` inside `jsconfig.json` or `tsconfig.json`?**
-
-Setting `compilerOptions.types` shuts out all other types not explicitly listed in the configuration. Using triple-slash references keeps the default TypeScript setting of accepting type information from the entire workspace, while also adding `svelte` and `vite/client` type information.
-
-**Why include `.vscode/extensions.json`?**
-
-Other templates indirectly recommend extensions via the README, but this file allows VS Code to prompt the user to install the recommended extension upon opening the project.
-
-**Why enable `allowJs` in the TS template?**
-
-While `allowJs: false` would indeed prevent the use of `.js` files in the project, it does not prevent the use of JavaScript syntax in `.svelte` files. In addition, it would force `checkJs: false`, bringing the worst of both worlds: not being able to guarantee the entire codebase is TypeScript, and also having worse typechecking for the existing JavaScript. In addition, there are valid use cases in which a mixed codebase may be relevant.
-
-**Why is HMR not preserving my local component state?**
-
-HMR state preservation comes with a number of gotchas! It has been disabled by default in both `svelte-hmr` and `@sveltejs/vite-plugin-svelte` due to its often surprising behavior. You can read the details [here](https://github.com/rixo/svelte-hmr#svelte-hmr).
-
-If you have state that's important to retain within a component, consider creating an external store which would not be replaced by HMR.
-
-```ts
-// store.ts
-// An extremely simple external store
-import { writable } from 'svelte/store'
-export default writable(0)
 ```
+GitHub Actions (hourly, :12)
+  └─ npx tgcloud run endpoints/tick
+       ├─ refresh NEA PM2.5 + PSI  → readings, state(snapshot)
+       ├─ send band-change and daily alerts → subscribers, alerts_sent
+       └─ run the forecast (Open-Meteo inputs) → state(forecast)
+
+Telegram ─ message / callback_query ─▶ tgcloud/handlers/*      (bot commands)
+Mini App  ─ Serverless.call(...)     ─▶ tgcloud/endpoints/*     (getDashboard, alerts)
+```
+
+It runs on Telegram Serverless (tgcloud). There is no server to host: `tgcloud/` holds the
+modules that run in the cloud, and `src/` is the Svelte front-end, built to `dist/` and served
+as the Mini App. Telegram Serverless has no scheduler, so
+[`.github/workflows/tick.yml`](.github/workflows/tick.yml) runs the hourly job. If a run is
+late, `/haze` and the Mini App fetch fresh data themselves when the snapshot is stale.
+
+| Path | What it is |
+|---|---|
+| `tgcloud/schema.js` | Database tables |
+| `tgcloud/handlers/` | Bot commands and inline buttons |
+| `tgcloud/endpoints/` | `getDashboard`, `alerts` (Mini App), `tick`, `admin` (CLI only) |
+| `tgcloud/lib/` | NEA fetch, PSI maths, alerts, formatting, the forecast runtime |
+| `src/` | Mini App (Svelte 5 + Vite + TypeScript) |
+| `scripts/train/` | Offline Python training for the forecast. Never deployed |
+| `scripts/fixture.mjs` | Builds `src/dev/fixture.json` from live data for local UI work |
+| `test/` | `node --test` unit tests for the shared logic |
+| `docs/` | Platform SDK reference, [design notes](docs/design.md), UI audit |
+
+## Develop
+
+Needs Node (version in `.nvmrc`).
+
+```bash
+npm install
+```
+
+```bash
+npm run dev
+```
+
+Outside Telegram the Mini App uses `src/dev/fixture.json` instead of calling endpoints. A
+toolbar at the bottom of the page switches between demo, worst-case, empty, error and loading
+data (`?demo=worst` and so on). To refresh the fixture from live NEA data:
+
+```bash
+node scripts/fixture.mjs
+```
+
+Checks:
+
+```bash
+npm test
+```
+
+```bash
+npm run check
+```
+
+## Deploy
+
+```bash
+npm run deploy
+```
+
+That builds the front-end and runs `tgcloud push`. Deploying never changes the database: after
+editing `tgcloud/schema.js`, run `npx tgcloud migrate` as well. `npx tgcloud status` shows what
+differs from the cloud.
+
+To run a module in the cloud by hand:
+
+```bash
+npx tgcloud run endpoints/tick
+```
+
+The tick workflow needs the repository secret `TGCLOUD_TOKEN`.
+
+### Operator settings
+
+There is no secret store, so secrets live in the `settings` table and are set only through the
+CLI-only `admin` endpoint (see the comment at the top of
+[`tgcloud/endpoints/admin.js`](tgcloud/endpoints/admin.js)). Don’t paste keys into commands
+that end up in shell history; the file shows how to read one with `read -rs`.
+
+## Forecast
+
+A quantile linear model per horizon (+1, 2, 3, 6 and 24 hours), trained offline in Python and
+exported as coefficients to `tgcloud/lib/forecast/model.js`, which the runtime evaluates in JS.
+Retraining:
+
+```bash
+uv run --project scripts/train python scripts/train/fetch.py
+```
+
+```bash
+uv run --project scripts/train python scripts/train/train.py
+```
+
+The backtest lands in `scripts/train/report.json`, and `test/forecast-vectors.json` checks that
+the JS predictions match Python’s.
+
+## Releasing a user-facing change
+
+Add an entry to [`src/lib/changelog.ts`](src/lib/changelog.ts) for the in-app **What’s new**
+sheet. The rules are in [docs/design.md](docs/design.md#whats-new).

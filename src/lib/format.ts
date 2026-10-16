@@ -12,4 +12,11 @@ export function sgtClock(sec: number): string {
   return sgtHour(new Date(sec * 1000 + 8 * 3600_000).toISOString(), true);
 }
 
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** "2026-10-16" (an SGT date) → "16 Oct" */
+export function sgtDayMonth(ymd: string): string {
+  return `${Number(ymd.slice(8, 10))} ${MONTHS[Number(ymd.slice(5, 7)) - 1]}`;
+}
+
 export const fmt = (v: number | null | undefined, digits = 0) => (v == null ? '–' : v.toFixed(digits));

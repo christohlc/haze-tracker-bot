@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Snapshot } from '../lib/api';
   import { sgtHour } from '../lib/format';
+  import WhatsNew from './WhatsNew.svelte';
 
   let { snapshot }: { snapshot: Snapshot | null } = $props();
 </script>
@@ -18,6 +19,7 @@
       {/if}
     </p>
   </div>
+  <WhatsNew />
 </header>
 
 <style>
