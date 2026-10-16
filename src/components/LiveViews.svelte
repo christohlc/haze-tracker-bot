@@ -185,14 +185,6 @@
   .stale {
     color: var(--status-critical);
   }
-  .sk {
-    animation: pulse 1.2s ease-in-out infinite alternate;
-  }
-  @keyframes pulse {
-    to {
-      opacity: 0.55;
-    }
-  }
   .sub {
     margin: 16px 0 0;
     font-size: 0.9375rem;
@@ -236,38 +228,12 @@
     margin-top: 12px;
   }
   .state {
-    display: grid;
-    gap: 12px;
-    justify-items: start;
     margin-top: 12px;
-  }
-  .error {
-    margin: 0;
-    font-size: 0.875rem;
-    color: var(--status-critical);
-  }
-  .state button {
-    min-height: 40px;
-    padding: 0 16px;
-    border: 0;
-    border-radius: 10px;
-    background: var(--accent);
-    color: var(--accent-ink);
-    font: inherit;
-    font-weight: 600;
-    transition: transform 120ms var(--ease-out);
-  }
-  .state button:active {
-    transform: scale(0.97);
   }
   @media (prefers-reduced-motion: reduce) {
     .frame,
-    .state button,
     .links a {
       transition: none;
-    }
-    .sk {
-      animation: none;
     }
   }
 </style>

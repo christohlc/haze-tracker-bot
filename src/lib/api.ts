@@ -86,16 +86,29 @@ export interface CamerasResult {
   serverTime: number;
 }
 
+/**
+ * Dev-only: one card's own state from `?card=cameras:error,weather:partial`, since ?demo=error and
+ * ?demo=loading hide every card. Throws for `error`, never settles for `loading`, else returns the state.
+ */
+async function devCard(card: string, failure: string): Promise<string | null> {
+  const state =
+    new URLSearchParams(location.search)
+      .get('card')
+      ?.split(',')
+      .find((s) => s.startsWith(`${card}:`))
+      ?.slice(card.length + 1) ?? null;
+  if (state === 'error') throw new Error(failure);
+  if (state === 'loading') await new Promise(() => {});
+  return state;
+}
+
 export async function loadCameras(): Promise<CamerasResult> {
   if (inTelegram) return callEndpoint<CamerasResult>('getCameras');
   if (import.meta.env.DEV) {
-    // Dev-only: follows ?demo= (worst | empty), plus ?cams=error | loading, since ?demo=error hides the cards.
-    const q = new URLSearchParams(location.search);
-    const cams = q.get('cams');
-    if (cams === 'error') throw new Error('Couldn’t load the camera pictures.');
-    if (cams === 'loading') return new Promise(() => {});
+    // Dev-only: follows ?demo= (worst | empty), plus ?card=cameras:error | cameras:loading.
+    await devCard('cameras', 'Couldn’t load the camera pictures.');
     const dev = await import('../dev/cameras');
-    const demo = q.get('demo');
+    const demo = new URLSearchParams(location.search).get('demo');
     if (demo === 'worst') return dev.worstCameras();
     if (demo === 'empty') return { cameras: [], serverTime: Date.now() };
     return dev.demoCameras();
@@ -114,14 +127,11 @@ export interface WeatherResult {
 export async function loadWeather(): Promise<WeatherResult> {
   if (inTelegram) return callEndpoint<WeatherResult>('getWeather');
   if (import.meta.env.DEV) {
-    // Dev-only: follows ?demo= (worst | empty), plus ?wx=error | loading | partial, like ?cams= for Live views.
-    const q = new URLSearchParams(location.search);
-    const wx = q.get('wx');
-    if (wx === 'error') throw new Error('Couldn’t load wind and rain.');
-    if (wx === 'loading') return new Promise(() => {});
+    // Dev-only: follows ?demo= (worst | empty), plus ?card=weather:error | weather:loading | weather:partial.
+    const state = await devCard('weather', 'Couldn’t load wind and rain.');
     const dev = await import('../dev/weather');
-    if (wx === 'partial') return dev.partialWeather();
-    const demo = q.get('demo');
+    if (state === 'partial') return dev.partialWeather();
+    const demo = new URLSearchParams(location.search).get('demo');
     if (demo === 'worst') return dev.worstWeather();
     if (demo === 'empty') return { weather: null, serverTime: Date.now() };
     return dev.demoWeather();

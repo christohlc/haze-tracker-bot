@@ -2,8 +2,9 @@
 // Thin DB helpers over schema.js.
 
 import { db } from 'sdk';
-import { desc, eq, gte } from 'sdk/db';
+import { desc, eq, gte, inArray } from 'sdk/db';
 import { readings, settings, sourceStatus, state } from '../schema.js';
+import { errorText } from './http.js';
 import { toSgtIso } from './time.js';
 
 const nowSec = () => Math.floor(Date.now() / 1000);
@@ -70,4 +71,43 @@ export async function recordSource(source, result) {
 
 export async function allSourceStatus() {
   return db.select().from(sourceStatus).all();
+}
+
+/**
+ * A feed fetched only when asked for, at most once per `everyS` seconds, kept in state(key) as
+ * `{ [key]: value }`. The attempt is claimed in state(key_attempt) before fetching, so Mini Apps
+ * opened together, or a feed that's down, cost one fetch per `everyS`. `load` returns the new
+ * value, with `error` for a partial failure (the value is still stored) and `detail` for the
+ * source's status; throwing counts as a failure. Returns the stored copy when there's nothing
+ * new (null if never). Never throws.
+ * @template T
+ * @param {string} key @param {number} everyS @param {string} source for recordSource
+ * @param {() => Promise<{ value: T | null, error?: string, detail?: string }>} load
+ * @returns {Promise<T | null>}
+ */
+export async function cachedFeed(key, everyS, source, load) {
+  const attemptKey = `${key}_attempt`;
+  let cached = null;
+  try {
+    // One read for both rows: a warm hit costs a single query.
+    const rows = await db.select().from(state).where(inArray(state.key, [key, attemptKey])).all();
+    const stored = rows.find((r) => r.key === key);
+    const attempt = rows.find((r) => r.key === attemptKey);
+    cached = stored?.value?.[key] ?? null;
+    if (attempt && nowSec() - attempt.updatedAt < everyS) return cached;
+    await setState(attemptKey, {});
+    /** @type {{ value: T | null, error?: string, detail?: string }} */
+    let result;
+    try {
+      result = await load();
+    } catch (e) {
+      result = { value: null, error: errorText(e) };
+    }
+    const { value, error, detail } = result;
+    const status = error || value == null ? { ok: false, error: error || 'No data' } : { ok: true, detail };
+    await Promise.all([value != null && setState(key, { [key]: value }), recordSource(source, status)]);
+    return value ?? cached;
+  } catch {
+    return cached;
+  }
 }
