@@ -21,10 +21,12 @@ in this project.
 Singapore haze bot + Mini App. User-facing overview in [README.md](README.md); visual
 and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious from the code:
 
-- **The 30-minute job is `endpoints/tick`**, run by `.github/workflows/tick.yml` (the
+- **The 15-minute job is `endpoints/tick`**, run by `.github/workflows/tick.yml` (the
   platform has no scheduler). It refreshes NEA, then sends alerts, runs the forecast and
   refreshes news in parallel.
   `tick` and `admin` call `requireCli(ctx)`: they're CLI-only, never Mini App endpoints.
+  The repo is public (free Actions minutes); a weekly `keepalive` job in the same workflow
+  stops GitHub's 60-day pause of scheduled workflows.
   NEA is refetched only until the current hour is published, news about hourly, the forecast
   once per NEA hour; the extra runs are for alerts a previous run didn't reach. `{"force":true}`
   refetches NEA and news regardless.

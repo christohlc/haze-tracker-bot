@@ -1,27 +1,36 @@
-# Heartbeat, every 30 minutes. Telegram Serverless has no built-in scheduler, so GitHub Actions
+# Heartbeat, every 15 minutes. Telegram Serverless has no built-in scheduler, so GitHub Actions
 # runs endpoints/tick in the bot's cloud environment (pattern from telegram-assistant-bot).
 #
 # Needs the repo secret TGCLOUD_TOKEN (the CLI access token from @BotFather).
 #
-# Every 30 min so alerts left over from a run (time budget, rate limit) go out soon after.
+# Every 15 min so alerts left over from a run (time budget, rate limit) go out soon after.
 # NEA, news and the forecast are fetched about once an hour, so the extra runs are cheap.
-# Cost note: on a private repo each run uses ~1 billed Actions minute, so this is ~1,450
-# min/month, inside the 2,000 free minutes. Every 15 min would be ~2,900 (over the free tier).
+# Cost note: the repo is public, so Actions minutes are free. If it ever goes private again,
+# this is ~2,900 billed min/month (over the 2,000 free); use '12,42 * * * *' instead.
 # GitHub may delay scheduled runs at busy times; /haze and the Mini App refetch on their own
 # when the snapshot is stale.
+#
+# GitHub pauses scheduled workflows in a public repo after 60 days without repo activity.
+# The weekly keepalive job re-enables this workflow through the API, which counts as activity
+# (the approach of the keepalive-workflow action, without the third-party dependency).
 name: tick
 
 on:
   schedule:
-    - cron: '12,42 * * * *' # NEA publishes ~15 min past the hour; off the congested :00 slot
+    - cron: '12,27,42,57 * * * *' # NEA publishes ~15 min past the hour; off the congested :00 slot
+    - cron: '33 3 * * 1' # keepalive, Mondays 11:33 SGT
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
-  group: tick
+  group: tick-${{ github.event.schedule == '33 3 * * 1' && 'keepalive' || 'run' }}
   cancel-in-progress: false
 
 jobs:
   tick:
+    if: github.event.schedule != '33 3 * * 1'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -34,3 +43,14 @@ jobs:
       - run: npx tgcloud run endpoints/tick
         env:
           TGCLOUD_TOKEN: ${{ secrets.TGCLOUD_TOKEN }}
+
+  keepalive:
+    if: github.event.schedule == '33 3 * * 1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      actions: write
+    steps:
+      - run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/tick.yml/enable"
+        env:
+          GH_TOKEN: ${{ github.token }}

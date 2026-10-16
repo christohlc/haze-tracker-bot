@@ -42,7 +42,7 @@ export async function refreshNews() {
 
 const NEWS_EVERY_S = 55 * 60;
 
-/** For the tick (every 30 min): refetch the feeds about once an hour. */
+/** For the tick (every 15 min): refetch the feeds about once an hour. */
 export async function refreshNewsIfDue() {
   const updatedAt = (await getState('news'))?.updatedAt ?? 0;
   if (Date.now() / 1000 - updatedAt < NEWS_EVERY_S) return { count: null, error: null, skipped: true };

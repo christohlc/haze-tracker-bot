@@ -38,7 +38,7 @@ export async function refreshNea() {
   return snap;
 }
 
-/** For the tick (every 30 min): refetch only until NEA has published the current hour. */
+/** For the tick (every 15 min): refetch only until NEA has published the current hour. */
 export async function refreshNeaIfNewHour(now = Date.now()) {
   const cached = (await getState('snapshot'))?.value;
   if (cached && unixHour(cached.asOf) === Math.floor(now / 3_600_000)) return cached;
