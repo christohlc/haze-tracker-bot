@@ -11,7 +11,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     id: '2026-10-16-fullscreen',
     date: '2026-10-16',
-    title: 'See more at a glance',
+    title: 'See more without scrolling',
     body: 'On your phone, the app now opens full screen, so more of the readings fit before you scroll.',
   },
   {

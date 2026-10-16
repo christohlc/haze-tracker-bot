@@ -51,6 +51,7 @@
     visited[tab] = true;
   });
   let tabsAnchor = $state<HTMLElement>();
+  let tabbar = $state<HTMLElement>();
 
   // Latest What's new id the user had seen when the app opened; undefined until storage answers.
   let seen = $state<string | null | undefined>(undefined);
@@ -72,8 +73,10 @@
   $effect(() => {
     tab;
     untrack(() => {
-      if (!tabsAnchor || window.scrollY === 0) return;
-      const y = tabsAnchor.getBoundingClientRect().top + window.scrollY;
+      if (!tabsAnchor || !tabbar || window.scrollY === 0) return;
+      // The bar sticks below the inset (notch and Telegram's buttons in full screen), not at 0.
+      const stuckAt = parseFloat(getComputedStyle(tabbar).top) || 0;
+      const y = tabsAnchor.getBoundingClientRect().top + window.scrollY - stuckAt;
       if (window.scrollY > y) window.scrollTo({ top: y, behavior: 'instant' });
     });
   });
@@ -102,6 +105,9 @@
   });
 </script>
 
+<!-- Full screen, the page scrolls under the status bar and Telegram's buttons; this covers it. -->
+<div class="inset-scrim" aria-hidden="true"></div>
+
 <main>
   <BrandHeader snapshot={data?.snapshot ?? null} onsecret={() => (ninja = true)} />
 
@@ -123,7 +129,7 @@
       </div>
     {/if}
     <div bind:this={tabsAnchor}></div>
-    <div class="tabbar">
+    <div class="tabbar" bind:this={tabbar}>
       <Segmented
         kind="tab"
         id="tab"
@@ -173,7 +179,16 @@
   main {
     max-width: 720px;
     margin: 0 auto;
-    padding: calc(12px + var(--inset-top)) var(--gutter) calc(24px + var(--inset-bottom));
+    padding: calc(12px + var(--inset-top)) calc(var(--gutter) + var(--inset-right))
+      calc(24px + var(--inset-bottom)) calc(var(--gutter) + var(--inset-left));
+  }
+  .inset-scrim {
+    position: fixed;
+    inset: 0 0 auto;
+    z-index: 3;
+    height: var(--inset-top);
+    background: var(--page);
+    pointer-events: none;
   }
   .sections,
   .skeleton {
