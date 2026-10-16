@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import Advice from './components/Advice.svelte';
   import CigCalc from './components/CigCalc.svelte';
+  import ForecastSection from './components/ForecastSection.svelte';
   import Hero from './components/Hero.svelte';
   import HistoryChart from './components/HistoryChart.svelte';
   import RegionTable from './components/RegionTable.svelte';
@@ -69,6 +70,7 @@
       <Hero snapshot={data.snapshot} />
       <RegionTable snapshot={data.snapshot} />
       <CigCalc snapshot={data.snapshot} />
+      {#if data.forecast}<ForecastSection forecast={data.forecast} history={data.history} />{/if}
       <HistoryChart snapshot={data.snapshot} history={data.history} />
       <Advice snapshot={data.snapshot} />
       <Sources sources={data.sources} />

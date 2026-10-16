@@ -37,10 +37,28 @@ export interface SourceStatus {
   detail: string | null;
 }
 
+export interface ForecastStep {
+  h: number;
+  t: string;
+  psi: number;
+  lo: number;
+  hi: number;
+}
+
+export interface Forecast {
+  issuedAt: string;
+  now: number | null;
+  steps: ForecastStep[];
+  factors: { group: string; label: string; delta: number }[];
+  missingInputs: number;
+  model: { version: number; trainedAt: string };
+}
+
 export interface Dashboard {
   snapshot: Snapshot;
   history: HourRow[];
   sources: SourceStatus[];
+  forecast?: Forecast | null;
   serverTime: number;
 }
 

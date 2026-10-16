@@ -6,7 +6,8 @@ import { cigarettes } from '../lib/cigs.js';
 import { renderAlertSettings } from '../lib/alert-settings.js';
 import { dashboardButton } from '../lib/buttons.js';
 import { REGIONS } from '../lib/config.js';
-import { formatCigs, formatHaze } from '../lib/format.js';
+import { getForecast } from '../lib/forecast/run.js';
+import { formatCigs, formatForecast, formatHaze } from '../lib/format.js';
 import { getSnapshot } from '../lib/refresh.js';
 import { getState } from '../lib/store.js';
 import { deleteSubscriber, getSubscriber, saveSubscriber } from '../lib/subscriptions.js';
@@ -15,6 +16,7 @@ const HELP = [
   '<b>Haze Tracker SG</b>',
   '/haze: current PSI, regions and advice',
   '/cigs [region] [% outdoors]: cigarette equivalent, e.g. <code>/cigs east 30</code>',
+  '/forecast: PSI for the next 24 hours (model, not official)',
   '/subscribe: alerts when the haze band changes',
   '/alerts: change alerts or add a daily update',
   '/unsubscribe: stop all alerts',
@@ -35,7 +37,13 @@ export default async function (message) {
       return reply(message, HELP, dashboardButton(message.chat.id));
     case 'haze': {
       const snap = await getSnapshot();
-      return reply(message, formatHaze(snap), dashboardButton(message.chat.id));
+      const fc = await getForecast();
+      return reply(message, formatHaze(snap, fc?.issuedAt === snap.asOf ? fc : null), dashboardButton(message.chat.id));
+    }
+    case 'forecast': {
+      const fc = await getForecast();
+      if (!fc) return reply(message, 'The forecast isn’t ready yet. It updates every hour.');
+      return reply(message, formatForecast(fc), dashboardButton(message.chat.id));
     }
     case 'cigs': {
       const { regionId, outdoorPct } = parseCigsArgs(args);

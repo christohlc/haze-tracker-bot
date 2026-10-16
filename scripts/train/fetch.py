@@ -19,23 +19,31 @@ UA = {"User-Agent": "haze-tracker-bot-training/0.1"}
 
 
 def get_json(url: str, tries: int = 6):
-    for attempt in range(tries):
+    attempt = 0
+    while attempt < tries:
+        attempt += 1
         try:
             with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=120) as r:
                 return json.load(r)
         except urllib.error.HTTPError as e:
             if e.code == 404:  # data.gov.sg: no data for that day
                 return {}
-            if attempt == tries - 1:
+            if e.code == 429:  # anonymous data.gov.sg quota: wait it out, don't give up
+                wait = int(e.headers.get("Retry-After") or 30)
+                print(f"  HTTP 429, waiting {wait}s", flush=True)
+                time.sleep(wait)
+                attempt -= 1  # quota waits don't use up retries
+                continue
+            if attempt == tries:
                 raise
-            wait = int(e.headers.get("Retry-After") or 2**attempt)
+            wait = 2**attempt
             print(f"  HTTP {e.code}, retry in {wait}s")
             time.sleep(wait)
         except Exception as e:  # noqa: BLE001 — retry anything transient
-            if attempt == tries - 1:
+            if attempt == tries:
                 raise
             wait = 2**attempt
-            print(f"  retry {attempt + 1} in {wait}s: {e}")
+            print(f"  retry {attempt} in {wait}s: {e}")
             time.sleep(wait)
 
 
@@ -50,14 +58,18 @@ def nea_day(d: date):
     ]
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(items))
-    time.sleep(0.25)  # be gentle with data.gov.sg
+    time.sleep(0.5)  # be gentle with data.gov.sg
 
 
 def fetch_nea():
     start = date.fromisoformat(START) - timedelta(days=2)
     days = [start + timedelta(days=i) for i in range((date.today() - start).days + 1)]
-    print(f"NEA: {len(days)} days")
-    with ThreadPoolExecutor(max_workers=8) as pool:
+    # The anonymous quota is ~12 requests/min, so fetch what matters most first:
+    # this year, then the Sep–Nov haze seasons, then everything else.
+    days.sort(key=lambda d: (0 if d.year == date.today().year else 1 if d.month in (9, 10, 11) else 2, -d.toordinal()))
+    days = [d for d in days if not (CACHE / "nea" / f"{d.isoformat()}.json").exists() or d >= date.today() - timedelta(days=1)]
+    print(f"NEA: {len(days)} days to fetch")
+    with ThreadPoolExecutor(max_workers=1) as pool:
         for i, _ in enumerate(pool.map(nea_day, days)):
             if i % 100 == 0:
                 print(f"  {i}/{len(days)}")

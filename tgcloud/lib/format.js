@@ -14,7 +14,8 @@ export function sgtTime(iso) {
 const n = (v, digits = 0) => (v == null ? '–' : v.toFixed(digits));
 const pad = (s, w) => String(s).padStart(w);
 
-export function formatHaze(snap) {
+/** @param {any} snap @param {any} [forecast] */
+export function formatHaze(snap, forecast) {
   const head = snap.worst.psi3h;
   const band = psiBand(head?.value);
   const mask = maskCard(head?.value);
@@ -39,6 +40,10 @@ export function formatHaze(snap) {
   ];
   if (mask) lines.push(`😷 <b>${mask.title}.</b> ${mask.text}`);
   if (tips.rightNow) lines.push(`👉 Band ${tips.rightNow.band} (${tips.rightNow.label}): ${tips.rightNow.text}`);
+  if (forecast?.steps?.length) {
+    const pick = forecast.steps.filter((/** @type {any} */ s) => [1, 3, 6].includes(s.h));
+    lines.push(`📈 Island-wide 1h PSI ahead: ${pick.map((/** @type {any} */ s) => `+${s.h}h <b>${s.psi}</b>`).join(' · ')} (/forecast)`);
+  }
   lines.push('', '<i>Not official. Check haze.gov.sg for NEA advisories.</i>');
   return lines.join('\n');
 }
@@ -72,5 +77,28 @@ export function formatBandAlert(snap, fromId, toId) {
   if (mask) lines.push(`😷 <b>${mask.title}.</b> ${mask.text}`);
   if (tips.rightNow) lines.push(`👉 ${tips.rightNow.text}`);
   lines.push('', '<i>/alerts to change or stop these.</i>');
+  return lines.join('\n');
+}
+
+/** @param {any} forecast */
+export function formatForecast(forecast) {
+  const rows = forecast.steps.map(
+    (/** @type {any} */ s) =>
+      `${`+${s.h}h`.padEnd(5)}${sgtTime(s.t).padStart(9)}${pad(s.psi, 6)}  ${`${s.lo}–${s.hi}`.padEnd(9)}`,
+  );
+  const table = [`${'When'.padEnd(5)}${'SGT'.padStart(9)}${pad('PSI', 6)}  80% range`, ...rows].join('\n');
+  const top = forecast.factors?.[0];
+  const lines = [
+    `📈 <b>Haze forecast</b> · island-wide 1-hour PSI`,
+    `<i>Now ${n(forecast.now)} · based on data to ${sgtTime(forecast.issuedAt)} SGT</i>`,
+    '',
+    `<pre>${table}</pre>`,
+  ];
+  if (top && Math.abs(top.delta) >= 1) {
+    lines.push(
+      `Biggest factor for the next hour (besides current PSI): ${top.label}, ${top.delta > 0 ? 'raising' : 'lowering'} it by about ${Math.abs(top.delta)} PSI vs a typical hour.`,
+    );
+  }
+  lines.push('', '<i>Model forecast, not official. About 8 times in 10 the reading should land inside the range.</i>');
   return lines.join('\n');
 }
