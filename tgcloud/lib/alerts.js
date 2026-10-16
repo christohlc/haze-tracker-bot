@@ -120,7 +120,7 @@ async function send(chatId, key, text) {
     }
     await releaseAlert(key);
     if (e instanceof BotApiError && e.code === 429) return { result: 'limited', retryAfterS: e.parameters?.retry_after };
-    console.error('alert send failed', chatId, e);
+    console.error('alert send failed', e instanceof BotApiError ? `${e.code} ${e.description}` : String(e)); // no chat id: tick output lands in public Actions logs
     return { result: 'failed' };
   }
 }
