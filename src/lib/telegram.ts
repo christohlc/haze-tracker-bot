@@ -13,6 +13,8 @@ export function initTelegram() {
   if (!tg) return;
   tg.ready();
   tg.expand();
+  // On phones the app takes the whole screen (Bot API 8.0+). Desktop keeps its window.
+  if (MOBILE.has(tg.platform) && tg.isVersionAtLeast?.('8.0')) tg.requestFullscreen?.();
   tg.onEvent?.('themeChanged', applyScheme);
   try {
     tg.setHeaderColor?.('secondary_bg_color');
@@ -21,6 +23,8 @@ export function initTelegram() {
     // older clients
   }
 }
+
+const MOBILE = new Set(['ios', 'android', 'android_x']);
 
 const darkQuery = matchMedia('(prefers-color-scheme: dark)');
 

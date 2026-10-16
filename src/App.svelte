@@ -173,8 +173,7 @@
   main {
     max-width: 720px;
     margin: 0 auto;
-    padding: calc(12px + var(--tg-content-safe-area-inset-top, 0px)) var(--gutter)
-      calc(24px + var(--tg-safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
+    padding: calc(12px + var(--inset-top)) var(--gutter) calc(24px + var(--inset-bottom));
   }
   .sections,
   .skeleton {
@@ -184,7 +183,7 @@
   }
   .tabbar {
     position: sticky;
-    top: var(--tg-content-safe-area-inset-top, 0px);
+    top: var(--inset-top);
     z-index: 2;
     margin: 0 calc(-1 * var(--gutter)) 12px;
     padding: 6px var(--gutter);

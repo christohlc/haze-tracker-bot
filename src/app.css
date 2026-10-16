@@ -43,6 +43,10 @@
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   --radius: 16px;
   --gutter: 16px;
+  /* Room for the notch and Telegram's own buttons. Full screen, both sit over the top of the
+     page, and Telegram measures its content inset from below the notch, so they add up. */
+  --inset-top: calc(var(--tg-safe-area-inset-top, 0px) + var(--tg-content-safe-area-inset-top, 0px));
+  --inset-bottom: var(--tg-safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
 
   font: 100%/1.45 system-ui, -apple-system, 'Segoe UI', sans-serif;
   -webkit-text-size-adjust: 100%;

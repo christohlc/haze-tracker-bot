@@ -9,6 +9,12 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-16-fullscreen',
+    date: '2026-10-16',
+    title: 'See more at a glance',
+    body: 'On your phone, the app now opens full screen, so more of the readings fit before you scroll.',
+  },
+  {
     id: '2026-10-16-nea-outlook',
     date: '2026-10-16',
     title: 'Check NEA’s forecast for tomorrow',

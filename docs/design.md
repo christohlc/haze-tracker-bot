@@ -64,7 +64,10 @@ or, outside Telegram, from the OS. A new colour token needs both a light and a d
 ## Layout
 
 - One column, at most 720px wide, with 16px gutters and 12px between cards. Padding respects
-  Telegram’s safe-area insets.
+  Telegram’s safe-area insets through `--inset-top` / `--inset-bottom`.
+- On phones the app asks Telegram for full screen when it opens (`requestFullscreen`, Bot API
+  8.0+), whichever button opened it. Telegram’s close and menu buttons then float over the top
+  of the page, which `--inset-top` leaves room for. Desktop clients keep their window.
 - Each section is a `.card` with a `.section-title`, an optional `.note` and its content.
 - Under the header, a sticky tab bar (`Segmented` with `kind="tab"`) splits the cards into three
   tabs. It sits at the top, not the bottom, because Telegram’s MainButton (“Get haze alerts”)
