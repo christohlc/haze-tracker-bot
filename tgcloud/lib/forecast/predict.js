@@ -7,10 +7,14 @@ import { MODEL } from './model.js';
 
 export const HORIZONS = [1, 2, 3, 6, 24];
 
-/** @param {any} m @param {string} q @param {number[]} x */
+/**
+ * log1p(PM2.5) at the horizon. The model predicts the change from the current reading
+ * (x[0] = log1p of current PM2.5), so the level is x[0] + b + w·z.
+ * @param {any} m @param {string} q @param {number[]} x
+ */
 function quantile(m, q, x) {
   const { b, w } = m.q[q];
-  let s = b;
+  let s = (MODEL.target === 'delta' ? x[0] : 0) + b;
   for (let i = 0; i < x.length; i++) s += w[i] * ((x[i] - m.mean[i]) / m.scale[i]);
   return s;
 }

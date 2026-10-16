@@ -4,6 +4,7 @@ Run: uv run --project scripts/train python scripts/train/fetch.py [--nea-only]
 """
 
 import json
+import os
 import sys
 import time
 import urllib.error
@@ -16,14 +17,20 @@ from config import POINTS, START
 
 CACHE = Path(__file__).parent / ".cache"
 UA = {"User-Agent": "haze-tracker-bot-training/0.1"}
+# Optional data.gov.sg API key (raises the ~12 requests/min anonymous limit). Read from the
+# environment only — never hard-code or commit it.
+GOVSG_KEY = os.environ.get("DATAGOVSG_API_KEY", "").strip()
 
 
 def get_json(url: str, tries: int = 6):
+    headers = dict(UA)
+    if GOVSG_KEY and "data.gov.sg" in url:
+        headers["x-api-key"] = GOVSG_KEY
     attempt = 0
     while attempt < tries:
         attempt += 1
         try:
-            with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=120) as r:
+            with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=120) as r:
                 return json.load(r)
         except urllib.error.HTTPError as e:
             if e.code == 404:  # data.gov.sg: no data for that day
@@ -58,7 +65,7 @@ def nea_day(d: date):
     ]
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(items))
-    time.sleep(0.5)  # be gentle with data.gov.sg
+    time.sleep(0.1 if GOVSG_KEY else 0.5)  # be gentle with data.gov.sg
 
 
 def fetch_nea():
@@ -69,7 +76,8 @@ def fetch_nea():
     days.sort(key=lambda d: (0 if d.year == date.today().year else 1 if d.month in (9, 10, 11) else 2, -d.toordinal()))
     days = [d for d in days if not (CACHE / "nea" / f"{d.isoformat()}.json").exists() or d >= date.today() - timedelta(days=1)]
     print(f"NEA: {len(days)} days to fetch")
-    with ThreadPoolExecutor(max_workers=1) as pool:
+    print("  using data.gov.sg API key" if GOVSG_KEY else "  no API key: anonymous rate limit (~12/min)")
+    with ThreadPoolExecutor(max_workers=4 if GOVSG_KEY else 1) as pool:
         for i, _ in enumerate(pool.map(nea_day, days)):
             if i % 100 == 0:
                 print(f"  {i}/{len(days)}")

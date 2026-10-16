@@ -27,3 +27,4 @@ dist-ssr
 # forecast training cache
 scripts/train/.cache/
 scripts/train/.venv/
+scripts/train/__pycache__/

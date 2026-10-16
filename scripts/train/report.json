@@ -1,0 +1,102 @@
+{
+  "+1h": {
+    "calibration": {
+      "n": 360,
+      "mae_psi": 4.85,
+      "persistence_mae_psi": 4.83,
+      "coverage_80": 0.808
+    },
+    "test": {
+      "n": 360,
+      "mae_psi": 5.77,
+      "persistence_mae_psi": 5.69,
+      "coverage_80": 0.908
+    },
+    "test_haze_hours": {
+      "n": 255,
+      "mae_psi": 6.58,
+      "persistence_mae_psi": 6.48,
+      "coverage_80": 0.902
+    }
+  },
+  "+2h": {
+    "calibration": {
+      "n": 360,
+      "mae_psi": 7.89,
+      "persistence_mae_psi": 7.92,
+      "coverage_80": 0.814
+    },
+    "test": {
+      "n": 360,
+      "mae_psi": 9.56,
+      "persistence_mae_psi": 9.45,
+      "coverage_80": 0.906
+    },
+    "test_haze_hours": {
+      "n": 255,
+      "mae_psi": 10.89,
+      "persistence_mae_psi": 10.73,
+      "coverage_80": 0.918
+    }
+  },
+  "+3h": {
+    "calibration": {
+      "n": 360,
+      "mae_psi": 10.35,
+      "persistence_mae_psi": 10.46,
+      "coverage_80": 0.817
+    },
+    "test": {
+      "n": 360,
+      "mae_psi": 12.83,
+      "persistence_mae_psi": 12.79,
+      "coverage_80": 0.906
+    },
+    "test_haze_hours": {
+      "n": 255,
+      "mae_psi": 14.58,
+      "persistence_mae_psi": 14.44,
+      "coverage_80": 0.918
+    }
+  },
+  "+6h": {
+    "calibration": {
+      "n": 360,
+      "mae_psi": 15.71,
+      "persistence_mae_psi": 16.41,
+      "coverage_80": 0.808
+    },
+    "test": {
+      "n": 360,
+      "mae_psi": 20.98,
+      "persistence_mae_psi": 20.48,
+      "coverage_80": 0.903
+    },
+    "test_haze_hours": {
+      "n": 255,
+      "mae_psi": 24.17,
+      "persistence_mae_psi": 23.6,
+      "coverage_80": 0.91
+    }
+  },
+  "+24h": {
+    "calibration": {
+      "n": 360,
+      "mae_psi": 25.41,
+      "persistence_mae_psi": 26.1,
+      "coverage_80": 0.803
+    },
+    "test": {
+      "n": 344,
+      "mae_psi": 24.41,
+      "persistence_mae_psi": 26.08,
+      "coverage_80": 0.983
+    },
+    "test_haze_hours": {
+      "n": 239,
+      "mae_psi": 25.03,
+      "persistence_mae_psi": 27.11,
+      "coverage_80": 0.979
+    }
+  }
+}

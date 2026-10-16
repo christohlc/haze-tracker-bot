@@ -19,7 +19,8 @@ test('JS forecast features and predictions match Python', { skip: !ready && 'run
       x.forEach((v, i) => assert.ok(Math.abs(v - exp.features[i]) < 1e-9, `h=${h} feature ${MODEL.features[i]}: ${v} vs ${exp.features[i]}`));
       const m = MODEL.horizons[h];
       const { b, w } = m.q['0.5'];
-      const q50 = x.reduce((s, xi, i) => s + w[i] * ((xi - m.mean[i]) / m.scale[i]), b);
+      const base = (MODEL.target === 'delta' ? x[0] : 0) + b;
+      const q50 = x.reduce((s, xi, i) => s + w[i] * ((xi - m.mean[i]) / m.scale[i]), base);
       assert.ok(Math.abs(q50 - exp.q50_log) < 1e-6, `h=${h} q50 ${q50} vs ${exp.q50_log}`);
     }
   }
