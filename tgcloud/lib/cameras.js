@@ -3,8 +3,8 @@
 // Fetched only when someone opens the Mini App, never by the tick.
 
 import { CAMERAS_FEED, parseCameras } from './cameras-parse.js';
+import { cachedFeed } from './feed-cache.js';
 import { getJson } from './http.js';
-import { cachedFeed } from './store.js';
 
 // The pictures change about every 20 s; a minute keeps us well inside data.gov.sg's rate limits.
 const CAMERAS_EVERY_S = 60;

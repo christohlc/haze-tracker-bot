@@ -126,7 +126,7 @@ select {
   color: var(--muted);
 }
 
-/* The main action in a card, and an error under it (AlertsCard, ShareCard, and the .state below). */
+/* The main action in a card, and an error under it (AlertsCard, ShareCard, a .state's Try again). */
 .primary {
   min-height: 48px;
   border: 0;
@@ -186,25 +186,14 @@ select {
 .state p {
   margin: 0;
 }
-.state button {
+.state .primary {
   min-height: 40px;
   padding: 0 16px;
-  border: 0;
   border-radius: 10px;
-  background: var(--accent);
-  color: var(--accent-ink);
-  font: inherit;
   font-weight: 600;
-  transition: transform 120ms var(--ease-out);
-}
-.state button:active {
-  transform: scale(0.97);
 }
 @media (prefers-reduced-motion: reduce) {
   .sk {
     animation: none;
-  }
-  .state button {
-    transition: none;
   }
 }

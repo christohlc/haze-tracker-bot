@@ -55,7 +55,7 @@
   {#if error && !data}
     <div class="card state">
       <p>{error}</p>
-      <button type="button" onclick={load}>Try again</button>
+      <button type="button" class="primary" onclick={load}>Try again</button>
     </div>
   {:else if !data}
     <div class="skeleton" aria-busy="true" aria-label="Loading">

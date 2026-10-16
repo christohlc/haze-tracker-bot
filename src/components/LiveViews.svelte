@@ -50,7 +50,7 @@
   {#if error}
     <div class="state">
       <p class="error" role="alert">{error}</p>
-      <button type="button" onclick={load}>Try again</button>
+      <button type="button" class="primary" onclick={load}>Try again</button>
     </div>
   {:else if !result}
     <div class="row" aria-busy="true" aria-label="Loading camera pictures">
