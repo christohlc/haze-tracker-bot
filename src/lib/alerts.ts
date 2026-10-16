@@ -5,9 +5,6 @@ export interface AlertSettings {
   dailyHour: number | null;
 }
 
-/** Same choices as the bot's /alerts keyboard (tgcloud/lib/alert-settings.js). */
-export const DAILY_HOURS = [7, 8, 12, 18];
-
 // Outside Telegram (dev preview) there's no endpoint: keep settings in memory.
 let devSettings: AlertSettings | null = null;
 

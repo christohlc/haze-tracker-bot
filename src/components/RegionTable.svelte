@@ -31,7 +31,7 @@
             <span class="bar" style:width="{(r.v / max) * 100}%" style:background="var(--band-{r.band?.id})"></span>
           {/if}
         </span>
-        <span class="value num">{fmt(r.v)}</span>
+        <span class="value num"><span class="visually-hidden">{PERIOD_LABEL[period]} PSI </span>{fmt(r.v)}</span>
         <span class="sub">
           {r.band?.label ?? 'No reading'} · PM2.5 <span class="num">{fmt(r.pm25)}</span> µg/m³
         </span>

@@ -32,6 +32,8 @@ export default async function (input, ctx) {
   }
 
   const existing = await getSubscriber(chatId);
+  const band = (await getState('alert_band'))?.value?.id ?? null;
+  const saved = await saveSubscriber(chatId, next, band);
   if (!existing) {
     // First subscribe: confirm in the chat, which also proves the bot may message this user.
     try {
@@ -41,11 +43,13 @@ export default async function (input, ctx) {
       });
     } catch (e) {
       if (e instanceof BotApiError && (e.code === 403 || /chat not found/i.test(e.description))) {
-        throw new EndpointError('The bot can’t message you yet', { code: 'NO_WRITE_ACCESS' });
+        await deleteSubscriber(chatId);
+        throw new EndpointError('The bot can’t message you. If you blocked it, unblock it and try again.', {
+          code: 'NO_WRITE_ACCESS',
+        });
       }
       throw e;
     }
   }
-  const band = (await getState('alert_band'))?.value?.id ?? null;
-  return view(await saveSubscriber(chatId, next, band));
+  return view(saved);
 }

@@ -26,6 +26,7 @@
     shown.set(target, { duration });
   });
 
+  const EYEBROWS: Record<Period, string> = { '1h': 'Last hour', '3h': 'Last 3 hours', '24h': 'Past 24 hours' };
   const CAPTIONS: Record<Period, string> = {
     '1h': 'Last hour, worked out from NEA’s PM2.5. Our calculation, not official.',
     '3h': 'Last 3 hours of PM2.5, averaged. Our calculation, not official.',
@@ -35,7 +36,7 @@
 
 <section class="hero sky-{band?.id ?? 'none'}" aria-labelledby="hero-title">
   <h2 id="hero-title" class="eyebrow">
-    Right now{#if worst}<span class="where">&nbsp;· highest in {worst.name}</span>{/if}
+    {EYEBROWS[period]}{#if worst}<span class="where">&nbsp;· highest in {worst.name}</span>{/if}
   </h2>
 
   {#if worst}
@@ -72,13 +73,14 @@
 
 <style>
   /* The card is a sky that clears or hazes with the band, like the logo. Ink is fixed per sky
-     (not Telegram's text colour) so it always contrasts with the gradient. */
+     (not Telegram's text colour) so it always contrasts with the gradient; --ink-2 is checked
+     at >= 4.5:1 against each sky's top, bottom and haze. */
   .hero {
     --sky-top: #8db8ea;
     --sky-bottom: #d9e6f2;
     --haze: rgba(255, 255, 255, 0.35);
     --ink: #0e1a26;
-    --ink-2: rgba(14, 26, 38, 0.74);
+    --ink-2: rgba(14, 26, 38, 0.86);
     --control: rgba(255, 255, 255, 0.4);
     --control-thumb: rgba(255, 255, 255, 0.92);
     position: relative;
@@ -98,17 +100,17 @@
   .sky-unhealthy { --sky-top: #c3c0b2; --sky-bottom: #ebcd78; --haze: rgba(245, 226, 170, 0.6); }
   .sky-very_unhealthy {
     --sky-top: #b9946a; --sky-bottom: #e7ad5c; --haze: rgba(240, 205, 150, 0.55);
-    --ink: #1e1206; --ink-2: rgba(30, 18, 6, 0.76);
+    --ink: #1e1206; --ink-2: rgba(30, 18, 6, 0.86);
   }
   .sky-hazardous {
-    --sky-top: #4b2f45; --sky-bottom: #8a4a36; --haze: rgba(190, 120, 90, 0.4);
-    --ink: #fbf3ea; --ink-2: rgba(251, 243, 234, 0.8);
+    --sky-top: #4b2f45; --sky-bottom: #8a4a36; --haze: rgba(190, 120, 90, 0.15);
+    --ink: #fbf3ea; --ink-2: rgba(251, 243, 234, 0.9);
     --control: rgba(0, 0, 0, 0.22); --control-thumb: rgba(255, 255, 255, 0.22);
   }
 
   :global([data-theme='dark']) .hero {
     --sky-top: #183553; --sky-bottom: #24496e; --haze: rgba(120, 170, 220, 0.18);
-    --ink: #f3f6fa; --ink-2: rgba(243, 246, 250, 0.76);
+    --ink: #f3f6fa; --ink-2: rgba(243, 246, 250, 0.86);
     --control: rgba(0, 0, 0, 0.25); --control-thumb: rgba(255, 255, 255, 0.18);
   }
   :global([data-theme='dark']) .sky-moderate { --sky-top: #24303c; --sky-bottom: #3a4550; --haze: rgba(200, 190, 160, 0.14); }

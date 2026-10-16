@@ -1,20 +1,21 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { DAILY_HOURS, getAlerts, saveAlerts, type AlertSettings } from '../lib/alerts';
+  import { DAILY_HOURS, hourLabel } from '../../tgcloud/lib/alert-settings.js';
+  import { getAlerts, saveAlerts, type AlertSettings } from '../lib/alerts';
   import { inTelegram, notifyHaptic, selectionHaptic, setMainButtonBusy, showMainButton } from '../lib/telegram';
 
   let settings = $state<AlertSettings | null>(null);
   let loaded = $state(false);
   let busy = $state(false);
+  let loadFailed = $state(false);
   let error = $state<string | null>(null);
-
-  const hourLabel = (h: number) => `${h % 12 === 0 ? 12 : h % 12} ${h < 12 ? 'am' : 'pm'}`;
 
   onMount(async () => {
     try {
       settings = await getAlerts();
     } catch (e) {
       error = e instanceof Error ? e.message : 'Couldn’t load your alerts.';
+      loadFailed = true;
     }
     loaded = true;
   });
@@ -38,9 +39,10 @@
 
   const turnOn = () => save({ bandAlerts: true, dailyHour: null });
 
-  // Alerts off: the Telegram MainButton is the call to action.
+  // Alerts off: the Telegram MainButton is the call to action. Not after a failed load: we
+  // don't know the current settings, and turning on would reset an existing daily update.
   $effect(() => {
-    if (!loaded || settings) return;
+    if (!loaded || loadFailed || settings) return;
     return showMainButton('🔔 Get haze alerts', turnOn);
   });
 
@@ -73,7 +75,7 @@
     </div>
   </div>
 
-  {#if loaded && !settings && !inTelegram}
+  {#if import.meta.env.DEV && loaded && !loadFailed && !settings && !inTelegram}
     <button type="button" class="primary" onclick={turnOn} disabled={busy}>
       {busy ? 'Turning on…' : '🔔 Get haze alerts'}
     </button>

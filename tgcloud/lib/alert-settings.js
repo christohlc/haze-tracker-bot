@@ -4,7 +4,7 @@
 export const DAILY_HOURS = [7, 8, 12, 18];
 
 /** @param {number} h */
-const hourLabel = (h) => `${h % 12 === 0 ? 12 : h % 12} ${h < 12 ? 'am' : 'pm'}`;
+export const hourLabel = (h) => `${h % 12 === 0 ? 12 : h % 12} ${h < 12 ? 'am' : 'pm'}`;
 
 /** @param {{ bandAlerts: boolean, dailyHour: number | null } | null} sub */
 export function renderAlertSettings(sub) {
@@ -19,6 +19,7 @@ export function renderAlertSettings(sub) {
     `Band changes: <b>${sub.bandAlerts ? 'on' : 'off'}</b>. A message when the 3-hour PSI moves into another band (rises straight away, drops after 3 hours).`,
     `Daily update: <b>${sub.dailyHour == null ? 'off' : `${hourLabel(sub.dailyHour)} SGT`}</b>`,
   ].join('\n');
+  /** @param {boolean} on @param {string} label */
   const mark = (on, label) => `${on ? '● ' : ''}${label}`;
   return {
     text,
