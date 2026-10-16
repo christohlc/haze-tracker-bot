@@ -9,11 +9,10 @@ import { REGIONS } from '../lib/config.js';
 import { getForecast } from '../lib/forecast/run.js';
 import { formatCigs, formatForecast, formatHaze } from '../lib/format.js';
 import { getSnapshot } from '../lib/refresh.js';
-import { getState } from '../lib/store.js';
 import { deleteSubscriber, getSubscriber, saveSubscriber } from '../lib/subscriptions.js';
 
 const HELP = [
-  '<b>Haze Tracker SG</b>',
+  '<b>I’m going hazelnuts!</b>',
   '/haze: current PSI, regions and advice',
   '/cigs [region] [% outdoors]: cigarette equivalent, e.g. <code>/cigs east 30</code>',
   '/forecast: PSI for the next 24 hours (model, not official)',
@@ -55,9 +54,8 @@ export default async function (message) {
     }
     case 'subscribe': {
       const existing = await getSubscriber(message.chat.id);
-      const band = (await getState('alert_band'))?.value?.id ?? null;
-      const sub = await saveSubscriber(message.chat.id, { bandAlerts: true, dailyHour: existing?.dailyHour ?? null }, band);
-      const view = renderAlertSettings(sub ?? null);
+      const { sub } = await saveSubscriber(message.chat.id, { bandAlerts: true, dailyHour: existing?.dailyHour ?? null });
+      const view = renderAlertSettings(sub);
       return reply(message, `✅ You’ll get a message when the haze band changes.\n\n${view.text}`, view.reply_markup);
     }
     case 'alerts': {

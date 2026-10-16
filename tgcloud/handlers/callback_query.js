@@ -2,8 +2,7 @@
 // Button presses on the /alerts settings message.
 
 import { api, BotApiError } from 'sdk';
-import { applyAlertAction, renderAlertSettings } from '../lib/alert-settings.js';
-import { getState } from '../lib/store.js';
+import { applyAlertAction, isActive, renderAlertSettings } from '../lib/alert-settings.js';
 import { deleteSubscriber, getSubscriber, saveSubscriber } from '../lib/subscriptions.js';
 
 export default async function (query) {
@@ -17,9 +16,8 @@ export default async function (query) {
   const next = applyAlertAction(current ?? null, query.data);
 
   let saved = null;
-  if (next && (next.bandAlerts || next.dailyHour != null)) {
-    const band = (await getState('alert_band'))?.value?.id ?? null;
-    saved = await saveSubscriber(chatId, next, band);
+  if (isActive(next)) {
+    saved = (await saveSubscriber(chatId, next)).sub;
   } else {
     await deleteSubscriber(chatId);
   }

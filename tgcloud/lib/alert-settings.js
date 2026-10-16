@@ -1,10 +1,10 @@
 // @ts-check
 // The /alerts settings message: text + inline keyboard. Pure.
 
-const DAILY_HOURS = [7, 8, 12, 18];
+export const DAILY_HOURS = [7, 8, 12, 18];
 
 /** @param {number} h */
-const hourLabel = (h) => `${h % 12 === 0 ? 12 : h % 12} ${h < 12 ? 'am' : 'pm'}`;
+export const hourLabel = (h) => `${h % 12 === 0 ? 12 : h % 12} ${h < 12 ? 'am' : 'pm'}`;
 
 /** @param {{ bandAlerts: boolean, dailyHour: number | null } | null} sub */
 export function renderAlertSettings(sub) {
@@ -19,6 +19,7 @@ export function renderAlertSettings(sub) {
     `Band changes: <b>${sub.bandAlerts ? 'on' : 'off'}</b>. A message when the 3-hour PSI moves into another band (rises straight away, drops after 3 hours).`,
     `Daily update: <b>${sub.dailyHour == null ? 'off' : `${hourLabel(sub.dailyHour)} SGT`}</b>`,
   ].join('\n');
+  /** @param {boolean} on @param {string} label */
   const mark = (on, label) => `${on ? '● ' : ''}${label}`;
   return {
     text,
@@ -52,4 +53,26 @@ export function applyAlertAction(sub, data) {
     return { bandAlerts: cur.bandAlerts, dailyHour };
   }
   return cur;
+}
+
+/**
+ * Validate settings sent by the Mini App. Returns the settings, or null when both are off
+ * (unsubscribe). Throws an Error with a user-facing message on bad input.
+ * @param {unknown} input
+ * @returns {{ bandAlerts: boolean, dailyHour: number | null } | null}
+ */
+export function parseAlertInput(input) {
+  const o = /** @type {Record<string, unknown>} */ (input ?? {});
+  if (typeof o.bandAlerts !== 'boolean') throw new Error('bandAlerts must be true or false');
+  const dailyHour = o.dailyHour ?? null;
+  if (dailyHour !== null && !DAILY_HOURS.includes(/** @type {number} */ (dailyHour))) {
+    throw new Error(`dailyHour must be one of ${DAILY_HOURS.join(', ')} or null`);
+  }
+  const settings = { bandAlerts: o.bandAlerts, dailyHour: /** @type {number | null} */ (dailyHour) };
+  return isActive(settings) ? settings : null;
+}
+
+/** Any alert on? All off means unsubscribed. @param {{ bandAlerts: boolean, dailyHour: number | null } | null} sub */
+export function isActive(sub) {
+  return Boolean(sub && (sub.bandAlerts || sub.dailyHour != null));
 }

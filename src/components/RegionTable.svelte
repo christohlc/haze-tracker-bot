@@ -1,74 +1,90 @@
 <script lang="ts">
+  import { psiBand } from '../../tgcloud/lib/psi.js';
   import type { Snapshot } from '../lib/api';
   import { fmt } from '../lib/format';
-  import BandPill from './BandPill.svelte';
+  import { PERIODS, psiKey, type Period } from '../lib/period';
 
-  let { snapshot }: { snapshot: Snapshot } = $props();
+  let { snapshot, period = '3h' }: { snapshot: Snapshot; period?: Period } = $props();
+
+  const key = $derived(psiKey(period));
+  const rows = $derived(
+    snapshot.regions.map((r) => {
+      const v = r[key];
+      return { ...r, v, band: psiBand(v) };
+    }),
+  );
+  // Bars share one scale: at least 200 so a moderate day doesn't look alarming.
+  const max = $derived(Math.max(200, ...rows.map((r) => r.v ?? 0)));
 </script>
 
 <section class="card" aria-labelledby="regions-title">
-  <h2 id="regions-title" class="section-title">By region</h2>
-  <p class="note">
-    PM2.5 is the raw latest hourly reading in µg/m³, so it isn’t coloured. 1h and 3h PSI are calculated from PM2.5;
-    24h PSI is NEA’s official figure.
-  </p>
+  <h2 id="regions-title" class="section-title">Around the island</h2>
+  <p class="note">{PERIODS[period].adj} PSI by NEA region. PM2.5 is the latest hourly reading.</p>
 
-  <table>
-    <thead>
-      <tr>
-        <th scope="col">Region</th>
-        <th scope="col" class="r">PM2.5</th>
-        <th scope="col" class="c divider">1h</th>
-        <th scope="col" class="c">3h</th>
-        <th scope="col" class="c">24h</th>
-      </tr>
-    </thead>
-    <tbody>
-      {#each snapshot.regions as r (r.id)}
-        <tr>
-          <th scope="row">{r.name}</th>
-          <td class="r num">{fmt(r.pm25)}</td>
-          <td class="c divider"><BandPill value={r.psi1h} /></td>
-          <td class="c"><BandPill value={r.psi3h} /></td>
-          <td class="c"><BandPill value={r.psi24h} /></td>
-        </tr>
-      {/each}
-    </tbody>
-  </table>
+  <ul>
+    {#each rows as r (r.id)}
+      <li>
+        <span class="name">{r.name}</span>
+        <span class="track" aria-hidden="true">
+          {#if r.v != null}
+            <span class="bar" style:transform="scaleX({r.v / max})" style:background="var(--band-{r.band?.id})"></span>
+          {/if}
+        </span>
+        <span class="value num"><span class="visually-hidden">{PERIODS[period].adj} PSI </span>{fmt(r.v)}</span>
+        <span class="sub">
+          {r.band?.label ?? 'No reading'} · PM2.5 <span class="num">{fmt(r.pm25)}</span> µg/m³
+        </span>
+      </li>
+    {/each}
+  </ul>
 </section>
 
 <style>
-  table {
-    width: 100%;
-    margin-top: 12px;
-    border-collapse: collapse;
-    font-size: 0.9375rem;
+  ul {
+    margin: 12px 0 0;
+    padding: 0;
+    list-style: none;
   }
-  th,
-  td {
-    padding: 9px 2px;
+  li {
+    display: grid;
+    grid-template-columns: 4.75rem minmax(0, 1fr) 3ch;
+    align-items: center;
+    column-gap: 10px;
+    padding: 8px 0;
+  }
+  li + li {
     border-top: 1px solid var(--hairline);
-    text-align: left;
-    font-weight: 400;
   }
-  thead th {
-    border-top: 0;
-    padding-top: 0;
-    font-size: 0.75rem;
+  .name {
     font-weight: 600;
+  }
+  .track {
+    height: 10px;
+    border-radius: 999px;
+    background: var(--control);
+    overflow: hidden;
+  }
+  .bar {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    transform-origin: left;
+    transition: transform 300ms var(--ease-out);
+  }
+  .value {
+    font-family: var(--font-display);
+    font-size: 1.0625rem;
+    font-weight: 750;
+    text-align: right;
+  }
+  .sub {
+    grid-column: 2 / -1;
+    font-size: 0.8125rem;
     color: var(--muted);
   }
-  tbody th {
-    font-weight: 550;
-  }
-  .r {
-    text-align: right;
-    padding-right: 8px;
-  }
-  .c {
-    text-align: center;
-  }
-  .divider {
-    border-left: 1px solid var(--hairline);
+  @media (prefers-reduced-motion: reduce) {
+    .bar {
+      transition: none;
+    }
   }
 </style>
