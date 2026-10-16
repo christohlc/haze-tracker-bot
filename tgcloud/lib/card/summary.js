@@ -1,7 +1,7 @@
 // @ts-check
 // The summary card: each region's 24-hour PSI and 1-hour PM2.5 on a map of Singapore, in the
-// app's own look. Each region's card is filled with its band colour, the only colour on a quiet
-// page, so the severity reads at a glance. Both numbers are
+// app's own look: the hero sky for the worst band behind, and each region's card filled with its
+// own band colour (outlined in white) so the severity reads at a glance. Both numbers are
 // NEA's, so the card needs no "our calculation" caption. Rules: docs/design.md#summary-card.
 // Pure (no SDK): tests and the Mini App use it too.
 
@@ -15,10 +15,23 @@ import { Canvas, decodeMask, fromBase64, rgb } from './raster.js';
 
 /** @typedef {import('./raster.js').Rgb} Rgb */
 
-/** A quiet page so the only colours are the bands on the region cards. */
+/**
+ * The hero sky for the worst band (src/components/Hero.svelte, light theme), with its fixed ink.
+ * `land` is how strongly the island shows through.
+ * @type {Record<string, { top: Rgb, bottom: Rgb, haze: Rgb, hazeAlpha: number, ink: Rgb, land: number }>}
+ */
+const SKY = {
+  none: { top: rgb('#8db8ea'), bottom: rgb('#d9e6f2'), haze: rgb('#ffffff'), hazeAlpha: 0.35, ink: rgb('#0e1a26'), land: 0.42 },
+  moderate: { top: rgb('#a6c1db'), bottom: rgb('#e6e2d3'), haze: rgb('#f0e8d6'), hazeAlpha: 0.55, ink: rgb('#0e1a26'), land: 0.42 },
+  unhealthy: { top: rgb('#c3c0b2'), bottom: rgb('#ebcd78'), haze: rgb('#f5e2aa'), hazeAlpha: 0.6, ink: rgb('#0e1a26'), land: 0.4 },
+  very_unhealthy: { top: rgb('#b9946a'), bottom: rgb('#e7ad5c'), haze: rgb('#f0cd96'), hazeAlpha: 0.55, ink: rgb('#1e1206'), land: 0.34 },
+  hazardous: { top: rgb('#4b2f45'), bottom: rgb('#8a4a36'), haze: rgb('#be785a'), hazeAlpha: 0.15, ink: rgb('#fbf3ea'), land: 0.14 },
+};
+
+/** White outline around each region card, so it stands off a sky of a similar colour. */
+const OUTLINE = 5;
+
 const C = {
-  page: rgb('#f6f2eb'),
-  land: rgb('#e6dfd3'),
   card: rgb('#ffffff'),
   ink: rgb('#1c1712'),
   muted: rgb('#6b6560'),
@@ -83,6 +96,7 @@ function regionCard(c, region) {
   const [x, y] = CARD_AT[/** @type {keyof typeof CARD_AT} */ (region.id)];
   const band = psiBand(shown(region.psi24h));
   const [fill, ink] = band ? BAND[/** @type {keyof typeof BAND} */ (band.id)] : [C.none, C.noneInk];
+  c.fillRoundRect(x - OUTLINE, y - OUTLINE, CARD.w + OUTLINE * 2, CARD.h + OUTLINE * 2, CARD.r + OUTLINE, C.card);
   c.fillRoundRect(x, y, CARD.w, CARD.h, CARD.r, fill);
 
   c.text(region.name, x + 24, y + 46, 'head', ink);
@@ -122,18 +136,22 @@ export function drawSummaryCard(snap) {
   const worst = snap.worst?.psi24h ?? null;
   const band = psiBand(worst?.value);
 
+  const sky = SKY[band?.id ?? 'none'] ?? SKY.none;
+
   const c = new Canvas(CARD_W, CARD_H);
-  c.fillRect(0, 0, CARD_W, CARD_H, C.page);
+  c.verticalGradient(sky.top, sky.bottom);
+  // The hero's haze: radial-gradient(120% 60% at 20% 105%, haze, transparent 70%).
+  c.glow(CARD_W * 0.2, CARD_H * 1.05, CARD_W * 1.2, CARD_H * 0.6, sky.haze, sky.hazeAlpha, 0.7);
   mapAlpha ??= decodeMask(fromBase64(MAP_MASK.data), 0, MAP_MASK.w * MAP_MASK.h);
-  c.blitMask(mapAlpha, MAP_MASK.w, MAP_MASK.h, 0, 0, C.land);
+  c.blitMask(mapAlpha, MAP_MASK.w, MAP_MASK.h, 0, 0, C.card, sky.land);
 
   // Brand, then the answer: the worst official reading and its band.
   logoRgba ??= fromBase64(LOGO.data);
   c.blitRgba(logoRgba, LOGO.w, LOGO.h, 56, 48);
-  c.text('I’m going hazelnuts!', 164, 84, 'head', C.ink);
-  c.text(`Singapore haze · ${cardDate(snap.asOf)}`, 164, 122, 'body', C.muted);
-  c.text(band?.label ?? 'No reading yet', 56, 236, 'title', C.ink);
-  if (worst) c.text(`24-hr PSI up to ${fmt(worst.value)} in ${worst.name}`, 56, 292, 'subtitle', C.ink);
+  c.text('I’m going hazelnuts!', 164, 84, 'head', sky.ink);
+  c.text(`Singapore haze · ${cardDate(snap.asOf)}`, 164, 122, 'body', sky.ink);
+  c.text(band?.label ?? 'No reading yet', 56, 236, 'title', sky.ink);
+  if (worst) c.text(`24-hr PSI up to ${fmt(worst.value)} in ${worst.name}`, 56, 292, 'subtitle', sky.ink);
   if (snap.stale) {
     const note = 'NEA hasn’t updated recently, so this may be out of date';
     c.fillRoundRect(56, 314, Math.ceil(c.measure(note, 'body')) + 36, 44, 22, C.stale);
@@ -147,7 +165,7 @@ export function drawSummaryCard(snap) {
   legendRow(c, 1170, 'Card colour: 24-hr PSI band', PSI_BANDS, PSI_BANDS.map((b) => b.id));
 
   const psiNote = snap.psiAsOf && snap.psiAsOf !== snap.asOf ? ` 24-hr PSI as at ${sgtHour(snap.psiAsOf)}.` : '';
-  c.text(`Readings from NEA.${psiNote} Advisories: haze.gov.sg`, 56, 1300, 'label', C.muted);
+  c.text(`Readings from NEA.${psiNote} Advisories: haze.gov.sg`, 56, 1300, 'label', sky.ink);
   return c;
 }
 

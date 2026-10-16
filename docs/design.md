@@ -110,9 +110,11 @@ The picture that `/haze`, alerts and the Mini App’s share button send
 ([`tgcloud/lib/card/summary.js`](../tgcloud/lib/card/summary.js)). It’s ours, not a copy of a
 newspaper graphic:
 
-- **Colour means one thing:** each region’s card is filled with its 24-hour PSI band colour, on a
-  quiet off-white page with the island in light grey. No region colours, no second palette for
-  PM2.5, so the severity of each region reads at a glance.
+- **The hero sky** for the worst 24-hour PSI band is the background, with the island as a soft
+  light silhouette. Text on the sky uses that sky’s fixed ink, as in the hero.
+- **Severity at a glance:** each region’s card is filled with its own 24-hour PSI band colour and
+  outlined in white, so it stands off a sky of a similar colour. No region colours and no second
+  palette for PM2.5: on the cards, colour only ever means the band.
 - **Answer first:** logo and name, then the band in big type and “24-hr PSI up to N in Region”.
 - **One card per region**, placed roughly where the region is: name, the 24-hour PSI as the big
   number, the band in words, and the 1-hour PM2.5 as plain text.

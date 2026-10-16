@@ -75,6 +75,12 @@ test('the card decodes to the drawn pixels', () => {
   assert.deepEqual(back.data, drawSummaryCard(fixture).data);
 });
 
+test('the sky follows the worst 24-hour PSI band', () => {
+  const top = (snap) => [...drawSummaryCard(snap).data.subarray(0, 3)];
+  assert.deepEqual(top(worst), [0x4b, 0x2f, 0x45]); // hazardous
+  assert.deepEqual(top({ ...worst, worst: { ...worst.worst, psi24h: null } }), [0x8d, 0xb8, 0xea]); // no reading
+});
+
 test('each region’s card is filled with its 24-hour PSI band colour', () => {
   const fill = (c, id) => {
     const [x, y] = CARD_AT[id];
