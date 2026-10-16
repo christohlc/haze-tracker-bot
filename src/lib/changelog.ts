@@ -9,6 +9,12 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-16-tabs',
+    date: '2026-10-16',
+    title: 'Find things faster with tabs',
+    body: 'The app is now split into Now, Outlook and More, so today’s readings come first and you don’t have to scroll past everything else. What’s new lives under More.',
+  },
+  {
     id: '2026-10-16-wind-rain',
     date: '2026-10-16',
     title: 'See where the wind is coming from',

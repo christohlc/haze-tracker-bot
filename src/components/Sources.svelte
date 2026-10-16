@@ -15,34 +15,46 @@
   };
   // Feeds we no longer use (Open-Meteo, FIRMS) keep their old rows in the database.
   const known = $derived(sources.filter((s) => s.source in NAMES));
+  const failing = $derived(known.filter((s) => s.lastError).length);
 </script>
+
+{#snippet status(ok: boolean, text: string)}
+  <span class="status">
+    <span class="dot" style:background={ok ? 'var(--status-good)' : 'var(--status-critical)'}></span>
+    {text}
+  </span>
+{/snippet}
 
 <section class="card" aria-labelledby="sources-title">
   <h2 id="sources-title" class="section-title">Data sources</h2>
-  <p class="note">Which feeds are working right now, and what each one contributes.</p>
   {#if !known.length}
-    <p class="note empty">No feeds have reported yet. They’re checked every hour.</p>
+    <p class="note">No feeds have reported yet. They’re checked every hour.</p>
+  {:else}
+    <details>
+      <summary>
+        {@render status(!failing, failing ? `${failing} of ${known.length} feeds failing` : 'All feeds working')}
+        <span class="more" aria-hidden="true"><span class="show">Details</span><span class="hide">Hide</span></span>
+      </summary>
+      <p class="note">Which feeds are working right now, and what each one contributes.</p>
+      <ul>
+        {#each known as s (s.source)}
+          {@const meta = NAMES[s.source]}
+          {@const ok = !s.lastError}
+          <li>
+            <div class="head">
+              <span class="name">{meta.name}</span>
+              {@render status(ok, ok ? 'Working' : 'Failing')}
+            </div>
+            <p class="note">{meta.role}</p>
+            <p class="note">
+              {#if ok && s.lastOkAt}Checked {sgtClock(s.lastOkAt)} SGT{/if}
+              {#if !ok}{s.lastError}{s.lastOkAt ? ` · last worked ${sgtClock(s.lastOkAt)} SGT` : ''}{/if}
+            </p>
+          </li>
+        {/each}
+      </ul>
+    </details>
   {/if}
-  <ul>
-    {#each known as s (s.source)}
-      {@const meta = NAMES[s.source]}
-      {@const ok = !s.lastError}
-      <li>
-        <div class="head">
-          <span class="name">{meta.name}</span>
-          <span class="status">
-            <span class="dot" style:background={ok ? 'var(--status-good)' : 'var(--status-critical)'}></span>
-            {ok ? 'Working' : 'Failing'}
-          </span>
-        </div>
-        <p class="note">{meta.role}</p>
-        <p class="note">
-          {#if ok && s.lastOkAt}Checked {sgtClock(s.lastOkAt)} SGT{/if}
-          {#if !ok}{s.lastError}{s.lastOkAt ? ` · last worked ${sgtClock(s.lastOkAt)} SGT` : ''}{/if}
-        </p>
-      </li>
-    {/each}
-  </ul>
   <p class="note credit">
     Data: NEA via data.gov.sg. 1-hour and 3-hour PSI are calculated here and aren’t official. Not medical advice.
   </p>
@@ -50,7 +62,7 @@
 
 <style>
   ul {
-    margin: 12px 0 0;
+    margin: 8px 0 0;
     padding: 0;
     list-style: none;
   }
@@ -89,8 +101,24 @@
     height: 8px;
     border-radius: 50%;
   }
-  .empty {
-    margin-top: 12px;
+  summary {
+    justify-content: space-between;
+    gap: 12px;
+    list-style: none;
+  }
+  summary::-webkit-details-marker {
+    display: none;
+  }
+  summary .status {
+    color: var(--ink);
+    font-size: 0.9375rem;
+  }
+  .hide,
+  details[open] .show {
+    display: none;
+  }
+  details[open] .hide {
+    display: inline;
   }
   .credit {
     margin-top: 12px;

@@ -296,13 +296,6 @@
     margin-top: 10px;
     font-size: 0.875rem;
   }
-  summary {
-    cursor: pointer;
-    color: var(--link);
-    min-height: 32px;
-    display: flex;
-    align-items: center;
-  }
   .table-wrap {
     max-height: 280px;
     overflow: auto;
