@@ -23,3 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 .tgcloud/
+
+# forecast training cache
+scripts/train/.cache/
+scripts/train/.venv/
