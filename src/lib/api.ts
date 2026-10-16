@@ -103,6 +103,32 @@ export async function loadCameras(): Promise<CamerasResult> {
   throw new Error('Open this dashboard from the bot in Telegram.');
 }
 
+export type Weather = import('../../tgcloud/lib/weather-parse.js').Weather;
+
+export interface WeatherResult {
+  /** Null until the feeds have answered once. */
+  weather: Weather | null;
+  serverTime: number;
+}
+
+export async function loadWeather(): Promise<WeatherResult> {
+  if (inTelegram) return callEndpoint<WeatherResult>('getWeather');
+  if (import.meta.env.DEV) {
+    // Dev-only: follows ?demo= (worst | empty), plus ?wx=error | loading | partial, like ?cams= for Live views.
+    const q = new URLSearchParams(location.search);
+    const wx = q.get('wx');
+    if (wx === 'error') throw new Error('Couldn’t load wind and rain.');
+    if (wx === 'loading') return new Promise(() => {});
+    const dev = await import('../dev/weather');
+    if (wx === 'partial') return dev.partialWeather();
+    const demo = q.get('demo');
+    if (demo === 'worst') return dev.worstWeather();
+    if (demo === 'empty') return { weather: null, serverTime: Date.now() };
+    return dev.demoWeather();
+  }
+  throw new Error('Open this dashboard from the bot in Telegram.');
+}
+
 export async function loadDashboard(): Promise<Dashboard> {
   if (inTelegram) return callEndpoint<Dashboard>('getDashboard');
   if (import.meta.env.DEV) {

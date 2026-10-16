@@ -9,6 +9,12 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-16-wind-rain',
+    date: '2026-10-16',
+    title: 'See where the wind is coming from',
+    body: 'Live wind and rain from NEA’s weather stations, and whether the wind is blowing in from the areas where haze fires usually burn.',
+  },
+  {
     id: '2026-10-16-live-views',
     date: '2026-10-16',
     title: 'See the haze for yourself',

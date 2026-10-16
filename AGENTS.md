@@ -39,14 +39,17 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
 - **Camera pictures (`endpoints/getCameras`) are fetched only when the Mini App asks**, cached
   for 60 s in `state('cameras')`, never by the tick. Since 30 June 2026 LTA runs only the 8
   checkpoint and Sentosa cameras; names come from `CAMERAS` in `lib/cameras-parse.js`.
+- **Wind and rain (`endpoints/getWeather`) is fetched the same way**: only when the Mini App asks,
+  cached for 5 min in `state('weather')`. It reads NEA's station feeds, and the “coming from Sumatra”
+  line (`smokeLine` in `lib/weather-parse.js`) is our reading, not NEA's.
 - **Open-Meteo is tried at most once per 5 min per NEA hour** (`forecast_attempt` state), since
   /haze and the Mini App can trigger a forecast run.
 - **Some `tgcloud/lib/` modules are shared with the front-end and tests**
   (`psi`, `cigs`, `advice`, `alert-settings`, `alert-rules`, `format`, `snapshot`,
-  `forecast/features|predict|model`, `news-parse`, `cameras-parse`). Keep these pure: no `sdk` import, no DB, so
+  `forecast/features|predict|model`, `news-parse`, `cameras-parse`, `weather-parse`). Keep these pure: no `sdk` import, no DB, so
   Vite and `node --test` can load them. Modules that touch `sdk`, directly or via `store`, are
   `store`, `nea`, `refresh`, `alerts`, `subscriptions`, `cli-only`, `forecast/inputs`,
-  `forecast/run`, `news`, `cameras`.
+  `forecast/run`, `news`, `cameras`, `weather`.
 - **Secrets live in the `settings` DB table**, set only via `endpoints/admin` from the
   CLI. Never commit or echo a key.
 - **`tgcloud/lib/forecast/model.js` is generated** by `scripts/train/train.py`. Don't
