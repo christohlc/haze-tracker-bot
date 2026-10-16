@@ -11,8 +11,8 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     id: '2026-10-16-nea-outlook',
     date: '2026-10-16',
-    title: 'NEA’s forecast for tomorrow',
-    body: 'During a haze episode, What’s ahead shows NEA’s official 24-hour PSI forecast. For the next few hours there’s now a simple likely range from recent readings, which lands right about 8 times in 10.',
+    title: 'Check NEA’s forecast for tomorrow',
+    body: 'During a haze episode, What’s ahead shows NEA’s official 24-hour PSI forecast. For the next few hours there’s now a simple likely range from recent readings. Over the past four years it held the actual reading about 8 times in 10.',
   },
   {
     id: '2026-10-16-tabs',

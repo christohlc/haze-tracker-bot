@@ -49,7 +49,7 @@ export default async function (message) {
     case 'forecast': {
       await getSnapshot(); // refreshes the readings the range is worked out from, when they're due
       const { ahead } = await getAhead();
-      if (!ahead.outlook && !ahead.range) return reply(message, 'There isn’t enough data for a forecast right now. Try again in an hour.');
+      if (!ahead.outlook && !ahead.range) return reply(message, 'Nothing to show yet. NEA issues a 24-hr PSI forecast only during haze episodes, and our range for the next few hours needs three days of recent readings.');
       return reply(message, formatForecast(ahead), dashboardButton(message.chat.id));
     }
     case 'cigs': {

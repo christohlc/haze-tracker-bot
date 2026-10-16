@@ -13,8 +13,9 @@
     nea_weather: { name: 'NEA weather stations', role: 'Wind and rain' },
     lta_cameras: { name: 'LTA traffic cameras', role: 'Live views from Woodlands, Tuas and Sentosa' },
   };
-  // Feeds we no longer use (Open-Meteo, FIRMS) keep their old rows in the database.
-  const known = $derived(sources.filter((s) => s.source in NAMES));
+  // Feeds we no longer use keep their old rows in the database.
+  const RETIRED = ['openmeteo', 'firms'];
+  const known = $derived(sources.filter((s) => !RETIRED.includes(s.source)));
   const failing = $derived(known.filter((s) => s.lastError).length);
 </script>
 
@@ -38,7 +39,7 @@
       <p class="note">Which feeds are working right now, and what each one contributes.</p>
       <ul>
         {#each known as s (s.source)}
-          {@const meta = NAMES[s.source]}
+          {@const meta = NAMES[s.source] ?? { name: s.source, role: '' }}
           {@const ok = !s.lastError}
           <li>
             <div class="head">

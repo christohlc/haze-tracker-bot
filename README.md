@@ -110,7 +110,7 @@ Two parts, with no model to train:
 - **The next few hours** (`lib/range.js`): the island-wide 1-hour PSI now, widened by the 10th
   and 90th percentiles of how far it moved over 1, 3 and 6 hours in the past two weeks. On NEA
   readings from 2022 to 2026 the actual value landed inside it 81–83% of the time (80–86%
-  during haze).
+  during haze); rerun with `node scripts/range-backtest.mjs <dir of NEA day files>`.
 
 ## Releasing a user-facing change
 

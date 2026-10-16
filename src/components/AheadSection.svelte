@@ -1,5 +1,6 @@
 <script lang="ts">
   import { psiBand } from '../../tgcloud/lib/psi.js';
+  import { RANGE_RECORD } from '../../tgcloud/lib/range.js';
   import { sgtDayName } from '../../tgcloud/lib/time.js';
   import type { Ahead } from '../lib/api';
   import { sgtDayMonth, sgtHour } from '../lib/format';
@@ -38,7 +39,7 @@
       {/if}
     </p>
     <p class="note">
-      24-hr PSI, in NEA’s words “{outlook.text}”. Issued {sgtDayMonth(outlook.issuedAt)}, {sgtHour(outlook.issuedAt, true)}.
+      24-hr PSI, in NEA’s words “{outlook.text}”. Issued {sgtDayMonth(outlook.issuedAt)}, {sgtHour(outlook.issuedAt, true)} SGT.
       <a href={HAZE_SITE} target="_blank" rel="noopener noreferrer" onclick={open}>More at haze.gov.sg</a>
     </p>
   {/if}
@@ -59,7 +60,7 @@
       <tbody>
         {#each range.steps as s (s.h)}
           <tr>
-            <th scope="row">{s.h} {s.h === 1 ? 'hour' : 'hours'} <span class="when">{sgtHour(s.t)}</span></th>
+            <th scope="row">{s.h} {s.h === 1 ? 'hour' : 'hours'} <span class="when">{sgtHour(s.t)} SGT</span></th>
             <td class="r">
               <span class="num range">{s.lo === s.hi ? s.lo : `${s.lo}–${s.hi}`}</span>
               <span class="band-text">{rangeBand(s.lo, s.hi)}</span>
@@ -68,9 +69,7 @@
         {/each}
       </tbody>
     </table>
-    <p class="note meta">In four years of NEA readings, the actual value landed in this range about 8 times in 10.</p>
-  {:else}
-    <p class="note meta">The next few hours appear once there are three days of readings.</p>
+    <p class="note meta">{RANGE_RECORD}</p>
   {/if}
 </section>
 

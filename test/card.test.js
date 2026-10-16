@@ -107,7 +107,7 @@ test('legend ranges come from the band tables', () => {
 
 test('captions fit Telegram’s 1,024-character limit', () => {
   const ahead = {
-    outlook: { text: 'High Very Unhealthy to Hazardous', from: 'very_unhealthy', to: 'hazardous', forDate: '2099-01-01', issuedAt: '2026-10-16T18:19:00+08:00' },
+    outlook: { text: 'High Very Unhealthy to Hazardous', from: 'very_unhealthy', to: 'hazardous', forDate: '2099-01-01', issuedAt: '2026-10-16T18:19:00+08:00', expires: null },
     range: null,
   };
   // The Mini App's snapshots leave out the cigarette numbers; the bot's have them.

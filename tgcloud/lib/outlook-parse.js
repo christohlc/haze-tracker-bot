@@ -4,25 +4,29 @@
 // The feed is the JSON haze.gov.sg itself uses, not a documented API, so nothing here may throw.
 
 import { PSI_BANDS } from './psi.js';
-import { sgtToday } from './time.js';
+import { MONTHS, sgtToday, toSgtIso } from './time.js';
 
-// The last path segment only busts caches; any value works.
 export const OUTLOOK_FEED = 'https://www.nea.gov.sg/api/advisory/latesthazesituationupdate';
 
-/** @typedef {{ text: string, from: string, to: string, forDate: string, issuedAt: string }} Outlook */
+/**
+ * NEA's words, our band ids, the SGT date it's for, and when it was issued and stops showing
+ * (SGT timestamps; `expires` is null when NEA set none).
+ * @typedef {{ text: string, from: string, to: string, forDate: string, issuedAt: string, expires: string | null }} Outlook
+ */
 
-const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+const ENTITIES = /** @type {Record<string, string>} */ ({
+  nbsp: ' ', ndash: '–', mdash: '—', amp: '&', quot: '"', apos: '’',
+  lsquo: '‘', rsquo: '’', ldquo: '“', rdquo: '”', lt: '<', gt: '>', micro: 'µ',
+});
 
-/** HTML → plain text with the entities NEA uses. @param {unknown} html */
+/** HTML → plain text. @param {unknown} html */
 function plain(html) {
   if (typeof html !== 'string') return '';
   return html
     .replace(/<[^>]*>/g, ' ')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&ndash;/g, '–')
-    .replace(/&mdash;/g, '—')
-    .replace(/&amp;/g, '&')
-    .replace(/&#(\d+);/g, (_, c) => String.fromCharCode(Number(c)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(Number(dec)))
+    .replace(/&([a-z]+);/gi, (m, name) => ENTITIES[name.toLowerCase()] ?? m)
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -36,24 +40,35 @@ function bandId(words) {
 /** "16 Oct 2026" → "2026-10-16"; null if unreadable. @param {string} s */
 function isoDate(s) {
   const m = s.match(/^(\d{1,2}) ([a-z]{3})[a-z]* (\d{4})$/i);
-  const month = m ? MONTHS.indexOf(m[2].toLowerCase()) : -1;
+  const month = m ? MONTHS.findIndex((x) => x.toLowerCase() === m[2].toLowerCase()) : -1;
   return m && month >= 0 ? `${m[3]}-${String(month + 1).padStart(2, '0')}-${m[1].padStart(2, '0')}` : null;
 }
 
+/** Any parseable timestamp → SGT ISO; null if it isn't one. @param {unknown} v */
+function sgtIso(v) {
+  const ms = typeof v === 'string' && v ? Date.parse(v) : NaN;
+  return Number.isFinite(ms) ? toSgtIso(Math.floor(ms / 1000)) : null;
+}
+
 /**
- * The forecast in NEA's words, mapped to our band ids. Null when there's none we can read, or
- * it's for a day that has passed (`now` decides "today", in SGT). Never throws.
+ * Whether a parsed forecast still applies at `now`: for today or tomorrow (SGT), not expired.
+ * @param {Outlook} o @param {number} [now] ms
+ */
+export function isCurrent(o, now = Date.now()) {
+  return o.forDate >= sgtToday(now) && o.forDate <= sgtToday(now + 86_400_000) && !(o.expires && Date.parse(o.expires) < now);
+}
+
+/**
+ * The forecast in NEA's words, mapped to our band ids. Null when there's none we can read, or it
+ * no longer applies at `now`. Never throws.
  * @param {any} json
  * @param {number} [now] ms
  * @returns {Outlook | null}
  */
 export function parseOutlook(json, now = Date.now()) {
-  const expiry = Date.parse(json?.ExpiryDateHazeDisplayDt ?? '');
-  if (Number.isFinite(expiry) && expiry < now) return null;
   const body = plain(json?.BodyText);
   const day = body.match(/forecast for (\d{1,2} [A-Za-z]{3,9} \d{4})/i);
   const forDate = day ? isoDate(day[1]) : null;
-  if (!forDate || forDate < sgtToday(now)) return null;
   // The short line first; the sentence in the body if NEA changes it.
   const text = (
     plain(json?.AirQualityBlurb).match(/24-hr PSI Forecast:\s*(.+)$/i)?.[1] ??
@@ -63,7 +78,11 @@ export function parseOutlook(json, now = Date.now()) {
   const parts = text.split(/\s+(?:to|–|-)\s+/i);
   const from = bandId(parts[0] ?? '');
   const to = bandId(parts.at(-1) ?? '');
-  const issuedAt = typeof json?.DateOfArticle === 'string' && Number.isFinite(Date.parse(json.DateOfArticle)) ? json.DateOfArticle : '';
-  if (!from || !to || parts.length > 2 || !issuedAt) return null;
-  return { text, from, to, forDate, issuedAt };
+  const issuedAt = sgtIso(json?.DateOfArticle);
+  // NEA fills one or the other; the site hides the box after it.
+  const expires = sgtIso(json?.ExpiryDateHazeDisplayDt) ?? sgtIso(json?.ExpiryDateHazeDisplay);
+  if (!forDate || !from || !to || parts.length > 2 || !issuedAt) return null;
+  /** @type {Outlook} */
+  const outlook = { text, from, to, forDate, issuedAt, expires };
+  return isCurrent(outlook, now) ? outlook : null;
 }

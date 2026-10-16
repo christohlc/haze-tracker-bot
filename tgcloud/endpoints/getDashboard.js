@@ -13,7 +13,10 @@ export default async function () {
   return {
     snapshot,
     // 48h so the chart can draw 24h rolling averages across the whole past day.
-    history: rows.slice(-48).map((h) => ({ t: h.timestamp, ...h.readings })),
+    history: rows
+      .slice(-48)
+      .filter((h) => Date.parse(h.timestamp) >= Date.now() - 50 * 3600_000)
+      .map((h) => ({ t: h.timestamp, ...h.readings })),
     sources: sources.map((s) => ({
       source: s.source,
       lastOkAt: s.lastOkAt,

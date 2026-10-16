@@ -3,6 +3,7 @@
 
 import { advice, maskCard } from './advice.js';
 import { PSI_BANDS, psiBand } from './psi.js';
+import { RANGE_RECORD } from './range.js';
 import { sgtDayMonth, sgtDayName, sgtHour } from './time.js';
 
 /** "2026-10-16T13:00:00+08:00" → "1:00 pm" (the timestamp is already in SGT). @param {string} iso */
@@ -47,7 +48,7 @@ export function formatHaze(snap, ahead, { table = true } = {}) {
   if (tips.rightNow) lines.push(`👉 Band ${tips.rightNow.band} (${tips.rightNow.label}): ${tips.rightNow.text}`);
   const soon = ahead?.range?.steps.find((s) => s.h === 3);
   if (ahead?.outlook) lines.push(`📅 ${outlookLine(ahead.outlook)} (/forecast)`);
-  else if (soon) lines.push(`📈 Island-wide 1h PSI in 3 hours: likely <b>${soon.lo}–${soon.hi}</b>, our calculation (/forecast)`);
+  else if (soon) lines.push(`📈 Island-wide 1-hour PSI in 3 hours: likely <b>${soon.lo}–${soon.hi}</b>, our calculation (/forecast)`);
   lines.push('', '<i>Not official. Check haze.gov.sg for NEA advisories.</i>');
   return lines.join('\n');
 }
@@ -113,7 +114,7 @@ export function formatForecast({ outlook, range }) {
     lines.push(
       `<b>Next few hours</b> · island-wide 1-hour PSI, now ${range.now}`,
       `<pre>${[`${'In'.padEnd(5)}${'SGT'.padStart(9)}  Likely`, ...rows].join('\n')}</pre>`,
-      '<i>Our calculation, not official: how much the reading moved over the same hours in the past two weeks. In four years of NEA readings, the actual value landed in this range about 8 times in 10.</i>',
+      `<i>Our calculation, not official: how much the reading moved over the same hours in the past two weeks. ${RANGE_RECORD}</i>`,
     );
   }
   return lines.join('\n');
