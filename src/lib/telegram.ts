@@ -113,6 +113,20 @@ export function requestWriteAccess(): Promise<boolean> {
   });
 }
 
+/**
+ * Run an endpoint call that needs the bot to message the user. If it's refused with
+ * NO_WRITE_ACCESS, ask Telegram for permission and try once more; `deniedMessage` if they say no.
+ */
+export async function withWriteAccess<T>(call: () => Promise<T>, deniedMessage: string): Promise<T> {
+  try {
+    return await call();
+  } catch (e) {
+    if (!(e instanceof EndpointCallError && e.code === 'NO_WRITE_ACCESS')) throw e;
+    if (!(await requestWriteAccess())) throw new Error(deniedMessage);
+    return call();
+  }
+}
+
 /** An endpoint refusal: `code` is the EndpointError code, when there is one. */
 export class EndpointCallError extends Error {
   readonly code: string | null;

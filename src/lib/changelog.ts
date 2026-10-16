@@ -15,6 +15,12 @@ export const CHANGELOG: ChangelogEntry[] = [
     body: 'Live wind and rain from NEA’s weather stations, and whether the wind is blowing in from the areas where haze fires usually burn.',
   },
   {
+    id: '2026-10-16-haze-picture',
+    date: '2026-10-16',
+    title: 'Share a picture of the haze',
+    body: 'Every region’s 24-hour PSI and 1-hour PM2.5 on one map, ready to send to a chat. /haze and the alerts now come with it too.',
+  },
+  {
     id: '2026-10-16-live-views',
     date: '2026-10-16',
     title: 'See the haze for yourself',

@@ -10,6 +10,7 @@
   import LiveViews from './components/LiveViews.svelte';
   import NewsCard from './components/NewsCard.svelte';
   import RegionTable from './components/RegionTable.svelte';
+  import ShareCard from './components/ShareCard.svelte';
   import Sources from './components/Sources.svelte';
   import WindRain from './components/WindRain.svelte';
   import { loadDashboard, loadWeather, type Dashboard, type WeatherResult } from './lib/api';
@@ -72,6 +73,7 @@
       <Hero snapshot={data.snapshot} bind:period />
       <AlertsCard />
       <RegionTable snapshot={data.snapshot} {period} />
+      <ShareCard snapshot={data.snapshot} />
       <CigCalc snapshot={data.snapshot} />
       {#if data.forecast}<ForecastSection forecast={data.forecast} history={data.history} />{/if}
       <WindRain snapshot={data.snapshot} first={weatherFirst} />

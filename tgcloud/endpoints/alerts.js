@@ -6,7 +6,7 @@
 
 import { api, EndpointError } from 'sdk';
 import { parseAlertInput } from '../lib/alert-settings.js';
-import { isUnreachable } from '../lib/alerts.js';
+import { isUnreachable } from '../lib/bot-errors.js';
 import { deleteSubscriber, getSubscriber, saveSubscriber } from '../lib/subscriptions.js';
 
 /** @param {{ bandAlerts: boolean, dailyHour: number | null } | null | undefined} sub */

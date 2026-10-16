@@ -46,10 +46,17 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   /haze and the Mini App can trigger a forecast run.
 - **Some `tgcloud/lib/` modules are shared with the front-end and tests**
   (`psi`, `cigs`, `advice`, `alert-settings`, `alert-rules`, `format`, `snapshot`,
-  `forecast/features|predict|model`, `news-parse`, `cameras-parse`, `weather-parse`). Keep these pure: no `sdk` import, no DB, so
+  `forecast/features|predict|model`, `news-parse`, `cameras-parse`, `weather-parse`,
+  `card/geometry|png|raster|summary|glyphs|art`). Keep these pure: no `sdk` import, no DB, so
   Vite and `node --test` can load them. Modules that touch `sdk`, directly or via `store`, are
   `store`, `nea`, `refresh`, `alerts`, `subscriptions`, `cli-only`, `forecast/inputs`,
-  `forecast/run`, `news`, `cameras`, `weather`.
+  `forecast/run`, `news`, `cameras`, `weather`, `bot-errors`, `messages`, `card/send`.
+- **The summary picture (`tgcloud/lib/card/`) is drawn in plain JS**: the runtime has no canvas,
+  fonts or zlib, so `png.js` has its own deflate and `glyphs.js` / `art.js` are pre-rendered
+  bitmaps **generated** by `npm run card:assets` (fonts in `scripts/card/fonts/`, island outline
+  in `scripts/card/singapore.svg`). Don't edit them by hand. `card/send` uploads it once per
+  snapshot and reuses Telegram's file id (state `card`); if the photo fails, the text goes instead.
+  Check a layout change with `node scripts/card/preview.mjs <dir>`.
 - **Secrets live in the `settings` DB table**, set only via `endpoints/admin` from the
   CLI. Never commit or echo a key.
 - **`tgcloud/lib/forecast/model.js` is generated** by `scripts/train/train.py`. Don't

@@ -2,7 +2,8 @@
 
 <img src="public/logo.svg" alt="" width="72" align="right" />
 
-A Telegram bot and Mini App for haze in Singapore. It shows current PSI by region, a cigarette
+A Telegram bot and Mini App for haze in Singapore. It shows current PSI by region (also as a
+shareable picture of the island), a cigarette
 equivalent, a 24-hour PSI forecast, NEA’s health advice and the latest haze headlines from The
 Straits Times, CNA and Mothership, and sends alerts to a chat when the haze band changes.
 
@@ -36,11 +37,12 @@ late, `/haze` and the Mini App fetch fresh data themselves when the snapshot is 
 |---|---|
 | `tgcloud/schema.js` | Database tables |
 | `tgcloud/handlers/` | Bot commands and inline buttons |
-| `tgcloud/endpoints/` | `getDashboard`, `alerts` (Mini App), `tick`, `admin` (CLI only) |
+| `tgcloud/endpoints/` | `getDashboard`, `alerts`, `shareCard` (Mini App), `tick`, `admin` (CLI only) |
 | `tgcloud/lib/` | NEA fetch, PSI maths, alerts, formatting, the forecast runtime |
 | `src/` | Mini App (Svelte 5 + Vite + TypeScript) |
 | `scripts/train/` | Offline Python training for the forecast. Never deployed |
 | `scripts/fixture.mjs` | Builds `src/dev/fixture.json` from live data for local UI work |
+| `scripts/card/` | Builds the summary picture’s glyphs, map and logo (`npm run card:assets`); `preview.mjs` writes sample PNGs |
 | `test/` | `node --test` unit tests for the shared logic |
 | `docs/` | Platform SDK reference, [design notes](docs/design.md), UI audit |
 
