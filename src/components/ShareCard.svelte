@@ -11,6 +11,9 @@
   let status = $state<string | null>(null);
   let error = $state<string | null>(null);
   let visible = $state(false);
+  let attempt = $state(0); // bumped by Try again to redraw
+  let expanded = $state(false);
+  let drawFailed = $state(false);
 
   const DONE: Record<ShareResult, string | null> = {
     shared: 'Shared.',
@@ -32,15 +35,21 @@
 
   $effect(() => {
     if (!visible) return;
+    void attempt;
     let current: string | null = null;
     let cancelled = false;
+    drawFailed = false;
     renderCardUrl(snapshot)
       .then((u) => {
         if (cancelled) return URL.revokeObjectURL(u);
         current = u;
         url = u;
+        error = null;
       })
-      .catch(() => (error = 'Couldn’t draw the picture.'));
+      .catch(() => {
+        drawFailed = true;
+        error = 'Couldn’t draw the picture.';
+      });
     return () => {
       cancelled = true;
       if (current) URL.revokeObjectURL(current);
@@ -66,22 +75,45 @@
 </script>
 
 <section class="card share" aria-labelledby="share-title">
-  <div class="thumb" aria-hidden={!url}>
-    {#if url}<img src={url} alt="Each region’s 24-hour PSI and 1-hour PM2.5 on a map" />{/if}
-  </div>
-  <div class="body">
-    <h2 id="share-title" class="section-title">Share the haze picture</h2>
-    <p class="note">Every region on one image, the same one the bot sends. Both numbers are NEA’s.</p>
-    <button type="button" class="primary" onclick={share} disabled={!url || busy}>
-      {busy ? 'Preparing…' : inTelegram ? 'Share picture' : 'Download picture'}
+  <div class="row">
+    <button
+      type="button"
+      class="thumb"
+      onclick={() => (expanded = !expanded)}
+      disabled={!url}
+      aria-expanded={expanded}
+      aria-label={expanded ? 'Hide the full-size picture' : 'Show the picture full size'}
+    >
+      {#if url}<img src={url} alt="" />{/if}
     </button>
-    {#if status}<p class="note" role="status">{status}</p>{/if}
-    {#if error}<p class="error" role="alert">{error}</p>{/if}
+    <div class="body">
+      <h2 id="share-title" class="section-title">Share the haze picture</h2>
+      <p class="note">Every region on one image, the same one the bot sends. Both numbers are NEA’s.</p>
+      <button type="button" class="primary" onclick={share} disabled={!url || busy} aria-busy={busy}>
+        <!-- Both labels share one grid cell, so the button keeps its width while busy. -->
+        <span class:hidden={busy}>{inTelegram ? 'Share picture' : 'Download picture'}</span>
+        <span class:hidden={!busy} aria-hidden={!busy}>Preparing…</span>
+      </button>
+      {#if status}<p class="note" role="status">{status}</p>{/if}
+      {#if error}
+        <p class="error" role="alert">
+          {error}
+          {#if drawFailed}<button type="button" class="retry" onclick={() => attempt++}>Try again</button>{/if}
+        </p>
+      {/if}
+    </div>
   </div>
+  {#if expanded && url}
+    <img class="full" src={url} alt="Each region’s 24-hour PSI and 1-hour PM2.5 on a map of Singapore" />
+  {/if}
 </section>
 
 <style>
   .share {
+    display: grid;
+    gap: 14px;
+  }
+  .row {
     display: flex;
     gap: 14px;
     align-items: flex-start;
@@ -90,15 +122,27 @@
     flex: none;
     width: 96px;
     aspect-ratio: 1080 / 1350;
+    padding: 0;
+    border: 0;
     border-radius: 10px;
     overflow: hidden;
     background: color-mix(in srgb, var(--brand-haze) 22%, var(--card));
   }
-  .thumb img {
+  .thumb:disabled {
+    opacity: 1;
+  }
+  .thumb img,
+  .full {
     display: block;
     width: 100%;
-    height: 100%;
     animation: appear 220ms var(--ease-out);
+  }
+  .thumb img {
+    height: 100%;
+  }
+  .full {
+    height: auto;
+    border-radius: 12px;
   }
   .body {
     display: grid;
@@ -121,6 +165,7 @@
     cursor: default;
   }
   .primary {
+    display: inline-grid;
     justify-self: start;
     min-height: 44px;
     padding: 0 18px;
@@ -129,6 +174,20 @@
     background: var(--accent);
     color: var(--accent-ink);
     font-weight: 650;
+  }
+  .primary > span {
+    grid-area: 1 / 1;
+  }
+  .hidden {
+    visibility: hidden;
+  }
+  .retry {
+    min-height: 44px;
+    padding: 0 0 0 6px;
+    border: 0;
+    background: none;
+    color: var(--link);
+    font-weight: 600;
   }
   .error {
     margin: 0;
@@ -144,7 +203,8 @@
     button {
       transition: none;
     }
-    .thumb img {
+    .thumb img,
+    .full {
       animation: none;
     }
   }

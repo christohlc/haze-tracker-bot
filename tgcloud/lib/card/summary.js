@@ -32,6 +32,7 @@ const C = {
   muted: rgb('#6b6560'),
   none: rgb('#dcdcdc'),
   noneInk: rgb('#3d3d3d'),
+  missing: rgb('#b8b2ab'),
   stale: rgb('#e2b84a'),
 };
 
@@ -91,6 +92,8 @@ export function bandRanges(bands) {
 
 /** @param {number | null | undefined} v */
 const fmt = (v) => (v == null ? '–' : String(Math.round(v)));
+/** Rounded like the number shown, so a 55.4 drawn as "55" also gets 55's band. @param {number | null | undefined} v */
+const shown = (v) => (v == null ? null : Math.round(v));
 
 /**
  * A pill: band colour, label in the band's ink, vertically centred on `y + h / 2`.
@@ -115,15 +118,15 @@ function regionCard(c, region) {
 
   const value = fmt(region.psi24h);
   const big = c.measure(value, 'num') <= 140 ? 'num' : 'numSmall';
-  c.text(value, x + 22, y + 124, big, C.ink);
+  c.text(value, x + 22, y + 124, big, region.psi24h == null ? C.missing : C.ink);
   c.text('24-hr PSI', x + 22 + c.measure(value, big) + 12, y + 124, 'label', C.muted);
 
-  const band = psiBand(region.psi24h);
+  const band = psiBand(shown(region.psi24h));
   const [fill, ink] = band ? BAND[/** @type {keyof typeof BAND} */ (band.id)] : [C.none, C.noneInk];
   pill(c, x + 24, y + 138, band?.label ?? 'No reading', fill, ink);
 
   // 1-hour PM2.5 underneath, with its own band dot.
-  const pm = pm25Band(region.pm25);
+  const pm = pm25Band(shown(region.pm25));
   const pmFill = pm ? BAND[/** @type {keyof typeof BAND} */ (PM25_COLOUR[/** @type {keyof typeof PM25_COLOUR} */ (pm.id)])][0] : C.none;
   c.fillRoundRect(x + 26, y + 191, 12, 12, 6, pmFill);
   c.text(`1-hr PM2.5: ${fmt(region.pm25)}`, x + 48, y + 204, 'label', C.ink);
