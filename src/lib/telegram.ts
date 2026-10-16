@@ -72,35 +72,29 @@ export function showBackButton(onClick: () => void): () => void {
 }
 
 // CloudStorage needs Bot API 6.9+; older clients throw, so they use localStorage too.
-const cloud = () => (inTelegram && tg.isVersionAtLeast?.('6.9') ? tg.CloudStorage : null);
+const cloudStorage = inTelegram && tg.isVersionAtLeast?.('6.9') ? tg.CloudStorage : null;
 
 /** Read a small per-user value: Telegram CloudStorage in Telegram, localStorage otherwise. */
-export function getStored(key: string): Promise<string | null> {
-  const cs = cloud();
-  if (cs) {
-    return new Promise((resolve) => {
-      try {
-        cs.getItem(key, (err: unknown, value?: string) => resolve(err ? null : value || null));
-      } catch {
-        resolve(null);
-      }
-    });
+export async function getStored(key: string): Promise<string | null> {
+  if (cloudStorage) {
+    return new Promise((resolve) =>
+      cloudStorage.getItem(key, (err: unknown, value?: string) => resolve(err ? null : value || null)),
+    );
   }
   try {
-    return Promise.resolve(localStorage.getItem(key));
+    return localStorage.getItem(key);
   } catch {
-    return Promise.resolve(null);
+    return null; // storage blocked (private mode)
   }
 }
 
 /** Write a small per-user value. Best effort: failures are ignored. */
 export function setStored(key: string, value: string) {
-  const cs = cloud();
   try {
-    if (cs) cs.setItem(key, value);
+    if (cloudStorage) cloudStorage.setItem(key, value);
     else localStorage.setItem(key, value);
   } catch {
-    // storage unavailable (private mode, old client)
+    // storage blocked (private mode)
   }
 }
 

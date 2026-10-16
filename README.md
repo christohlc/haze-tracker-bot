@@ -118,6 +118,5 @@ the JS predictions match Python’s.
 
 ## Releasing a user-facing change
 
-Add an entry to the top of [`src/lib/changelog.ts`](src/lib/changelog.ts). It feeds the
-**What’s new** sheet in the Mini App, and users who haven’t seen the latest entry get a dot on
-the header button.
+Add an entry to [`src/lib/changelog.ts`](src/lib/changelog.ts) for the in-app **What’s new**
+sheet. The rules are in [docs/design.md](docs/design.md#whats-new).

@@ -114,5 +114,5 @@ developers:
 - Behind-the-scenes changes get an entry only when users would notice them (e.g. a better
   forecast).
 
-The latest entry’s `id` is saved in Telegram `CloudStorage` (`localStorage` outside Telegram)
+Each entry needs a new, unique `id`. The latest entry’s `id` is saved in Telegram `CloudStorage` (`localStorage` outside Telegram)
 once the sheet has been opened. Until then, the header button shows a dot.

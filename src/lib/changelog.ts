@@ -1,6 +1,4 @@
-// "What's new" in the Mini App, newest first. Written for users: what they can now do, no
-// file names or internals. Give each entry a new, unique `id`; the newest id is what marks
-// the header button as seen (see docs/design.md).
+// "What's new" in the Mini App, newest first. Rules for entries: docs/design.md#whats-new.
 
 export interface ChangelogEntry {
   id: string;

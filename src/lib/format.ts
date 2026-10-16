@@ -15,7 +15,7 @@ export function sgtClock(sec: number): string {
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /** "2026-10-16" (an SGT date) → "16 Oct" */
-export function sgtDate(ymd: string): string {
+export function sgtDayMonth(ymd: string): string {
   return `${Number(ymd.slice(8, 10))} ${MONTHS[Number(ymd.slice(5, 7)) - 1]}`;
 }
 
