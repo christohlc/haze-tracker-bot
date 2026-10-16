@@ -3,7 +3,10 @@
 // from freshly fetched stories and the official 24-hour PSI crossing; lib/alerts.js sends them.
 // state('breaking_paused') (endpoints/admin) stops both.
 
+import { api } from 'sdk';
 import { hazeGateOpen, pickBreaking, pruneEvents, psiCrossing, sendableEvents } from './breaking-rules.js';
+import { dashboardButton } from './buttons.js';
+import { formatBreaking } from './format.js';
 import { getState, setState } from './store.js';
 
 /** @typedef {import('./breaking-rules.js').BreakingEvent} BreakingEvent */
@@ -18,38 +21,42 @@ export async function isBreakingPaused() {
   return Boolean((await getState('breaking_paused'))?.value);
 }
 
-/** @param {boolean} on */
-export async function setBreakingPaused(on) {
-  await setState('breaking_paused', on);
-}
-
 /**
- * Add new events from this tick: news (only while there's haze) and the official 24h PSI.
- * The PSI band is tracked even while paused, so unpausing doesn't announce an old rise.
- * Returns the new events' ids.
+ * This tick's breaking news: store new events (news only while there's haze, and the official
+ * 24h PSI), then return what's still to send. The PSI band is tracked even while paused, so
+ * unpausing doesn't announce an old rise.
  * @param {any} snap
  * @param {Array<{ source: string, title: string, link: string, publishedAt: string, description?: string }>} fresh
  * @param {number} now
+ * @returns {Promise<{ added: string[], toSend: BreakingEvent[] }>}
  */
 export async function updateBreaking(snap, fresh, now = Date.now()) {
   const [{ events, psiBand }, paused] = await Promise.all([getBreaking(), isBreakingPaused()]);
-  const psi = psiCrossing(psiBand, snap.worst.psi24h?.value, now);
+  const psi = psiCrossing(psiBand, snap.worst.psi24h?.value, now, events);
   /** @type {BreakingEvent[]} */
   const added = [];
   if (!paused) {
     if (psi.event) added.push(psi.event);
     if (hazeGateOpen(snap)) added.push(...pickBreaking(events, fresh, now));
   }
-  if (added.length || psi.band !== psiBand) {
-    await setState('breaking', { events: pruneEvents([...events, ...added], now), psiBand: psi.band });
-  }
-  return added.map((e) => e.id);
+  const all = added.length ? pruneEvents([...events, ...added], now) : events;
+  if (added.length || psi.band !== psiBand) await setState('breaking', { events: all, psiBand: psi.band });
+  return { added: added.map((e) => e.id), toSend: paused ? [] : sendableEvents(all, now) };
 }
 
-/** Events to send now, oldest first; none while paused. @param {number} now */
-export async function eventsToSend(now = Date.now()) {
-  if (await isBreakingPaused()) return [];
-  return sendableEvents((await getBreaking()).events, now);
+/**
+ * Send one breaking event to a chat. A story gets its large preview above the text, much like
+ * a forwarded channel post. @param {number} chatId @param {BreakingEvent} event @param {any} snap
+ */
+export function sendBreaking(chatId, event, snap) {
+  const reply_markup = dashboardButton(chatId);
+  return api.sendMessage({
+    chat_id: chatId,
+    text: formatBreaking(event, snap),
+    parse_mode: 'HTML',
+    link_preview_options: event.kind === 'news' ? { url: event.link, prefer_large_media: true, show_above_text: true } : { is_disabled: true },
+    ...(reply_markup && { reply_markup }),
+  });
 }
 
 /** Stop sending one event. Returns false if there's no such event. @param {string} id */

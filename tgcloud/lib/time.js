@@ -1,6 +1,9 @@
 // @ts-check
 // Hour arithmetic shared by the bot and the Mini App. Pure.
 
+/** YYYY-MM-DD in Singapore at `ms`. @param {number} ms */
+export const sgtDateOf = (ms) => new Date(ms + 8 * 3_600_000).toISOString().slice(0, 10);
+
 /** ISO timestamp (any offset) → unix hour (hours since epoch, UTC). @param {string} iso */
 export const unixHour = (iso) => Math.floor(Date.parse(iso) / 3_600_000);
 

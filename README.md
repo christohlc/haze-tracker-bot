@@ -15,7 +15,7 @@ turning Very unhealthy or Hazardous).
 
 Readings come from NEA (via data.gov.sg). The 1-hour and 3-hour PSI and the forecast are this
 project’s own calculations, not official figures. Breaking news is picked from the headlines by
-the bot's own rules and sent without anyone checking it first; the operator can pause it with
+the bot’s own rules and sent without anyone checking it first; the operator can pause it with
 `endpoints/admin` (`breaking_pause`).
 
 ## How it fits together

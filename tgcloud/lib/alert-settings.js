@@ -6,10 +6,9 @@ export const DAILY_HOURS = [7, 8, 12, 18];
 /** @param {number} h */
 export const hourLabel = (h) => `${h % 12 === 0 ? 12 : h % 12} ${h < 12 ? 'am' : 'pm'}`;
 
-/** Breaking news is on unless turned off (rows and Mini App builds from before it count as on). @param {{ breakingAlerts?: boolean } | null} sub */
-export const breakingOn = (sub) => Boolean(sub && (sub.breakingAlerts ?? true));
+/** @typedef {{ bandAlerts: boolean, dailyHour: number | null, breakingAlerts: boolean }} AlertSettings */
 
-/** @param {{ bandAlerts: boolean, dailyHour: number | null, breakingAlerts?: boolean } | null} sub */
+/** @param {AlertSettings | null} sub */
 export function renderAlertSettings(sub) {
   if (!sub) {
     return {
@@ -20,7 +19,7 @@ export function renderAlertSettings(sub) {
   const text = [
     '<b>Haze alerts</b>',
     `Band changes: <b>${sub.bandAlerts ? 'on' : 'off'}</b>. A message when the 3-hour PSI moves into another band (rises straight away, drops after 3 hours).`,
-    `Breaking news: <b>${breakingOn(sub) ? 'on' : 'off'}</b>. School closures, halted outdoor activities, and the official 24-hour PSI turning Very unhealthy or Hazardous.`,
+    `Breaking news: <b>${sub.breakingAlerts ? 'on' : 'off'}</b>. School closures, halted outdoor activities, and the official 24-hour PSI turning Very unhealthy or Hazardous.`,
     `Daily update: <b>${sub.dailyHour == null ? 'off' : `${hourLabel(sub.dailyHour)} SGT`}</b>`,
   ].join('\n');
   /** @param {boolean} on @param {string} label */
@@ -30,7 +29,7 @@ export function renderAlertSettings(sub) {
     reply_markup: {
       inline_keyboard: [
         [{ text: `${sub.bandAlerts ? '✅' : '⬜️'} Band change alerts`, callback_data: 'a:band' }],
-        [{ text: `${breakingOn(sub) ? '✅' : '⬜️'} Breaking news`, callback_data: 'a:breaking' }],
+        [{ text: `${sub.breakingAlerts ? '✅' : '⬜️'} Breaking news`, callback_data: 'a:breaking' }],
         DAILY_HOURS.map((h) => ({ text: mark(sub.dailyHour === h, hourLabel(h)), callback_data: `a:daily:${h}` })),
         [{ text: mark(sub.dailyHour == null, 'No daily update'), callback_data: 'a:daily:off' }],
         [{ text: '🔕 Stop all alerts', callback_data: 'a:stop' }],
@@ -41,14 +40,15 @@ export function renderAlertSettings(sub) {
 
 /**
  * Apply a button press to the settings. Returns the new settings, or null to unsubscribe.
- * @param {{ bandAlerts: boolean, dailyHour: number | null, breakingAlerts?: boolean } | null} sub
+ * @param {AlertSettings | null} sub
  * @param {string} data callback_data
+ * @returns {AlertSettings | null}
  */
 export function applyAlertAction(sub, data) {
   if (data === 'a:stop') return null;
   // From "off" entirely, "Turn on alerts" (a:band) turns on band alerts and breaking news.
   if (!sub && data === 'a:band') return { bandAlerts: true, dailyHour: null, breakingAlerts: true };
-  const cur = { bandAlerts: Boolean(sub?.bandAlerts), dailyHour: sub?.dailyHour ?? null, breakingAlerts: sub ? breakingOn(sub) : false };
+  const cur = { bandAlerts: Boolean(sub?.bandAlerts), dailyHour: sub?.dailyHour ?? null, breakingAlerts: Boolean(sub?.breakingAlerts) };
   if (data === 'a:band') return { ...cur, bandAlerts: !cur.bandAlerts };
   if (data === 'a:breaking') return { ...cur, breakingAlerts: !cur.breakingAlerts };
   const m = /^a:daily:(off|\d{1,2})$/.exec(data);
@@ -62,12 +62,14 @@ export function applyAlertAction(sub, data) {
 
 /**
  * Validate settings sent by the Mini App. Returns the settings, or null when all are off
- * (unsubscribe). Throws an Error with a user-facing message on bad input. `breakingAlerts` is
- * optional (builds from before it) and then on, unless band and daily are both off.
+ * (unsubscribe). Throws an Error with a user-facing message on bad input. Builds from before
+ * breaking news don't send `breakingAlerts`: it then stays as `current` has it, or is on for a
+ * new subscriber, and an older build's "Stop all alerts" (both others off) still stops it.
  * @param {unknown} input
- * @returns {{ bandAlerts: boolean, dailyHour: number | null, breakingAlerts: boolean } | null}
+ * @param {{ breakingAlerts: boolean } | null} [current] the saved settings
+ * @returns {AlertSettings | null}
  */
-export function parseAlertInput(input) {
+export function parseAlertInput(input, current = null) {
   const o = /** @type {Record<string, unknown>} */ (input ?? {});
   if (typeof o.bandAlerts !== 'boolean') throw new Error('bandAlerts must be true or false');
   const dailyHour = o.dailyHour ?? null;
@@ -75,13 +77,13 @@ export function parseAlertInput(input) {
     throw new Error(`dailyHour must be one of ${DAILY_HOURS.join(', ')} or null`);
   }
   if (o.breakingAlerts !== undefined && typeof o.breakingAlerts !== 'boolean') throw new Error('breakingAlerts must be true or false');
-  // An older build's "Stop all alerts" sends both off and no breakingAlerts: that still stops everything.
-  const breakingAlerts = o.breakingAlerts ?? (o.bandAlerts || dailyHour !== null);
+  const others = o.bandAlerts || dailyHour !== null;
+  const breakingAlerts = /** @type {boolean | undefined} */ (o.breakingAlerts) ?? (others && (current ? Boolean(current.breakingAlerts) : true));
   const settings = { bandAlerts: o.bandAlerts, dailyHour: /** @type {number | null} */ (dailyHour), breakingAlerts };
   return isActive(settings) ? settings : null;
 }
 
-/** Any alert on? All off means unsubscribed. @param {{ bandAlerts: boolean, dailyHour: number | null, breakingAlerts?: boolean } | null} sub */
+/** Any alert on? All off means unsubscribed. @param {AlertSettings | null} sub */
 export function isActive(sub) {
-  return Boolean(sub && (sub.bandAlerts || sub.dailyHour != null || breakingOn(sub)));
+  return Boolean(sub && (sub.bandAlerts || sub.dailyHour != null || sub.breakingAlerts));
 }

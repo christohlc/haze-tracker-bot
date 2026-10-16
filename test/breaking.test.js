@@ -40,6 +40,10 @@ test('denials, reopenings, questions and other countries are not', () => {
     'Johor schools shut as haze worsens',
     'Malaysia closes 1,000 schools over haze',
     'Fake message about school closures circulating, says MOE',
+    'MOE prepared to close schools if PSI hits hazardous',
+    'Organisers considering calling off marathon due to haze',
+    'No decision yet to cancel race amid haze',
+    'Schools could close next week as haze worsens',
     'Haze in Singapore: what you need to know',
   ]) {
     assert.equal(storyTopic(title), null, title);
@@ -121,6 +125,10 @@ test('official 24h PSI: rising into Very unhealthy or Hazardous is an event, onc
   assert.equal(event?.band, 'hazardous');
   ({ event } = psiCrossing({ id: 'moderate', at: 0 }, 150, NOW));
   assert.equal(event, null, 'Unhealthy is a band alert, not breaking');
+  // Down for over 3 hours and back up the same day: already announced today.
+  const first = psiCrossing({ id: 'unhealthy', at: 0 }, 210, NOW).event;
+  assert.equal(psiCrossing({ id: 'unhealthy', at: 0 }, 215, NOW + 5 * H, [first]).event, null);
+  assert.equal(psiCrossing({ id: 'unhealthy', at: 0 }, 215, NOW + 24 * H, [first]).event?.band, 'very_unhealthy', 'next day counts');
 });
 
 test('prune and sendable windows', () => {

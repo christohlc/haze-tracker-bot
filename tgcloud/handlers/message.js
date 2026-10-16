@@ -63,7 +63,7 @@ export default async function (message) {
       const existing = await getSubscriber(message.chat.id);
       const { sub } = await saveSubscriber(message.chat.id, { bandAlerts: true, dailyHour: existing?.dailyHour ?? null });
       const view = renderAlertSettings(sub);
-      return reply(message, `✅ You’ll get a message when the haze band changes${sub.breakingAlerts === false ? '' : ', and breaking haze news'}.\n\n${view.text}`, view.reply_markup);
+      return reply(message, `✅ You’ll get a message when the haze band changes${sub.breakingAlerts ? ', and breaking haze news' : ''}.\n\n${view.text}`, view.reply_markup);
     }
     case 'alerts': {
       const view = renderAlertSettings((await getSubscriber(message.chat.id)) ?? null);

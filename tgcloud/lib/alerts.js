@@ -9,9 +9,8 @@ import { dailyDue, nextAlertBand, runBatched, SEND_INTERVAL_MS, sgtHourOf } from
 import { dashboardButton } from './buttons.js';
 import { isRateLimited, isUnreachable } from './bot-errors.js';
 import { cachedCardId, sendCardOrText } from './card/send.js';
-import { eventsToSend } from './breaking.js';
-import { formatBandAlert, formatBreaking, formatHaze, formatHazeCaption } from './format.js';
-import { sendHtml } from './messages.js';
+import { sendBreaking } from './breaking.js';
+import { formatBandAlert, formatHaze, formatHazeCaption } from './format.js';
 import { sgtDate } from './nea.js';
 import { psiBand } from './psi.js';
 import { getState, setState } from './store.js';
@@ -32,7 +31,8 @@ import {
 /** Stop sending this long after the tick starts so it returns before the platform cuts it
  *  off; whoever isn't reached yet keeps their old lastBand / unclaimed key for the next run. */
 const BUDGET_MS = 20_000;
-/** Breaking news goes first and stops by here, then band alerts by BAND_BUDGET_MS, so a
+/** Breaking news goes first and stops this long after alerts start (the news fetch before them
+ *  doesn't eat into it), then band alerts by BAND_BUDGET_MS after the tick started, so a
  *  backlog of one doesn't starve the next. */
 const BREAKING_BUDGET_MS = 6_000;
 const BAND_BUDGET_MS = 12_000;
@@ -41,8 +41,12 @@ const DAILY_HEADER = '☀️ <b>Daily haze update</b>\n\n';
 
 const sleep = typeof setTimeout === 'function' ? (/** @type {number} */ ms) => new Promise((r) => setTimeout(r, ms)) : null;
 
-/** @param {any} snap @param {number} [now] when the tick started; the budget counts from here */
-export async function runAlerts(snap, now = Date.now()) {
+/**
+ * @param {any} snap @param {number} [now] when the tick started; the budget counts from here
+ * @param {import('./breaking.js').BreakingEvent[]} [breaking] events to send (updateBreaking)
+ */
+export async function runAlerts(snap, now = Date.now(), breaking = []) {
+  const end = now + BUDGET_MS;
   const out = { breaking: 0, band: null, sent: 0, daily: 0, removed: 0, deferred: false, paced: Boolean(sleep) };
   let retryAfter = SEND_INTERVAL_MS;
   /** @param {{ results: string[], stopped: string | null }} res @param {'breaking' | 'sent' | 'daily'} field */
@@ -73,23 +77,18 @@ export async function runAlerts(snap, now = Date.now()) {
 
   // Breaking news: every event still to send × breaking subscribers who haven't had it and
   // subscribed before it happened (so a new subscriber doesn't get an old story).
-  const events = await eventsToSend(now);
   /** @type {Array<{ chatId: number, event: any }>} */
   const pending = [];
-  if (events.length) {
-    const subs = await breakingSubscribers();
-    for (const event of events) {
-      const claimed = await breakingClaimedChats(event.id);
-      for (const s of subs) if (s.createdAt * 1000 <= event.at && !claimed.has(s.chatId)) pending.push({ chatId: s.chatId, event });
-    }
+  if (breaking.length) {
+    const [subs, ...claimed] = await Promise.all([breakingSubscribers(), ...breaking.map((e) => breakingClaimedChats(e.id))]);
+    breaking.forEach((event, i) => {
+      for (const s of subs) if (s.createdAt * 1000 <= event.at && !claimed[i].has(s.chatId)) pending.push({ chatId: s.chatId, event });
+    });
   }
   const breakingRes = await runBatched(
     pending,
-    ({ chatId, event }) =>
-      sendNoting429(chatId, `breaking:${chatId}:${event.id}`, () =>
-        sendHtml(chatId, formatBreaking(event, snap), dashboardButton(chatId), event.kind === 'news' ? storyPreview(event.link) : undefined),
-      ),
-    { deadline: now + BREAKING_BUDGET_MS, sleep },
+    ({ chatId, event }) => sendNoting429(chatId, `breaking:${event.id}:${chatId}`, () => sendBreaking(chatId, event, snap)),
+    { deadline: Math.min(Date.now() + BREAKING_BUDGET_MS, end), sleep },
   );
   const breakingStopped = tally(breakingRes, 'breaking');
 
@@ -121,7 +120,7 @@ export async function runAlerts(snap, now = Date.now()) {
 
   // A band backlog doesn't hold back daily updates. After a 429, wait Telegram's retry_after
   // first if there's time; otherwise the next tick sends them.
-  const deadline = now + BUDGET_MS;
+  const deadline = end;
   if (await canGoOn(bandStopped, deadline)) {
     const date = sgtDate(0, now);
     const hour = sgtHourOf(now);
@@ -139,9 +138,6 @@ export async function runAlerts(snap, now = Date.now()) {
   await pruneAlerts();
   return out;
 }
-
-/** The story's own preview above the text, large, much like a forwarded channel post. @param {string} url */
-const storyPreview = (url) => ({ url, prefer_large_media: true, show_above_text: true });
 
 /**
  * Claim `key`, then `deliver` the message. 'duplicate' means another run already sent it.

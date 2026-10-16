@@ -7,6 +7,7 @@
 import { bandRank, nextAlertBand } from './alert-rules.js';
 import { isHaze, storyKey } from './news-parse.js';
 import { psiBand } from './psi.js';
+import { sgtDateOf } from './time.js';
 
 const H = 3600_000;
 /** A story older than this when we first see it isn't breaking any more. */
@@ -32,7 +33,7 @@ export const TOPICS = {
   outdoor: {
     label: 'Outdoor activities',
     subject:
-      /\b(?:outdoor|sports?|races?|marathon|run|matches|games|training|NS|SAF|ActiveSG|concerts?|festival|parade|Grand Prix|F1|events?|facilities)\b/i,
+      /\b(?:outdoor|sports?|races?|marathon|matches|training|NS|SAF|ActiveSG|concerts?|festival|parade|Grand Prix|F1|events?)\b/i,
     action: /\b(?:cancel(?:s|led|ling)?|called off|calls off|halt(?:s|ed)?|suspend(?:s|ed)?|postpone(?:s|d)?|scrap(?:s|ped)?|stop(?:s|ped)?|clos(?:e|es|ed)|shut)\b/i,
   },
   masks: {
@@ -47,9 +48,9 @@ export const TOPICS = {
   },
 };
 
-/** A headline that says it's not happening, is over, or is only a question. */
+/** A headline that says it's not happening, might happen, is over, or is only a question. */
 const NEGATION =
-  /\b(?:not|won't|wont|isn't|aren't|don't|doesn't|no plans?|no need|remain(?:s)? open|stay(?:s)? open|reopen\w*|resum(?:e|es|ed)|lifted|rul(?:e|es|ed) out|unlikely|fake|hoax|myths?|false|rumou?rs?|den(?:y|ies|ied)|clarif\w*)\b|\?\s*$/i;
+  /\b(?:not|won't|wont|isn't|aren't|don't|doesn't|no plans?|no need|no decision|remain(?:s)? open|stay(?:s)? open|reopen\w*|resum(?:e|es|ed)|lifted|rul(?:e|es|ed) out|unlikely|fake|hoax|myths?|false|rumou?rs?|den(?:y|ies|ied)|clarif\w*|if|could|may|might|consider\w*|mull\w*|prepared to|ready to|possibl[ey]|contingenc\w*)\b|\?\s*$/i;
 /** Another country's closures, which the publishers' Singapore feeds sometimes carry. */
 const ELSEWHERE =
   /\b(?:Malaysia\w*|Johor|KL|Kuala Lumpur|Selangor|Penang|Sarawak|Sabah|Indonesia\w*|Jakarta|Thailand|Thai|Bangkok|Brunei)\b/i;
@@ -80,9 +81,6 @@ export function hazeGateOpen(snap) {
   return (snap?.worst?.psi24h?.value ?? 0) > GATE_PSI || (snap?.worst?.psi3h?.value ?? 0) > GATE_PSI;
 }
 
-/** YYYY-MM-DD in Singapore. @param {number} ms */
-const sgtDay = (ms) => new Date(ms + 8 * H).toISOString().slice(0, 10);
-
 /** Short, LIKE-safe id for a story key (it ends up in alerts_sent keys). @param {string} s */
 function hashId(s) {
   let h = 5381;
@@ -105,8 +103,8 @@ function hashId(s) {
  * @returns {NewsEvent[]}
  */
 export function pickBreaking(prev, fresh, nowMs) {
-  const day = sgtDay(nowMs);
-  const today = prev.filter((e) => e.kind === 'news' && sgtDay(e.at) === day);
+  const day = sgtDateOf(nowMs);
+  const today = prev.filter((e) => e.kind === 'news' && sgtDateOf(e.at) === day);
   const topics = new Set(today.map((e) => /** @type {NewsEvent} */ (e).topic));
   const seen = new Set(prev.map((e) => e.id));
   let left = MAX_NEWS_PER_DAY - today.length;
@@ -130,19 +128,22 @@ export function pickBreaking(prev, fresh, nowMs) {
 
 /**
  * The official 24-hour PSI band we've announced, and an event when it rises into Very
- * unhealthy or Hazardous. Drops wait 3 hours (nextAlertBand), so a reading on a boundary
- * doesn't announce the same rise twice.
+ * unhealthy or Hazardous, at most once per band per Singapore day. Drops wait 3 hours
+ * (nextAlertBand), so a reading on a boundary doesn't announce the same rise twice.
  * @param {{ id: string, at: number } | null} prev
  * @param {number | null | undefined} psi24h
  * @param {number} nowMs
+ * @param {BreakingEvent[]} [events] already stored, so a band isn't announced twice in a day
  * @returns {{ band: { id: string, at: number } | null, event: PsiEvent | null }}
  */
-export function psiCrossing(prev, psi24h, nowMs) {
+export function psiCrossing(prev, psi24h, nowMs, events = []) {
   const raw = psiBand(psi24h ?? null)?.id ?? null;
   const band = nextAlertBand(prev, raw, nowMs);
   const rose = band && prev && band !== prev && bandRank(band.id) > bandRank(prev.id);
   if (!band || !rose || !PSI_BREAKING.includes(band.id) || psi24h == null) return { band, event: null };
-  return { band, event: { id: `p${band.id}${Math.floor(band.at / 1000)}`, kind: 'psi24', band: band.id, value: psi24h, at: nowMs } };
+  const id = `p${band.id}${sgtDateOf(nowMs)}`;
+  if (events.some((e) => e.id === id)) return { band, event: null };
+  return { band, event: { id, kind: 'psi24', band: band.id, value: psi24h, at: nowMs } };
 }
 
 /** Events still worth keeping. @param {BreakingEvent[]} events @param {number} nowMs */

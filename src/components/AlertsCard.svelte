@@ -107,7 +107,7 @@
       <label class="row">
         <span>
           <span class="row-title">Breaking news</span>
-          <span class="note">School closures, events called off, official PSI over 200</span>
+          <span class="note">School closures, events called off, official 24-hour PSI over 200</span>
         </span>
         <input
           type="checkbox"

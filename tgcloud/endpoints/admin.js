@@ -10,13 +10,10 @@
 //   npx tgcloud run endpoints/admin "{ action: 'breaking_test', chatId: 123 }"  (send the latest event, or a sample, to one chat)
 
 import { EndpointError } from 'sdk';
-import { cancelEvent, getBreaking, isBreakingPaused, setBreakingPaused } from '../lib/breaking.js';
-import { dashboardButton } from '../lib/buttons.js';
-import { formatBreaking } from '../lib/format.js';
-import { sendHtml } from '../lib/messages.js';
-import { getSnapshot } from '../lib/refresh.js';
+import { cancelEvent, getBreaking, isBreakingPaused, sendBreaking } from '../lib/breaking.js';
 import { requireCli } from '../lib/cli-only.js';
 import { PSI_BANDS } from '../lib/psi.js';
+import { getSnapshot } from '../lib/refresh.js';
 import { breakingClaimedChats, countSubscribers, setAllLastBand } from '../lib/subscriptions.js';
 import { allSourceStatus, countReadings, deleteSetting, getSetting, getState, setSetting, setState, toSgtIso } from '../lib/store.js';
 
@@ -76,7 +73,7 @@ export default async function (input, ctx) {
     }
     case 'breaking_pause': {
       if (typeof input.on !== 'boolean') throw new EndpointError('on must be true or false');
-      await setBreakingPaused(input.on);
+      await setState('breaking_paused', input.on);
       return { ok: true, paused: input.on };
     }
     case 'breaking_cancel': {
@@ -86,15 +83,18 @@ export default async function (input, ctx) {
     case 'breaking_test': {
       const chatId = Number(input.chatId);
       if (!Number.isInteger(chatId) || chatId === 0) throw new EndpointError('chatId must be a chat id');
-      const event = (await getBreaking()).events.at(-1) ?? {
+      /** @type {import('../lib/breaking.js').BreakingEvent} */
+      const event = (await getBreaking()).events.findLast((e) => !e.cancelled) ?? {
+        id: 'test',
         kind: 'news',
+        topic: 'schools',
         source: 'st',
         title: 'Test: this is what breaking haze news looks like',
         link: 'https://www.straitstimes.com/singapore',
+        at: Date.now(),
       };
-      const preview = event.kind === 'news' ? { url: event.link, prefer_large_media: true, show_above_text: true } : undefined;
-      await sendHtml(chatId, formatBreaking(event, await getSnapshot()), dashboardButton(chatId), preview);
-      return { ok: true, sent: event.kind === 'news' ? event.title : `psi24 ${event.band}` };
+      await sendBreaking(chatId, event, await getSnapshot());
+      return { ok: true, sent: event.id };
     }
     default:
       throw new EndpointError("action must be 'set', 'unset', 'status', 'rewind_band', 'breaking_pause', 'breaking_cancel' or 'breaking_test'");

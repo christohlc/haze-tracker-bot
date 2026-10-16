@@ -50,18 +50,15 @@ test('settings actions', () => {
   assert.deepEqual(applyAlertAction({ ...sub, dailyHour: 8 }, 'a:daily:off'), sub);
   assert.deepEqual(applyAlertAction(sub, 'a:daily:3'), sub, 'only offered hours are accepted');
   assert.equal(applyAlertAction(sub, 'a:stop'), null);
-  // A row from before breaking news counts as on.
-  assert.deepEqual(applyAlertAction({ bandAlerts: true, dailyHour: null }, 'a:breaking'), { ...sub, breakingAlerts: false });
 });
 
 test('breaking news alone keeps a chat subscribed', () => {
   assert.equal(isActive({ bandAlerts: false, dailyHour: null, breakingAlerts: true }), true);
   assert.equal(isActive({ bandAlerts: false, dailyHour: null, breakingAlerts: false }), false);
-  assert.equal(isActive({ bandAlerts: false, dailyHour: null }), true, 'missing means on');
 });
 
 test('settings view marks the chosen hour and fits callback_data limits', () => {
-  const view = renderAlertSettings({ bandAlerts: true, dailyHour: 18 });
+  const view = renderAlertSettings({ bandAlerts: true, dailyHour: 18, breakingAlerts: true });
   const buttons = view.reply_markup.inline_keyboard.flat();
   assert.ok(buttons.some((b) => b.text === '● 6 pm'));
   for (const b of buttons) assert.ok(Buffer.byteLength(b.callback_data) <= 64);
@@ -93,6 +90,9 @@ test('Mini App alert settings are validated, and all-off means unsubscribe', () 
   assert.deepEqual(parseAlertInput({ bandAlerts: false, dailyHour: null, breakingAlerts: true }), { bandAlerts: false, dailyHour: null, breakingAlerts: true });
   assert.equal(parseAlertInput({ bandAlerts: false, dailyHour: null, breakingAlerts: false }), null);
   assert.equal(parseAlertInput({ bandAlerts: false, dailyHour: null }), null, 'an older build’s Stop all alerts still stops everything');
+  // An older build saving band or daily keeps breaking news as the chat set it.
+  assert.equal(parseAlertInput({ bandAlerts: true }, { breakingAlerts: false })?.breakingAlerts, false);
+  assert.equal(parseAlertInput({ bandAlerts: true }, { breakingAlerts: true })?.breakingAlerts, true);
   assert.throws(() => parseAlertInput({ bandAlerts: true, breakingAlerts: 'yes' }));
   assert.throws(() => parseAlertInput({ bandAlerts: 'yes' }));
   assert.throws(() => parseAlertInput({ bandAlerts: true, dailyHour: 9 }));
