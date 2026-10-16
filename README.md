@@ -22,7 +22,7 @@ the bot’s own rules and sent without anyone checking it first; the operator ca
 ## How it fits together
 
 ```
-GitHub Actions (every 15 min: :12, :27, :42, :57)
+cron-job.org (every 15 min: :12, :27, :42, :57) ─▶ GitHub Actions workflow_dispatch
   └─ npx tgcloud run endpoints/tick
        ├─ refresh NEA PM2.5 + PSI  → readings, state(snapshot)
        ├─ refresh news (every run while there's haze) → state(news), breaking events → state(breaking)
@@ -35,8 +35,9 @@ Mini App  ─ Serverless.call(...)     ─▶ tgcloud/endpoints/*     (getDashbo
 It runs on Telegram Serverless (tgcloud). There is no server to host: `tgcloud/` holds the
 modules that run in the cloud, and `src/` is the Svelte front-end, built to `dist/` and served
 as the Mini App. Telegram Serverless has no scheduler, so
-[`.github/workflows/tick.yml`](.github/workflows/tick.yml) runs the 15-minute job. If a run is
-late, `/haze` and the Mini App fetch fresh data themselves when the snapshot is stale.
+[`.github/workflows/tick.yml`](.github/workflows/tick.yml) runs the 15-minute job, started by an
+external cron ([below](#the-15-minute-tick)). If a run is late, `/haze` and the Mini App fetch
+fresh data themselves when the snapshot is stale.
 
 | Path | What it is |
 |---|---|
@@ -97,6 +98,32 @@ npx tgcloud run endpoints/tick
 ```
 
 The tick workflow needs the repository secret `TGCLOUD_TOKEN`.
+
+### The 15-minute tick
+
+GitHub's own `schedule` trigger is best effort and drops most runs (on 16 Oct 2026 it fired 1 of
+31 slots), so an external cron starts the workflow through the API. The `schedule` in the
+workflow stays as a backstop. To set it up:
+
+1. GitHub → Settings → Developer settings → Fine-grained tokens → new token with access to this
+   repository only and the single permission **Actions: Read and write**. Set an expiry and a
+   reminder to renew it; nothing else can start the tick once it lapses.
+2. On [cron-job.org](https://cron-job.org) (free), create a job:
+   - URL `https://api.github.com/repos/christohogc/haze-tracker-bot/actions/workflows/tick.yml/dispatches`
+   - Schedule: custom, minutes `12,27,42,57`, every hour
+   - Advanced: method `POST`, request body `{"ref":"main"}`, headers
+     `Accept: application/vnd.github+json`, `X-GitHub-Api-Version: 2022-11-28` and
+     `Authorization: Bearer <the token>`
+   - Turn on the failure notification. Success is HTTP 204.
+3. Optionally, a second weekly job with body `{"ref":"main","inputs":{"keepalive":"true"}}`, in
+   case GitHub drops the scheduled keepalive.
+
+The token lives only on cron-job.org (paste it there, not into this repo or a chat). It can start,
+re-run and cancel Actions runs in this repository and nothing else. Check that runs are coming in with:
+
+```bash
+gh run list --workflow tick.yml -L 12
+```
 
 ### Groups
 
