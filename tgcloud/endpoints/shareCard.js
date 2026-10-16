@@ -22,7 +22,7 @@ export default async function (input, ctx) {
   let sentToChat = false;
   if (!fileId) {
     try {
-      fileId = photoFileId(await sendCard(userId, snap, formatHazeCaption(snap), dashboardButton(userId)));
+      fileId = photoFileId(await sendCard(userId, snap, formatHazeCaption(snap), await dashboardButton(userId)));
       sentToChat = true;
     } catch (e) {
       if (isUnreachable(e)) {

@@ -8,6 +8,7 @@ import { BotApiError } from 'sdk';
 import { dailyDue, nextAlertBand, runBatched, SEND_INTERVAL_MS, sgtHourOf } from './alert-rules.js';
 import { dashboardButton } from './buttons.js';
 import { isRateLimited, isUnreachable } from './bot-errors.js';
+import { subscriberTarget } from './chat-rules.js';
 import { cachedCardId, sendCardOrText } from './card/send.js';
 import { sendBreaking } from './breaking.js';
 import { formatBandAlert, formatHaze, formatHazeCaption } from './format.js';
@@ -19,9 +20,11 @@ import {
   breakingClaimedChats,
   breakingSubscribers,
   claimAlert,
+  clearThread,
   dailyClaimedChats,
   dailySubscribers,
   deleteSubscriber,
+  moveSubscriber,
   pruneAlerts,
   releaseAlert,
   seedLastBand,
@@ -62,8 +65,9 @@ export async function runAlerts(snap, now = Date.now(), breaking = []) {
     if (retryAfterS) retryAfter = Math.max(retryAfter, retryAfterS * 1000);
     return result;
   };
-  /** @param {number} chatId @param {{ caption: string, text: string }} message */
-  const card = (chatId, message) => () => sendCardOrText(chatId, snap, { ...message, reply_markup: dashboardButton(chatId) });
+  /** @param {{ chatId: number, threadId?: number | null }} sub @param {{ caption: string, text: string }} message */
+  const card = (sub, message) => async () =>
+    sendCardOrText(subscriberTarget(sub), snap, { ...message, reply_markup: await dashboardButton(sub.chatId) });
   /** After a phase hit a 429: wait Telegram's retry_after if there's time before `deadline`. @param {string | null} stopped @param {number} deadline */
   const canGoOn = async (stopped, deadline) => {
     if (stopped !== 'limited') return true;
@@ -77,17 +81,17 @@ export async function runAlerts(snap, now = Date.now(), breaking = []) {
 
   // Breaking news: every event still to send × breaking subscribers who haven't had it and
   // subscribed before it happened (so a new subscriber doesn't get an old story).
-  /** @type {Array<{ chatId: number, event: any }>} */
+  /** @type {Array<{ sub: any, event: any }>} */
   const pending = [];
   if (breaking.length) {
     const [subs, ...claimed] = await Promise.all([breakingSubscribers(), ...breaking.map((e) => breakingClaimedChats(e.id))]);
     breaking.forEach((event, i) => {
-      for (const s of subs) if (s.createdAt * 1000 <= event.at && !claimed[i].has(s.chatId)) pending.push({ chatId: s.chatId, event });
+      for (const s of subs) if (s.createdAt * 1000 <= event.at && !claimed[i].has(s.chatId)) pending.push({ sub: s, event });
     });
   }
   const breakingRes = await runBatched(
     pending,
-    ({ chatId, event }) => sendNoting429(chatId, `breaking:${event.id}:${chatId}`, () => sendBreaking(chatId, event, snap)),
+    ({ sub, event }) => sendNoting429(sub.chatId, `breaking:${event.id}:${sub.chatId}`, () => sendBreaking(subscriberTarget(sub), event, snap)),
     { deadline: Math.min(Date.now() + BREAKING_BUDGET_MS, end), sleep },
   );
   const breakingStopped = tally(breakingRes, 'breaking');
@@ -109,7 +113,7 @@ export async function runAlerts(snap, now = Date.now(), breaking = []) {
       subs,
       async (sub) => {
         const text = formatBandAlert(snap, sub.lastBand, band.id);
-        const r = await sendNoting429(sub.chatId, `band:${sub.chatId}:${band.id}:${band.at}`, card(sub.chatId, { caption: text, text }));
+        const r = await sendNoting429(sub.chatId, `band:${sub.chatId}:${band.id}:${band.at}`, card(sub, { caption: text, text }));
         if (r === 'sent' || r === 'duplicate') await setLastBand(sub.chatId, band.id);
         return r;
       },
@@ -129,7 +133,7 @@ export async function runAlerts(snap, now = Date.now(), breaking = []) {
     const daily = { caption: `${DAILY_HEADER}${formatHazeCaption(snap)}`, text: `${DAILY_HEADER}${formatHaze(snap)}` };
     const res = await runBatched(
       due,
-      (sub) => sendNoting429(sub.chatId, `daily:${sub.chatId}:${date}`, card(sub.chatId, daily)),
+      (sub) => sendNoting429(sub.chatId, `daily:${sub.chatId}:${date}`, card(sub, daily)),
       { deadline, sleep, firstAlone: await firstAlone() },
     );
     tally(res, 'daily');
@@ -156,6 +160,17 @@ async function send(chatId, key, deliver) {
       return { result: 'removed' };
     }
     await releaseAlert(key);
+    // The group became a supergroup (new id), or the topic alerts went to was deleted: fix the
+    // subscription, and the next tick sends to the right place.
+    const movedTo = e instanceof BotApiError ? e.parameters?.migrate_to_chat_id : undefined;
+    if (movedTo) {
+      await moveSubscriber(chatId, movedTo);
+      return { result: 'failed' };
+    }
+    if (e instanceof BotApiError && /thread not found/i.test(e.description)) {
+      await clearThread(chatId);
+      return { result: 'failed' };
+    }
     if (isRateLimited(e)) return { result: 'limited', retryAfterS: /** @type {any} */ (e).parameters?.retry_after };
     console.error('alert send failed', e instanceof BotApiError ? `${e.code} ${e.description}` : String(e)); // no chat id: tick output lands in public Actions logs
     return { result: 'failed' };

@@ -6,6 +6,7 @@
 import { api } from 'sdk';
 import { hazeGateOpen, pickBreaking, pruneEvents, psiCrossing, sendableEvents } from './breaking-rules.js';
 import { dashboardButton } from './buttons.js';
+import { targetChat, targetParams } from './chat-rules.js';
 import { formatBreaking } from './format.js';
 import { getState, setState } from './store.js';
 
@@ -46,12 +47,12 @@ export async function updateBreaking(snap, fresh, now = Date.now()) {
 
 /**
  * Send one breaking event to a chat. A story gets its large preview above the text, much like
- * a forwarded channel post. @param {number} chatId @param {BreakingEvent} event @param {any} snap
+ * a forwarded channel post. @param {import('./chat-rules.js').Target} to @param {BreakingEvent} event @param {any} snap
  */
-export function sendBreaking(chatId, event, snap) {
-  const reply_markup = dashboardButton(chatId);
+export async function sendBreaking(to, event, snap) {
+  const reply_markup = await dashboardButton(targetChat(to));
   return api.sendMessage({
-    chat_id: chatId,
+    ...targetParams(to),
     text: formatBreaking(event, snap),
     parse_mode: 'HTML',
     link_preview_options: event.kind === 'news' ? { url: event.link, prefer_large_media: true, show_above_text: true } : { is_disabled: true },

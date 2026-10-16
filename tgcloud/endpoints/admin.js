@@ -4,14 +4,16 @@
 //   npx tgcloud run endpoints/admin "{ action: 'status' }"
 //   npx tgcloud run endpoints/admin "{ action: 'unset', key: 'firms_map_key' }"
 //   npx tgcloud run endpoints/admin "{ action: 'rewind_band', band: 'unhealthy' }"  (test: next tick alerts the change)
+//   npx tgcloud run endpoints/admin "{ action: 'commands' }"  (the command menus; in groups most are ephemeral, chat-rules.js COMMANDS)
 //   npx tgcloud run endpoints/admin "{ action: 'backfill', days: 14 }"  (NEA's hourly PM2.5 for past days; rerun a minute later until remaining is empty)
 // Breaking news is sent without anyone checking it first, so:
 //   npx tgcloud run endpoints/admin "{ action: 'breaking_pause', on: true }"   (no new events, nothing sent; false resumes)
 //   npx tgcloud run endpoints/admin "{ action: 'breaking_cancel', id: 'n1a2b3c' }"  (stop sending one event; ids in status)
 //   npx tgcloud run endpoints/admin "{ action: 'breaking_test', chatId: 123 }"  (send the latest event, or a sample, to one chat)
 
-import { EndpointError } from 'sdk';
+import { api, EndpointError } from 'sdk';
 import { cancelEvent, getBreaking, isBreakingPaused, sendBreaking } from '../lib/breaking.js';
+import { COMMANDS } from '../lib/chat-rules.js';
 import { requireCli } from '../lib/cli-only.js';
 import { errorText } from '../lib/http.js';
 import { getPm25Day } from '../lib/nea.js';
@@ -135,6 +137,17 @@ export default async function (input, ctx) {
       if (!Number.isInteger(days) || days < 1 || days > 14) throw new EndpointError('days must be 1 to 14');
       return backfill(days);
     }
+    case 'commands': {
+      // Private chats: the plain list. Groups: is_ephemeral, so the command and the reply are
+      // seen only by the sender and the bot.
+      const plain = COMMANDS.map(({ command, description }) => ({ command, description }));
+      await api.setMyCommands({ commands: plain, scope: { type: 'all_private_chats' } });
+      await api.setMyCommands({
+        commands: COMMANDS.map(({ command, description, ephemeral }) => ({ command, description, ...(ephemeral && { is_ephemeral: true }) })),
+        scope: { type: 'all_group_chats' },
+      });
+      return { ok: true, ephemeralInGroups: COMMANDS.filter((c) => c.ephemeral).map((c) => c.command) };
+    }
     case 'breaking_pause': {
       if (typeof input.on !== 'boolean') throw new EndpointError('on must be true or false');
       await setState('breaking_paused', input.on);
@@ -161,6 +174,6 @@ export default async function (input, ctx) {
       return { ok: true, sent: event.id };
     }
     default:
-      throw new EndpointError("action must be 'set', 'unset', 'status', 'rewind_band', 'backfill', 'breaking_pause', 'breaking_cancel' or 'breaking_test'");
+      throw new EndpointError("action must be 'set', 'unset', 'status', 'rewind_band', 'backfill', 'commands', 'breaking_pause', 'breaking_cancel' or 'breaking_test'");
   }
 }

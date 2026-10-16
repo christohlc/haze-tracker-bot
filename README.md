@@ -98,6 +98,21 @@ npx tgcloud run endpoints/tick
 
 The tick workflow needs the repository secret `TGCLOUD_TOKEN`.
 
+### Groups
+
+Add the bot to a group and an admin sends `/subscribe` (in the topic the alerts should go to, if
+the group has topics). Only the group’s admins can change or stop its alerts. In groups,
+`/haze`, `/cigs`, `/forecast`, `/alerts` and `/help` are ephemeral: picked from the command menu,
+the command and the reply are seen only by the person who sent it. After deploying a change to
+the command list, set the menus again:
+
+```bash
+npx tgcloud run endpoints/admin "{ action: 'commands' }"
+```
+
+If the bot is a group admin, it can also send an ephemeral “admins only” answer to an ordinary
+command; otherwise that answer is visible to the group.
+
 ### Operator settings
 
 There is no secret store, so secrets live in the `settings` table and are set only through the

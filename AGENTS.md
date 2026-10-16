@@ -65,17 +65,27 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   5 days per run back to back (`paced: false` in the result), so rerun a minute later.
 - **Some `tgcloud/lib/` modules are shared with the front-end and tests**
   (`psi`, `cigs`, `advice`, `alert-settings`, `alert-rules`, `breaking-rules`, `format`, `snapshot`,
-  `outlook-parse`, `range`, `html`, `time`, `news-parse`, `cameras-parse`, `weather-parse`,
+  `outlook-parse`, `range`, `html`, `time`, `news-parse`, `cameras-parse`, `weather-parse`, `chat-rules`,
   `card/geometry|png|raster|summary|glyphs|art`). Keep these pure: no `sdk` import, no DB, so
   Vite and `node --test` can load them. Modules that touch `sdk`, directly or via `store`, are
   `store`, `nea`, `refresh`, `alerts`, `breaking`, `subscriptions`, `cli-only`, `outlook`, `ahead`,
-  `news`, `cameras`, `weather`, `bot-errors`, `messages`, `card/send`, `http`, `feed-cache`.
+  `news`, `cameras`, `weather`, `bot-errors`, `messages`, `card/send`, `http`, `feed-cache`, `groups`,
+  `buttons`.
 - **The summary picture (`tgcloud/lib/card/`) is drawn in plain JS**: the runtime has no canvas,
   fonts or zlib, so `png.js` has its own deflate and `glyphs.js` / `art.js` are pre-rendered
   bitmaps **generated** by `npm run card:assets` (fonts in `scripts/card/fonts/`, island outline
   in `scripts/card/singapore.svg`). Don't edit them by hand. `card/send` uploads it once per
   snapshot and reuses Telegram's file id (state `card`); if the photo fails, the text goes instead.
   Check a layout change with `node scripts/card/preview.mjs <dir>`.
+- **The bot works in groups** (`lib/chat-rules.js`, `lib/groups.js`). A group subscribes as one
+  chat; only its admins (`getChatMember`) may change alerts. Alerts go to the forum topic `/subscribe`
+  was sent in (`subscribers.thread_id`; cleared if the topic is deleted), and a group upgraded to a
+  supergroup takes its subscription along (`migrate_to_chat_id`). In groups most commands are
+  **ephemeral** (Bot API 10.2+, `COMMANDS` in `chat-rules.js`): the command and the bot's reply are
+  seen only by the sender, and the reply must go within 15 s. The menus are set by `admin`
+  `{ action: 'commands' }`; rerun it after changing `COMMANDS`. web_app buttons don't work in
+  groups, so the dashboard button there is a t.me link. **Run `npx tgcloud migrate` before pushing**
+  a build that reads `thread_id`.
 - **Secrets live in the `settings` DB table**, set only via `endpoints/admin` from the
   CLI. Never commit or echo a key.
 - **1-hour and 3-hour PSI and the next-hours range are our own calculations**, not NEA's.
