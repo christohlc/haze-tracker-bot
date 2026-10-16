@@ -20,8 +20,12 @@ export function initTelegram() {
   }
 }
 
+const darkQuery = matchMedia('(prefers-color-scheme: dark)');
+// Outside Telegram the SDK still reports colorScheme 'light', so only trust it in Telegram.
+if (!inTelegram) darkQuery.addEventListener('change', applyScheme);
+
 function applyScheme() {
-  const scheme = tg?.colorScheme ?? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  const scheme = inTelegram ? tg.colorScheme : darkQuery.matches ? 'dark' : 'light';
   document.documentElement.dataset.theme = scheme;
 }
 

@@ -1,19 +1,20 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Advice from './components/Advice.svelte';
+  import BrandHeader from './components/BrandHeader.svelte';
   import CigCalc from './components/CigCalc.svelte';
-  import Hero from './components/Hero.svelte';
+  import Hero, { type Period } from './components/Hero.svelte';
   import HistoryChart from './components/HistoryChart.svelte';
   import RegionTable from './components/RegionTable.svelte';
   import Sources from './components/Sources.svelte';
   import { loadDashboard, type Dashboard } from './lib/api';
-  import { sgtHour } from './lib/format';
   import { inTelegram } from './lib/telegram';
 
   const DevToggle = import.meta.env.DEV && !inTelegram ? import('./dev/DevDataToggle.svelte') : null;
 
   let data = $state<Dashboard | null>(null);
   let error = $state<string | null>(null);
+  let period = $state<Period>('3h');
   let loadedAt = 0;
 
   async function load() {
@@ -38,15 +39,7 @@
 </script>
 
 <main>
-  <header>
-    <img class="logo" src="/logo.svg" alt="" width="44" height="44" />
-    <div>
-      <h1>How much haze have you smoked today?</h1>
-      {#if data}
-        <p class="note">Latest PM2.5 reading {sgtHour(data.snapshot.asOf, true)} SGT</p>
-      {/if}
-    </div>
-  </header>
+  <BrandHeader snapshot={data?.snapshot ?? null} />
 
   {#if error && !data}
     <div class="card state">
@@ -66,8 +59,8 @@
       </div>
     {/if}
     <div class="sections">
-      <Hero snapshot={data.snapshot} />
-      <RegionTable snapshot={data.snapshot} />
+      <Hero snapshot={data.snapshot} bind:period />
+      <RegionTable snapshot={data.snapshot} {period} />
       <CigCalc snapshot={data.snapshot} />
       <HistoryChart snapshot={data.snapshot} history={data.history} />
       <Advice snapshot={data.snapshot} />
@@ -86,23 +79,6 @@
     margin: 0 auto;
     padding: calc(12px + var(--tg-content-safe-area-inset-top, 0px)) var(--gutter)
       calc(24px + var(--tg-safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
-  }
-  header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 8px 4px 14px;
-  }
-  .logo {
-    flex: none;
-    border-radius: 12px;
-  }
-  h1 {
-    margin: 0 0 2px;
-    font-size: 1.375rem;
-    font-weight: 750;
-    line-height: 1.15;
-    letter-spacing: -0.02em;
   }
   .sections,
   .skeleton {

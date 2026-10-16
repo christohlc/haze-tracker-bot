@@ -54,7 +54,7 @@
     z-index: -1;
   }
   button {
-    min-height: 32px;
+    min-height: 44px;
     padding: 4px 10px;
     border: 0;
     background: none;
