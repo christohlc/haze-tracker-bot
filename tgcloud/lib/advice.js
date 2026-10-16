@@ -4,6 +4,7 @@
 
 import { psiBand, pm25Band } from './psi.js';
 
+/** @type {Record<string, { healthy: string, vulnerable: string, chronic: string }>} */
 const BY_PSI = {
   good: { healthy: 'Normal activities.', vulnerable: 'Normal activities.', chronic: 'Normal activities.' },
   moderate: { healthy: 'Normal activities.', vulnerable: 'Normal activities.', chronic: 'Normal activities.' },
@@ -24,6 +25,7 @@ const BY_PSI = {
   },
 };
 
+/** @type {Record<string, string>} */
 const RIGHT_NOW = {
   I: 'Air is fine for normal activities.',
   II: 'Cut back on long or hard exercise outdoors if you feel unwell.',
@@ -31,6 +33,7 @@ const RIGHT_NOW = {
   IV: 'Stay indoors where you can. Wear a well-fitted N95 if you must go out.',
 };
 
+/** @type {Record<string, { title: string, text: string }>} */
 const MASK = {
   good: { title: 'Breathe easy', text: 'No mask needed.' },
   moderate: { title: 'All good', text: 'No mask needed for most people.' },
@@ -49,7 +52,10 @@ export function advice(psi24h, maxPm25Now) {
   };
 }
 
-/** Short headline card, keyed off the headline PSI. */
+/**
+ * Short headline card, keyed off the headline PSI.
+ * @param {number | null} psi
+ */
 export function maskCard(psi) {
   const band = psiBand(psi);
   return band ? MASK[band.id] : null;

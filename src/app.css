@@ -1,15 +1,128 @@
+/* Design tokens. Telegram theme params win when present; palette values (validated with
+   the dataviz skill's checker) cover the chart and band colours in each scheme. */
+
 :root {
-  --bg: var(--tg-theme-bg-color, #fff);
-  --text: var(--tg-theme-text-color, #111);
-  --hint: var(--tg-theme-hint-color, #6b7280);
-  color-scheme: light dark;
-  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color-scheme: light;
+  --page: var(--tg-theme-secondary-bg-color, #f2f2f0);
+  --card: var(--tg-theme-section-bg-color, var(--tg-theme-bg-color, #fcfcfb));
+  --ink: var(--tg-theme-text-color, #0b0b0b);
+  --ink-2: var(--tg-theme-subtitle-text-color, #52514e);
+  --muted: var(--tg-theme-hint-color, #898781);
+  --hairline: var(--tg-theme-section-separator-color, #e1e0d9);
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --control: rgba(11, 11, 11, 0.06);
+  --control-thumb: var(--card);
+  --accent: var(--tg-theme-button-color, #2a78d6);
+  --accent-ink: var(--tg-theme-button-text-color, #fff);
+  --link: var(--tg-theme-link-color, #2a78d6);
+
+  /* PSI bands (ordinal severity). Passes lightness, chroma, CVD and normal-vision checks. */
+  --band-good: #0ca30c;           --band-good-ink: #0b0b0b;
+  --band-moderate: #2a78d6;       --band-moderate-ink: #fff;
+  --band-unhealthy: #dcab00;      --band-unhealthy-ink: #0b0b0b;
+  --band-very_unhealthy: #e0481f; --band-very_unhealthy-ink: #0b0b0b;
+  --band-hazardous: #8e3a9e;      --band-hazardous-ink: #fff;
+
+  /* Regions: categorical slots 1–5 in fixed order (never cycled). */
+  --region-north: #2a78d6;
+  --region-west: #eb6834;
+  --region-central: #1baf7a;
+  --region-east: #eda100;
+  --region-south: #e87ba4;
+
+  --status-good: #0ca30c;
+  --status-critical: #d03b3b;
+
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --radius: 16px;
+  --gutter: 16px;
+
+  font: 100%/1.45 system-ui, -apple-system, 'Segoe UI', sans-serif;
   -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  background: var(--page);
+  color: var(--ink);
 }
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --page: var(--tg-theme-secondary-bg-color, #0d0d0d);
+  --card: var(--tg-theme-section-bg-color, var(--tg-theme-bg-color, #1a1a19));
+  --ink: var(--tg-theme-text-color, #f0efec);
+  --ink-2: var(--tg-theme-subtitle-text-color, #c3c2b7);
+  --hairline: var(--tg-theme-section-separator-color, #2c2c2a);
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --control: rgba(255, 255, 255, 0.08);
+  --control-thumb: rgba(255, 255, 255, 0.16);
+
+  --band-good: #0ca30c;           --band-good-ink: #0b0b0b;
+  --band-moderate: #3987e5;       --band-moderate-ink: #0b0b0b;
+  --band-unhealthy: #b78e00;      --band-unhealthy-ink: #0b0b0b;
+  --band-very_unhealthy: #cf3418; --band-very_unhealthy-ink: #fff;
+  --band-hazardous: #a556b8;      --band-hazardous-ink: #fff;
+
+  --region-north: #3987e5;
+  --region-west: #d95926;
+  --region-central: #199e70;
+  --region-east: #c98500;
+  --region-south: #d55181;
+}
+
 html,
 body {
   margin: 0;
+  overscroll-behavior: none;
+}
+
+body {
   min-height: 100dvh;
-  background: var(--bg);
-  color: var(--text);
+  background: var(--page);
+}
+
+button,
+[role='radio'],
+summary {
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+input,
+select {
+  font-size: 16px;
+}
+
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+.section-title {
+  margin: 0 0 4px;
+  font-size: 1.0625rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.note {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

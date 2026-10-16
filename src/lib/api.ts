@@ -1,0 +1,59 @@
+import { callEndpoint, inTelegram } from './telegram';
+
+export type RegionId = 'north' | 'west' | 'central' | 'east' | 'south';
+
+export interface Region {
+  id: RegionId;
+  name: string;
+  pm25: number | null;
+  psi1h: number | null;
+  psi3h: number | null;
+  psi24h: number | null;
+  pm25Mean24h: number | null;
+}
+
+export interface Worst {
+  region: RegionId;
+  name: string;
+  value: number;
+}
+
+export interface Snapshot {
+  asOf: string;
+  psiAsOf: string;
+  stale: boolean;
+  regions: Region[];
+  island: { now: number | null; mean24h: number | null };
+  worst: { psi1h: Worst | null; psi3h: Worst | null; psi24h: Worst | null; pm25: Worst | null };
+}
+
+export type HourRow = { t: string } & Partial<Record<RegionId, number>>;
+
+export interface SourceStatus {
+  source: string;
+  lastOkAt: number | null;
+  lastErrorAt: number | null;
+  lastError: string | null;
+  detail: string | null;
+}
+
+export interface Dashboard {
+  snapshot: Snapshot;
+  history: HourRow[];
+  sources: SourceStatus[];
+  serverTime: number;
+}
+
+export async function loadDashboard(): Promise<Dashboard> {
+  if (inTelegram) return callEndpoint<Dashboard>('getDashboard');
+  if (import.meta.env.DEV) {
+    // Dev-only data switch (see DevDataToggle): ?demo=worst | empty | error | loading
+    const demo = new URLSearchParams(location.search).get('demo');
+    if (demo === 'worst') return (await import('../dev/worst')).worstCase();
+    if (demo === 'empty') return (await import('../dev/worst')).emptyCase();
+    if (demo === 'error') throw new Error('Couldn’t reach the haze service. Check your connection and try again.');
+    if (demo === 'loading') return new Promise(() => {});
+    return (await import('../dev/fixture.json')).default as Dashboard;
+  }
+  throw new Error('Open this dashboard from the Haze Tracker bot in Telegram.');
+}

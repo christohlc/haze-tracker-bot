@@ -13,7 +13,11 @@ const BREAKPOINTS = [
   [500, 500],
 ];
 
-/** PM2.5 concentration (µg/m³) → PSI sub-index, rounded. Extrapolates past 500. */
+/**
+ * PM2.5 concentration (µg/m³) → PSI sub-index, rounded. Extrapolates past 500.
+ * @param {number | null | undefined} pm25
+ * @returns {number | null}
+ */
 export function pm25ToPsi(pm25) {
   if (pm25 == null || Number.isNaN(pm25)) return null;
   const c = Math.max(0, pm25);
@@ -36,6 +40,7 @@ export const PSI_BANDS = [
   { id: 'hazardous', label: 'Hazardous', max: Infinity, emoji: '🔴' },
 ];
 
+/** @param {number | null | undefined} psi */
 export function psiBand(psi) {
   if (psi == null) return null;
   return PSI_BANDS.find((b) => psi <= b.max) ?? null;
@@ -49,13 +54,19 @@ export const PM25_BANDS = [
   { id: 'IV', label: 'Very high', max: Infinity },
 ];
 
+/** @param {number | null | undefined} pm25 */
 export function pm25Band(pm25) {
   if (pm25 == null) return null;
   return PM25_BANDS.find((b) => pm25 <= b.max) ?? null;
 }
 
-/** Mean of the last `n` numbers (ignoring nulls); null if none. */
+/**
+ * Mean of the last `n` numbers (ignoring nulls); null if none.
+ * @param {Array<number | null | undefined>} values
+ * @param {number} n
+ * @returns {number | null}
+ */
 export function meanOfLast(values, n) {
-  const xs = values.slice(-n).filter((v) => v != null);
+  const xs = /** @type {number[]} */ (values.slice(-n).filter((v) => v != null));
   return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null;
 }

@@ -1,9 +1,8 @@
-import { mount } from 'svelte'
-import './app.css'
-import App from './App.svelte'
+import { mount } from 'svelte';
+import './app.css';
+import App from './App.svelte';
+import { initTelegram } from './lib/telegram';
 
-const app = mount(App, {
-  target: document.getElementById('app')!,
-})
+initTelegram();
 
-export default app
+export default mount(App, { target: document.getElementById('app')! });
