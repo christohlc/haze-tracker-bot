@@ -124,6 +124,8 @@ Two parts, with no model to train:
   ```
 
   It skips days already complete and stops before the run limit; rerun until `remaining` is empty.
+  If the result says `paced: false` (the runtime has no way to wait between requests), a run fetches
+  at most 5 days, to stay under data.gov.sg’s rate limit, so wait a minute between reruns.
 
 ## Releasing a user-facing change
 

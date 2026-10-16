@@ -60,7 +60,9 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   episodes only, so null is the usual answer. The next-hours range (`lib/range.js`) is worked out
   from the last 14 days of `readings` and needs at least 72 hours; the tick stores only today and
   yesterday, so after a fresh start or a gap fill it with `admin` `{ action: 'backfill', days: 14 }`
-  (one NEA request per day, 1 s apart, ~20 s budget; rerun until `remaining` is empty).
+  (one NEA request per day, 1 s apart, ~20 s budget; rerun until `remaining` is empty). The runtime
+  may lack `setTimeout`: then it waits with `Atomics.wait`, or, if that's missing too, fetches at most
+  5 days per run back to back (`paced: false` in the result), so rerun a minute later.
 - **Some `tgcloud/lib/` modules are shared with the front-end and tests**
   (`psi`, `cigs`, `advice`, `alert-settings`, `alert-rules`, `breaking-rules`, `format`, `snapshot`,
   `outlook-parse`, `range`, `html`, `time`, `news-parse`, `cameras-parse`, `weather-parse`,
