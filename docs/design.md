@@ -13,9 +13,10 @@ code and this file disagree, fix one of them.
   what set it apart; keep them.
 - **Telegram-native.** Follow Telegram’s theme, use the MainButton for the main action, add
   haptics on selections and saves, and let alerts arrive in the chat. Use what a website can’t.
-- **Honest about the numbers.** Only NEA’s 24-hour PSI is official. The 1-hour and 3-hour PSI
-  are calculated from PM2.5, and the forecast comes from a model. Wherever they appear, the copy
-  says so in a short caption (“Our calculation, not official.”).
+- **Honest about the numbers.** Only NEA’s 24-hour PSI and NEA’s own forecast are official,
+  and the forecast keeps NEA’s wording. The 1-hour and 3-hour PSI are calculated from PM2.5, and
+  the next-hours range from past readings. Wherever they appear, the copy says so in a short
+  caption (“Our calculation, not official.”).
 
 ## Brand
 
@@ -69,7 +70,7 @@ or, outside Telegram, from the OS. A new colour token needs both a light and a d
   tabs. It sits at the top, not the bottom, because Telegram’s MainButton (“Get haze alerts”)
   owns the bottom edge.
   - **Now:** hero, regions, advice, alerts, share.
-  - **Outlook:** forecast, wind and rain, history.
+  - **Outlook:** what’s ahead, wind and rain, history.
   - **More:** live views, news, cigarettes, what’s new, sources (collapsed).
 - A tab mounts the first time it’s opened and then stays mounted, hidden (laid out at zero
   height rather than `display: none`), so its controls keep their state, its cards rise in only
@@ -105,13 +106,18 @@ of the sky and the haze. Check that again whenever a sky colour changes.
   a Try again button.
 - Bot messages use Telegram HTML. Keep them short enough to read in a notification. Commands
   in `/help` follow the pattern “/command: what it does”.
+- Breaking news (`formatBreaking` in `tgcloud/lib/format.js`): “🚨 Breaking:” plus the
+  publisher’s headline as it is, the publisher and a “Read the story” link (with the story’s
+  large preview above), then the official 24-hour PSI. It says the bot picked the story itself.
+  The PSI version says “Official 24-hour PSI now Hazardous”: only NEA’s 24-hour PSI is ever
+  called official.
 
 ## States
 
 Every section handles loading, empty and failed states. To check them outside Telegram, use
 the dev toolbar (`?demo=worst|empty|error|loading`). Those last two hide every card, so a card's
 own states take `?card=<card>:<state>`, comma-separated: `cameras:error|loading` for Live views and
-`weather:error|loading|partial` for Wind and rain. `?tab=outlook|more` opens on that tab. The
+`weather:error|loading|partial` for Wind and rain, `ahead:range|outlook` for one half of What’s ahead. `?tab=outlook|more` opens on that tab. The
 worst-case data has long names, missing readings and extreme values, so use it before shipping a
 layout change.
 

@@ -2,18 +2,18 @@
 // endpoints/getDashboard.js — everything the Mini App renders, in one call.
 // The platform verifies init data before this runs, so only Telegram users reach it.
 
-import { getCurrentForecast } from '../lib/forecast/run.js';
+import { getAhead } from '../lib/ahead.js';
 import { getNews } from '../lib/news.js';
 import { getSnapshot } from '../lib/refresh.js';
 import { allSourceStatus, recentReadings } from '../lib/store.js';
 
 export default async function () {
-  const snap = await getSnapshot();
-  const { history: _recent, ...snapshot } = snap;
-  const [history, sources, forecast, news] = await Promise.all([
-    recentReadings(48),
+  const refreshed = getSnapshot();
+  const [{ history: _recent, ...snapshot }, ahead, history, sources, news] = await Promise.all([
+    refreshed,
+    getAhead(refreshed),
+    refreshed.then(() => recentReadings(48)),
     allSourceStatus(),
-    getCurrentForecast(snap), // needs snap.history
     getNews(),
   ]);
   return {
@@ -27,7 +27,7 @@ export default async function () {
       lastError: s.lastErrorAt && (!s.lastOkAt || s.lastErrorAt > s.lastOkAt) ? s.lastError : null,
       detail: s.detail,
     })),
-    forecast,
+    ahead,
     news,
     serverTime: Date.now(),
   };

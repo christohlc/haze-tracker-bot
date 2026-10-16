@@ -4,15 +4,19 @@
 
 A Telegram bot and Mini App for haze in Singapore. It shows current PSI by region (also as a
 shareable picture of the island), a cigarette
-equivalent, a 24-hour PSI forecast, NEA’s health advice and the latest haze headlines from The
-Straits Times, CNA and Mothership, and sends alerts to a chat when the haze band changes.
+equivalent, NEA’s 24-hour PSI forecast during haze episodes, a likely range for the next few hours,
+NEA’s health advice and the latest haze headlines from The Straits Times, CNA and Mothership, and
+sends alerts to a chat when the haze band changes or there’s breaking haze news (schools closing,
+outdoor activities called off, NEA’s 24-hour PSI turning Very unhealthy or Hazardous).
 
 - **Bot:** `/haze`, `/cigs [region] [% outdoors]`, `/forecast`, `/subscribe`, `/alerts`,
   `/unsubscribe`
 - **Mini App:** <https://app8809761337.tgcloud.ai/>, opened from the bot’s button
 
-Readings come from NEA (via data.gov.sg). The 1-hour and 3-hour PSI and the forecast are this
-project’s own calculations, not official figures.
+Readings come from NEA (via data.gov.sg). The 1-hour and 3-hour PSI and the next-hours range are this
+project’s own calculations, not official figures. Breaking news is picked from the headlines by
+the bot’s own rules and sent without anyone checking it first; the operator can pause it with
+`endpoints/admin` (`breaking_pause`).
 
 ## How it fits together
 
@@ -20,8 +24,8 @@ project’s own calculations, not official figures.
 GitHub Actions (hourly, :12)
   └─ npx tgcloud run endpoints/tick
        ├─ refresh NEA PM2.5 + PSI  → readings, state(snapshot)
-       ├─ send band-change and daily alerts → subscribers, alerts_sent
-       └─ run the forecast (Open-Meteo inputs) → state(forecast)
+       ├─ refresh news (every run while there's haze) → state(news), breaking events → state(breaking)
+       └─ send breaking news, band-change and daily alerts → subscribers, alerts_sent
 
 Telegram ─ message / callback_query ─▶ tgcloud/handlers/*      (bot commands)
 Mini App  ─ Serverless.call(...)     ─▶ tgcloud/endpoints/*     (getDashboard, alerts)
@@ -38,9 +42,8 @@ late, `/haze` and the Mini App fetch fresh data themselves when the snapshot is 
 | `tgcloud/schema.js` | Database tables |
 | `tgcloud/handlers/` | Bot commands and inline buttons |
 | `tgcloud/endpoints/` | `getDashboard`, `alerts`, `shareCard` (Mini App), `tick`, `admin` (CLI only) |
-| `tgcloud/lib/` | NEA fetch, PSI maths, alerts, formatting, the forecast runtime |
+| `tgcloud/lib/` | NEA fetch, PSI maths, alerts, formatting, NEA’s outlook and the next-hours range |
 | `src/` | Mini App (Svelte 5 + Vite + TypeScript) |
-| `scripts/train/` | Offline Python training for the forecast. Never deployed |
 | `scripts/fixture.mjs` | Builds `src/dev/fixture.json` from live data for local UI work |
 | `scripts/card/` | Builds the summary picture’s glyphs, map and logo (`npm run card:assets`); `preview.mjs` writes sample PNGs |
 | `test/` | `node --test` unit tests for the shared logic |
@@ -101,22 +104,18 @@ CLI-only `admin` endpoint (see the comment at the top of
 [`tgcloud/endpoints/admin.js`](tgcloud/endpoints/admin.js)). Don’t paste keys into commands
 that end up in shell history; the file shows how to read one with `read -rs`.
 
-## Forecast
+## What’s ahead
 
-A quantile linear model per horizon (+1, 2, 3, 6 and 24 hours), trained offline in Python and
-exported as coefficients to `tgcloud/lib/forecast/model.js`, which the runtime evaluates in JS.
-Retraining:
+Two parts, with no model to train:
 
-```bash
-uv run --project scripts/train python scripts/train/fetch.py
-```
-
-```bash
-uv run --project scripts/train python scripts/train/train.py
-```
-
-The backtest lands in `scripts/train/report.json`, and `test/forecast-vectors.json` checks that
-the JS predictions match Python’s.
+- **NEA’s 24-hr PSI forecast** (`lib/outlook-parse.js`), read from the JSON that haze.gov.sg
+  itself uses (`nea.gov.sg/api/advisory/latesthazesituationupdate`). NEA issues it at about 6 pm
+  SGT, and only during haze episodes. It isn’t a documented API, so the parser returns null for
+  anything it can’t read and the section shows only the range.
+- **The next few hours** (`lib/range.js`): the island-wide 1-hour PSI now, widened by the 10th
+  and 90th percentiles of how far it moved over 1, 3 and 6 hours in the past two weeks. On NEA
+  readings from 2022 to 2026 the actual value landed inside it 81–83% of the time (80–86%
+  during haze); rerun with `node scripts/range-backtest.mjs <dir of NEA day files>`.
 
 ## Releasing a user-facing change
 

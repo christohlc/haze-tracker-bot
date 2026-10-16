@@ -118,6 +118,13 @@ select {
   letter-spacing: -0.01em;
 }
 
+/* A heading inside a card, under its section title. */
+.sub {
+  margin: 16px 0 0;
+  font-size: 0.9375rem;
+  font-weight: 650;
+}
+
 .note {
   margin: 0;
   font-size: 0.8125rem;

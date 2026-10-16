@@ -1,7 +1,7 @@
 // @ts-check
 // endpoints/alerts.js — the Mini App's alert settings for the calling user.
 //   { action: 'get' }                                → settings or null
-//   { action: 'save', bandAlerts, dailyHour }         → settings or null (both off = unsubscribe)
+//   { action: 'save', bandAlerts, dailyHour, breakingAlerts } → settings or null (all off = unsubscribe)
 // Alerts go to the user's private chat with the bot, whose id is the user id.
 
 import { api, EndpointError } from 'sdk';
@@ -9,8 +9,9 @@ import { parseAlertInput } from '../lib/alert-settings.js';
 import { isUnreachable } from '../lib/bot-errors.js';
 import { deleteSubscriber, getSubscriber, saveSubscriber } from '../lib/subscriptions.js';
 
-/** @param {{ bandAlerts: boolean, dailyHour: number | null } | null | undefined} sub */
-const view = (sub) => (sub ? { bandAlerts: Boolean(sub.bandAlerts), dailyHour: sub.dailyHour ?? null } : null);
+/** @param {import('../lib/alert-settings.js').AlertSettings | null | undefined} sub */
+const view = (sub) =>
+  sub ? { bandAlerts: Boolean(sub.bandAlerts), dailyHour: sub.dailyHour ?? null, breakingAlerts: Boolean(sub.breakingAlerts) } : null;
 
 export default async function (input, ctx) {
   const chatId = ctx.initData?.user?.id;
@@ -21,7 +22,7 @@ export default async function (input, ctx) {
 
   let next;
   try {
-    next = parseAlertInput(input);
+    next = parseAlertInput(input, (await getSubscriber(chatId)) ?? null);
   } catch (e) {
     throw new EndpointError(e instanceof Error ? e.message : 'Invalid settings');
   }
