@@ -1,11 +1,12 @@
 // @ts-check
-// Keep the DB's snapshot current. The hourly tick calls refreshNea(); chat commands and
+// Keep the DB's snapshot current. The tick calls refreshNeaIfNewHour(); chat commands and
 // the Mini App call getSnapshot(), which refetches itself if the tick is late
 // (the GitHub Actions cron can be delayed or skipped).
 
 import { getLatestPsi, getPm25History } from './nea.js';
 import { buildSnapshot } from './snapshot.js';
 import { getState, recentReadings, recordSource, setState, upsertReadings } from './store.js';
+import { unixHour } from './time.js';
 
 const STALE_MS = 80 * 60_000; // NEA publishes ~15 min past the hour
 const RETRY_MS = 5 * 60_000; // don't hammer NEA when it's down
@@ -35,6 +36,13 @@ export async function refreshNea() {
   const snap = buildSnapshot(history, psiState);
   await setState('snapshot', snap);
   return snap;
+}
+
+/** For the tick (every 15 min): refetch only until NEA has published the current hour. */
+export async function refreshNeaIfNewHour(now = Date.now()) {
+  const cached = (await getState('snapshot'))?.value;
+  if (cached && unixHour(cached.asOf) === Math.floor(now / 3_600_000)) return cached;
+  return refreshNea();
 }
 
 /** Latest snapshot, refetching when stale. `stale: true` means NEA couldn't be reached. */

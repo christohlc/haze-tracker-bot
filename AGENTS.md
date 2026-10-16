@@ -21,13 +21,19 @@ in this project.
 Singapore haze bot + Mini App. User-facing overview in [README.md](README.md); visual
 and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious from the code:
 
-- **The hourly job is `endpoints/tick`**, run by `.github/workflows/tick.yml` (the
-  platform has no scheduler). It refreshes NEA, sends alerts, then runs the forecast.
+- **The 15-minute job is `endpoints/tick`**, run by `.github/workflows/tick.yml` (the
+  platform has no scheduler). It refreshes NEA, then sends alerts, runs the forecast and
+  refreshes news in parallel.
   `tick` and `admin` call `requireCli(ctx)`: they're CLI-only, never Mini App endpoints.
-  It runs every 15 min; NEA and the forecast are cached per NEA hour, so only alerts do new work.
+  NEA is refetched only until the current hour is published, news about hourly, the forecast
+  once per NEA hour; the extra runs are for alerts a previous run didn't reach. `{"force":true}`
+  refetches NEA and news regardless.
 - **Alerts go out in batches of 25/s within a ~20 s budget** (`runBatched` in `lib/alert-rules.js`).
   Whoever isn't reached (budget, 429) keeps their old `lastBand` / unclaimed key and the next tick
-  resumes. The run limit of `tgcloud run` isn't documented; tune `BUDGET_MS` in `lib/alerts.js`.
+  resumes. Band alerts get the first 12 s so daily updates aren't starved. The run limit of
+  `tgcloud run` isn't documented; tune `BUDGET_MS` in `lib/alerts.js`. Pacing needs
+  `setTimeout`: the tick's `alerts.paced` says whether the runtime has it (if not, batches run
+  back to back and a 429 ends the run).
 - **Open-Meteo is tried at most once per 5 min per NEA hour** (`forecast_attempt` state), since
   /haze and the Mini App can trigger a forecast run.
 - **Some `tgcloud/lib/` modules are shared with the front-end and tests**

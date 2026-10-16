@@ -2,7 +2,7 @@
 // Subscriber storage.
 
 import { db } from 'sdk';
-import { eq, isNotNull, lt } from 'sdk/db';
+import { and, eq, isNotNull, isNull, like, lt } from 'sdk/db';
 import { alertsSent, subscribers } from '../schema.js';
 import { getState } from './store.js';
 
@@ -47,6 +47,21 @@ export async function dailySubscribers() {
 /** @param {number} chatId @param {string} band */
 export async function setLastBand(chatId, band) {
   await db.update(subscribers).set({ lastBand: band }).where(eq(subscribers.chatId, chatId)).run();
+}
+
+/** Subscribers who have never been told a band start at `band`, without an alert. @param {string} band */
+export async function seedLastBand(band) {
+  await db
+    .update(subscribers)
+    .set({ lastBand: band })
+    .where(and(eq(subscribers.bandAlerts, true), isNull(subscribers.lastBand)))
+    .run();
+}
+
+/** Chats whose daily update for `date` (YYYY-MM-DD) is already claimed. @param {string} date */
+export async function dailyClaimedChats(date) {
+  const rows = await db.select({ chatId: alertsSent.chatId }).from(alertsSent).where(like(alertsSent.key, `daily:%:${date}`)).all();
+  return new Set(rows.map((r) => r.chatId));
 }
 
 /** Testing aid: pretend every band subscriber was last told about `band`. @param {string} band */

@@ -1,5 +1,5 @@
 // @ts-check
-// Fetch haze headlines from ST, CNA and Mothership each tick and keep them in state('news').
+// Fetch haze headlines from ST, CNA and Mothership about hourly and keep them in state('news').
 // Stories are merged into the stored list, so ones that drop out of a short feed
 // (Mothership only lists its last 10 posts) stay for 14 days.
 
@@ -38,6 +38,15 @@ export async function refreshNews() {
   } catch (e) {
     return { count: null, error: errorText(e) };
   }
+}
+
+const NEWS_EVERY_S = 55 * 60;
+
+/** For the tick (every 15 min): refetch the feeds about once an hour. */
+export async function refreshNewsIfDue() {
+  const updatedAt = (await getState('news'))?.updatedAt ?? 0;
+  if (Date.now() / 1000 - updatedAt < NEWS_EVERY_S) return { count: null, error: null, skipped: true };
+  return refreshNews();
 }
 
 /** Stored haze headlines, or null before the first tick has fetched them. */

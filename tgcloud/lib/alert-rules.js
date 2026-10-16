@@ -47,14 +47,14 @@ export const SEND_INTERVAL_MS = 1000;
  * `intervalMs`. Stops when a task returns 'limited' (rate limited: the rest wait for the next
  * run), or before a batch that might not finish by `deadline` (the slowest batch so far, or one
  * interval, is the estimate). Without `sleep` (no timers), batches run back to back.
- * @template T, R
+ * @template T
  * @param {T[]} items
- * @param {(item: T) => Promise<R>} task
+ * @param {(item: T) => Promise<string>} task
  * @param {{ deadline: number, size?: number, intervalMs?: number, now?: () => number, sleep?: ((ms: number) => Promise<void>) | null }} opts
- * @returns {Promise<{ results: R[], stopped: null | 'limited' | 'budget' }>}
+ * @returns {Promise<{ results: string[], stopped: null | 'limited' | 'budget' }>}
  */
 export async function runBatched(items, task, { deadline, size = SEND_BATCH, intervalMs = SEND_INTERVAL_MS, now = Date.now, sleep = null }) {
-  /** @type {R[]} */
+  /** @type {string[]} */
   const results = [];
   let slowest = intervalMs;
   for (let i = 0; i < items.length; i += size) {
@@ -62,7 +62,7 @@ export async function runBatched(items, task, { deadline, size = SEND_BATCH, int
     if (start + slowest > deadline) return { results, stopped: 'budget' };
     const batch = await Promise.all(items.slice(i, i + size).map(task));
     results.push(...batch);
-    if (batch.includes(/** @type {R} */ ('limited'))) return { results, stopped: 'limited' };
+    if (batch.includes('limited')) return { results, stopped: 'limited' };
     const took = now() - start;
     slowest = Math.max(slowest, took);
     if (sleep && took < intervalMs && i + size < items.length) await sleep(intervalMs - took);

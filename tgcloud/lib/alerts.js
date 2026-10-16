@@ -5,7 +5,7 @@
 // made) and the subscriber's lastBand stays behind, so the next tick catches them up.
 
 import { api, BotApiError } from 'sdk';
-import { dailyDue, nextAlertBand, runBatched, sgtHourOf } from './alert-rules.js';
+import { dailyDue, nextAlertBand, runBatched, SEND_INTERVAL_MS, sgtHourOf } from './alert-rules.js';
 import { dashboardButton } from './buttons.js';
 import { formatBandAlert, formatHaze } from './format.js';
 import { sgtDate } from './nea.js';
@@ -14,25 +14,40 @@ import { getState, setState } from './store.js';
 import {
   bandSubscribers,
   claimAlert,
+  dailyClaimedChats,
   dailySubscribers,
   deleteSubscriber,
   pruneAlerts,
   releaseAlert,
+  seedLastBand,
   setLastBand,
 } from './subscriptions.js';
 
-/** Stop sending this long after the run starts so the tick returns before the platform cuts it
+/** Stop sending this long after the tick starts so it returns before the platform cuts it
  *  off; whoever isn't reached yet keeps their old lastBand / unclaimed key for the next run. */
 const BUDGET_MS = 20_000;
-/** The band loop may use this share of the budget, so daily updates still go out in a backlog. */
-const BAND_SHARE = 0.6;
+/** Band alerts stop by here, so daily updates still get time in a backlog. */
+const BAND_BUDGET_MS = 12_000;
 
 const sleep = typeof setTimeout === 'function' ? (/** @type {number} */ ms) => new Promise((r) => setTimeout(r, ms)) : null;
 
-/** @param {any} snap @param {number} [now] */
+/** @param {any} snap @param {number} [now] when the tick started; the budget counts from here */
 export async function runAlerts(snap, now = Date.now()) {
-  const started = Date.now();
-  const out = { band: null, sent: 0, daily: 0, removed: 0, deferred: false };
+  const out = { band: null, sent: 0, daily: 0, removed: 0, deferred: false, paced: Boolean(sleep) };
+  let retryAfter = SEND_INTERVAL_MS;
+  /** @param {{ results: string[], stopped: string | null }} res @param {'sent' | 'daily'} field */
+  const tally = ({ results, stopped }, field) => {
+    out[field] += results.filter((r) => r === 'sent').length;
+    out.removed += results.filter((r) => r === 'removed').length;
+    if (stopped) out.deferred = true;
+    return stopped;
+  };
+  /** @param {number} chatId @param {string} key @param {string} text */
+  const sendNoting429 = async (chatId, key, text) => {
+    const { result, retryAfterS } = await send(chatId, key, text);
+    if (retryAfterS) retryAfter = Math.max(retryAfter, retryAfterS * 1000);
+    return result;
+  };
 
   const raw = psiBand(snap.worst.psi3h?.value)?.id ?? null;
   const prev = (await getState('alert_band'))?.value ?? null;
@@ -40,52 +55,53 @@ export async function runAlerts(snap, now = Date.now()) {
   if (band && band !== prev) await setState('alert_band', band);
   out.band = band?.id ?? null;
 
+  let bandStopped = null;
   if (band) {
-    const subs = (await bandSubscribers()).filter((s) => s.lastBand !== band.id);
-    const { results, stopped } = await runBatched(
+    await seedLastBand(band.id);
+    const subs = (await bandSubscribers()).filter((s) => s.lastBand && s.lastBand !== band.id);
+    const res = await runBatched(
       subs,
       async (sub) => {
-        if (!sub.lastBand) {
-          await setLastBand(sub.chatId, band.id);
-          return 'skipped';
-        }
-        const r = await send(sub.chatId, `band:${sub.chatId}:${band.id}:${band.at}`, formatBandAlert(snap, sub.lastBand, band.id));
+        const r = await sendNoting429(sub.chatId, `band:${sub.chatId}:${band.id}:${band.at}`, formatBandAlert(snap, sub.lastBand, band.id));
         if (r === 'sent' || r === 'duplicate') await setLastBand(sub.chatId, band.id);
         return r;
       },
-      { deadline: started + BUDGET_MS * BAND_SHARE, sleep },
+      { deadline: now + BAND_BUDGET_MS, sleep },
     );
-    out.sent += count(results, 'sent');
-    out.removed += count(results, 'removed');
-    if (stopped) out.deferred = true;
+    bandStopped = tally(res, 'sent');
   }
 
-  const hour = sgtHourOf(now);
-  const date = sgtDate(0, now);
-  const daily = (await dailySubscribers()).filter((s) => dailyDue(s.dailyHour, hour));
-  const { results, stopped } = await runBatched(
-    daily,
-    (sub) => send(sub.chatId, `daily:${sub.chatId}:${date}`, `☀️ <b>Daily haze update</b>\n\n${formatHaze(snap)}`),
-    { deadline: started + BUDGET_MS, sleep },
-  );
-  out.daily += count(results, 'sent');
-  out.removed += count(results, 'removed');
-  if (stopped) out.deferred = true;
+  // A band backlog doesn't hold back daily updates. After a 429, wait Telegram's retry_after
+  // first if there's time; otherwise the next tick sends them.
+  const deadline = now + BUDGET_MS;
+  const canWait = bandStopped !== 'limited' || (sleep && Date.now() + retryAfter + SEND_INTERVAL_MS < deadline);
+  if (canWait) {
+    if (bandStopped === 'limited' && sleep) await sleep(retryAfter);
+    const date = sgtDate(0, now);
+    const hour = sgtHourOf(now);
+    const [subs, claimed] = await Promise.all([dailySubscribers(), dailyClaimedChats(date)]);
+    const due = subs.filter((s) => dailyDue(s.dailyHour, hour) && !claimed.has(s.chatId));
+    const res = await runBatched(
+      due,
+      (sub) => sendNoting429(sub.chatId, `daily:${sub.chatId}:${date}`, `☀️ <b>Daily haze update</b>\n\n${formatHaze(snap)}`),
+      { deadline, sleep },
+    );
+    tally(res, 'daily');
+  } else {
+    out.deferred = true;
+  }
 
-  if (!out.deferred) await pruneAlerts();
+  await pruneAlerts();
   return out;
 }
-
-/** @param {string[]} results @param {string} r */
-const count = (results, r) => results.filter((x) => x === r).length;
 
 /**
  * Claim, then send. 'duplicate' means another run already sent it.
  * @param {number} chatId @param {string} key @param {string} text
- * @returns {Promise<'sent' | 'duplicate' | 'removed' | 'limited' | 'failed'>}
+ * @returns {Promise<{ result: 'sent' | 'duplicate' | 'removed' | 'limited' | 'failed', retryAfterS?: number }>}
  */
 async function send(chatId, key, text) {
-  if (!(await claimAlert(key, chatId))) return 'duplicate';
+  if (!(await claimAlert(key, chatId))) return { result: 'duplicate' };
   try {
     const reply_markup = dashboardButton(chatId);
     await api.sendMessage({
@@ -95,17 +111,17 @@ async function send(chatId, key, text) {
       link_preview_options: { is_disabled: true },
       ...(reply_markup && { reply_markup }),
     });
-    return 'sent';
+    return { result: 'sent' };
   } catch (e) {
     if (isUnreachable(e)) {
       // Blocked the bot, left the group, or deleted the account.
       await deleteSubscriber(chatId);
-      return 'removed';
+      return { result: 'removed' };
     }
     await releaseAlert(key);
-    if (e instanceof BotApiError && e.code === 429) return 'limited';
+    if (e instanceof BotApiError && e.code === 429) return { result: 'limited', retryAfterS: e.parameters?.retry_after };
     console.error('alert send failed', chatId, e);
-    return 'failed';
+    return { result: 'failed' };
   }
 }
 
