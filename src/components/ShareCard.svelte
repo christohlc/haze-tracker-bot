@@ -87,7 +87,7 @@
       <p class="note">Every region on one image, the same one the bot sends. Both numbers are NEA’s.</p>
       <button type="button" class="primary" onclick={share} disabled={!url || busy} aria-busy={busy}>
         <!-- Both labels share one grid cell, so the button keeps its width while busy. -->
-        <span class:hidden={busy}>{inTelegram ? 'Share picture' : 'Download picture'}</span>
+        <span class:hidden={busy}>{inTelegram ? 'Share' : 'Download'}</span>
         <span class:hidden={!busy} aria-hidden={!busy}>Preparing…</span>
       </button>
       {#if status}<p class="note" role="status">{status}</p>{/if}
@@ -163,9 +163,12 @@
   }
   .primary {
     display: inline-grid;
+    place-items: center; /* the label sits in the middle however tall the button gets */
     justify-self: start;
+    align-self: start; /* don't stretch with the row */
+    min-width: 96px;
     min-height: 44px;
-    padding: 0 18px;
+    padding: 0 22px;
   }
   .primary > span {
     grid-area: 1 / 1;
