@@ -2,7 +2,7 @@
 // Thin DB helpers over schema.js.
 
 import { db } from 'sdk';
-import { desc, eq, gte } from 'sdk/db';
+import { and, desc, eq, gte, lt } from 'sdk/db';
 import { readings, settings, sourceStatus, state } from '../schema.js';
 import { toSgtIso } from './time.js';
 
@@ -56,6 +56,11 @@ export async function recentReadings(hours = 25) {
 
 export async function countReadings() {
   return db.$count(readings);
+}
+
+/** Readings with `from` ≤ hour < `to` (unix seconds). @param {number} from @param {number} to */
+export async function countReadingsBetween(from, to) {
+  return db.$count(readings, and(gte(readings.hour, from), lt(readings.hour, to)));
 }
 
 export { toSgtIso } from './time.js';

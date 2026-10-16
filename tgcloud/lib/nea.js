@@ -12,17 +12,31 @@ async function getItems(path, date) {
   return body.data?.items ?? [];
 }
 
+/** @typedef {{ timestamp: string, readings: Record<string, number> }} Pm25Item */
+
+/**
+ * Hourly PM2.5 for one SGT date ("2026-10-16"); NEA has up to 24 items a day.
+ * @param {string} date
+ * @returns {Promise<Pm25Item[]>} oldest first
+ */
+export async function getPm25Day(date) {
+  return byTime(await getItems('pm25', date));
+}
+
 /**
  * Hourly PM2.5 for today and yesterday (SGT), so there are always ≥24 hours.
- * @returns {Promise<Array<{ timestamp: string, readings: Record<string, number> }>>} oldest first
+ * @returns {Promise<Pm25Item[]>} oldest first
  */
 export async function getPm25History() {
   const [today, yesterday] = await Promise.all([getItems('pm25', sgtDateOf(Date.now())), getItems('pm25', sgtDateOf(Date.now() - 86_400_000))]);
-  const byTime = new Map();
-  for (const item of [...yesterday, ...today]) {
-    byTime.set(item.timestamp, { timestamp: item.timestamp, readings: item.readings.pm25_one_hourly });
-  }
-  return [...byTime.values()].sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
+  return byTime([...yesterday, ...today]);
+}
+
+/** NEA items → one Pm25Item per hour, oldest first. @param {any[]} items @returns {Pm25Item[]} */
+function byTime(items) {
+  const out = new Map();
+  for (const item of items) out.set(item.timestamp, { timestamp: item.timestamp, readings: item.readings.pm25_one_hourly });
+  return [...out.values()].sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
 }
 
 /** Latest PSI item (24-hour PSI and sub-indices per region). */
