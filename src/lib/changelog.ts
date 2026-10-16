@@ -9,6 +9,12 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-16-live-views',
+    date: '2026-10-16',
+    title: 'See the haze for yourself',
+    body: 'Live pictures from the road cameras at Woodlands, Tuas and Sentosa, plus satellite pictures of the smoke and a map of fire hotspots around the region.',
+  },
+  {
     id: '2026-10-16-privacy',
     date: '2026-10-16',
     title: 'Know what we keep',

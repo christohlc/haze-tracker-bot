@@ -7,6 +7,7 @@
   import ForecastSection from './components/ForecastSection.svelte';
   import Hero from './components/Hero.svelte';
   import HistoryChart from './components/HistoryChart.svelte';
+  import LiveViews from './components/LiveViews.svelte';
   import NewsCard from './components/NewsCard.svelte';
   import RegionTable from './components/RegionTable.svelte';
   import Sources from './components/Sources.svelte';
@@ -70,6 +71,7 @@
       {#if data.forecast}<ForecastSection forecast={data.forecast} history={data.history} />{/if}
       <HistoryChart snapshot={data.snapshot} history={data.history} />
       <Advice snapshot={data.snapshot} />
+      <LiveViews />
       {#if data.news}<NewsCard news={data.news} serverTime={data.serverTime} />{/if}
       <Sources sources={data.sources} />
     </div>
