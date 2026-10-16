@@ -31,9 +31,12 @@ export async function saveSubscriber(chatId, patch) {
   return { sub, created: true };
 }
 
-/** @param {number} chatId */
+/** Remove everything stored about a chat: its settings and its sent-alert records. @param {number} chatId */
 export async function deleteSubscriber(chatId) {
-  await db.delete(subscribers).where(eq(subscribers.chatId, chatId)).run();
+  await Promise.all([
+    db.delete(subscribers).where(eq(subscribers.chatId, chatId)).run(),
+    db.delete(alertsSent).where(eq(alertsSent.chatId, chatId)).run(),
+  ]);
 }
 
 export async function bandSubscribers() {

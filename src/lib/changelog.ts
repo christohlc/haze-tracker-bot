@@ -9,6 +9,12 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-16-privacy',
+    date: '2026-10-16',
+    title: 'Know what we keep',
+    body: 'If you turn on alerts, the bot keeps only your chat ID and alert settings. Send /stop to delete them. /help says the same.',
+  },
+  {
     id: '2026-10-16-news',
     date: '2026-10-16',
     title: 'Haze in the news',

@@ -19,6 +19,8 @@ const HELP = [
   '/subscribe: alerts when the haze band changes',
   '/alerts: change alerts or add a daily update',
   '/unsubscribe: stop all alerts',
+  '',
+  '<i>Privacy: if you subscribe, the bot keeps your chat ID and alert settings, nothing else. /stop deletes them.</i>',
 ].join('\n');
 
 export default async function (message) {
@@ -64,7 +66,7 @@ export default async function (message) {
     case 'unsubscribe':
     case 'stop':
       await deleteSubscriber(message.chat.id);
-      return reply(message, '🔕 Alerts are off. Send /subscribe to turn them back on.');
+      return reply(message, '🔕 Alerts are off, and your chat ID and alert settings are deleted. Send /subscribe to turn them back on.');
     default:
       if (message.chat.type === 'private') return reply(message, HELP);
   }
