@@ -34,7 +34,7 @@ export const TOPICS = {
     label: 'Outdoor activities',
     subject:
       /\b(?:outdoor|sports?|races?|marathon|matches|training|NS|SAF|ActiveSG|concerts?|festival|parade|Grand Prix|F1|events?)\b/i,
-    action: /\b(?:cancel(?:s|led|ling)?|called off|calls off|halt(?:s|ed)?|suspend(?:s|ed)?|postpone(?:s|d)?|scrap(?:s|ped)?|stop(?:s|ped)?|clos(?:e|es|ed)|shut)\b/i,
+    action: /\b(?:cancel(?:s|led|ling)?|called off|calls off|halt(?:s|ed)?|suspend(?:s|ed)?|postpone(?:s|d)?|scrap(?:s|ped)?|stop(?:s|ped)?|clos(?:e|es|ed|ures?)|shut)\b/i,
   },
   masks: {
     label: 'Masks',
@@ -48,16 +48,19 @@ export const TOPICS = {
   },
 };
 
-/** A headline that says it's not happening, might happen, is over, or is only a question. */
+/** A headline that says it's not happening, might happen, is over, or asks a question (anywhere). */
 const NEGATION =
-  /\b(?:not|won't|wont|isn't|aren't|don't|doesn't|no plans?|no need|no decision|remain(?:s)? open|stay(?:s)? open|reopen\w*|resum(?:e|es|ed)|lifted|rul(?:e|es|ed) out|unlikely|fake|hoax|myths?|false|rumou?rs?|den(?:y|ies|ied)|clarif\w*|if|could|may|might|consider\w*|mull\w*|prepared to|ready to|possibl[ey]|contingenc\w*)\b|\?\s*$/i;
+  /\b(?:not|won't|wont|isn't|aren't|don't|doesn't|no plans?|no need|no decision|remain(?:s)? open|stay(?:s)? open|reopen\w*|resum(?:e|es|ed)|lifted|rul(?:e|es|ed) out|unlikely|fake|hoax|myths?|false|rumou?rs?|den(?:y|ies|ied)|clarif\w*|if|could|may|might|consider\w*|mull\w*|prepared to|ready to|possibl[ey]|contingenc\w*)\b|\?/i;
+/** A feature, explainer or opinion piece about the haze rather than news that something changed. */
+const FEATURE =
+  /\b(?:what to know|what you need to know|how to|explainers?|explained|guide|tips|toll|lost income|livelihoods?|struggl\w*|feel(?:s|ing)? the pinch|cop(?:e|es|ing)|opinion|commentary|forum|letters?|in pictures|photos|videos?|watch|podcast|quiz)\b/i;
 /** Another country's closures, which the publishers' Singapore feeds sometimes carry. */
 const ELSEWHERE =
   /\b(?:Malaysia\w*|Johor|KL|Kuala Lumpur|Selangor|Penang|Sarawak|Sabah|Indonesia\w*|Jakarta|Thailand|Thai|Bangkok|Brunei)\b/i;
 
 /** @param {string} title @returns {keyof typeof TOPICS | null} */
 export function storyTopic(title) {
-  if (NEGATION.test(title) || ELSEWHERE.test(title)) return null;
+  if (NEGATION.test(title) || FEATURE.test(title) || ELSEWHERE.test(title)) return null;
   for (const [id, t] of Object.entries(TOPICS)) {
     if (t.subject.test(title) && t.action.test(title)) return /** @type {keyof typeof TOPICS} */ (id);
   }
