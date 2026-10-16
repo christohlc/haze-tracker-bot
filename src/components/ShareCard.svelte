@@ -9,64 +9,60 @@
   let url = $state<string | null>(null);
   let busy = $state(false);
   let status = $state<string | null>(null);
-  let error = $state<string | null>(null);
-  let visible = $state(false);
+  let drawError = $state<string | null>(null);
+  let shareError = $state<string | null>(null);
   let attempt = $state(0); // bumped by Try again to redraw
   let expanded = $state(false);
-  let drawFailed = $state(false);
 
-  const DONE: Record<ShareResult, string | null> = {
+  const DONE: Record<Exclude<ShareResult, 'cancelled'>, string> = {
     shared: 'Shared.',
-    cancelled: null,
     sent: 'Sent to your chat with the bot. Forward it from there.',
     downloaded: 'Downloaded haze.png.',
   };
 
-  // Draw the card once the page has settled: it loads ~200 KB of glyphs and map.
-  onMount(() => {
-    const ric = window.requestIdleCallback;
-    if (ric) {
-      const id = ric(() => (visible = true), { timeout: 2000 });
-      return () => window.cancelIdleCallback(id);
-    }
-    const id = setTimeout(() => (visible = true), 800);
-    return () => clearTimeout(id);
-  });
-
+  // Draw the card once the page has settled (it loads ~200 KB of glyphs and map), and again when
+  // the readings change. The old picture stays up until the new one is ready.
   $effect(() => {
-    if (!visible) return;
     void attempt;
-    let current: string | null = null;
+    const snap = snapshot;
     let cancelled = false;
-    drawFailed = false;
-    renderCardUrl(snapshot)
-      .then((u) => {
-        if (cancelled) return URL.revokeObjectURL(u);
-        current = u;
-        url = u;
-        error = null;
-      })
-      .catch(() => {
-        drawFailed = true;
-        error = 'Couldn’t draw the picture.';
-      });
+    const draw = () =>
+      renderCardUrl(snap)
+        .then((u) => {
+          if (cancelled) return URL.revokeObjectURL(u);
+          if (url) URL.revokeObjectURL(url);
+          url = u;
+          drawError = null;
+        })
+        .catch(() => {
+          if (!cancelled) drawError = 'Couldn’t draw the picture.';
+        });
+    // Older WebViews (iOS Safari before 18) have no requestIdleCallback.
+    const idle = 'requestIdleCallback' in window;
+    const id = idle ? requestIdleCallback(draw, { timeout: 2000 }) : setTimeout(draw, 800);
     return () => {
       cancelled = true;
-      if (current) URL.revokeObjectURL(current);
+      if (idle) cancelIdleCallback(id as number);
+      else clearTimeout(id);
     };
+  });
+
+  onMount(() => () => {
+    if (url) URL.revokeObjectURL(url);
   });
 
   async function share() {
     if (!url || busy) return;
     busy = true;
     status = null;
-    error = null;
+    shareError = null;
     try {
       const { result, alsoSentToChat } = await shareCard(url);
-      status = alsoSentToChat && result !== 'sent' ? `${DONE[result] ?? ''} A copy is also in your chat with the bot.`.trim() : DONE[result];
+      const copy = alsoSentToChat ? 'A copy is also in your chat with the bot.' : null;
+      status = result === 'cancelled' ? copy : [DONE[result], copy].filter(Boolean).join(' ');
       if (result !== 'cancelled') notifyHaptic('success');
     } catch (e) {
-      error = e instanceof Error ? e.message : 'Couldn’t share the picture. Try again.';
+      shareError = e instanceof Error ? e.message : 'Couldn’t share the picture. Try again.';
       notifyHaptic('error');
     } finally {
       busy = false;
@@ -95,12 +91,13 @@
         <span class:hidden={!busy} aria-hidden={!busy}>Preparing…</span>
       </button>
       {#if status}<p class="note" role="status">{status}</p>{/if}
-      {#if error}
+      {#if drawError}
         <p class="error" role="alert">
-          {error}
-          {#if drawFailed}<button type="button" class="retry" onclick={() => attempt++}>Try again</button>{/if}
+          {drawError}
+          <button type="button" class="retry" onclick={() => attempt++}>Try again</button>
         </p>
       {/if}
+      {#if shareError}<p class="error" role="alert">{shareError}</p>{/if}
     </div>
   </div>
   {#if expanded && url}
@@ -169,11 +166,6 @@
     justify-self: start;
     min-height: 44px;
     padding: 0 18px;
-    border: 0;
-    border-radius: 12px;
-    background: var(--accent);
-    color: var(--accent-ink);
-    font-weight: 650;
   }
   .primary > span {
     grid-area: 1 / 1;
@@ -188,11 +180,6 @@
     background: none;
     color: var(--link);
     font-weight: 600;
-  }
-  .error {
-    margin: 0;
-    font-size: 0.875rem;
-    color: var(--status-critical);
   }
   @keyframes appear {
     from {

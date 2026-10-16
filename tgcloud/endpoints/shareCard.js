@@ -8,7 +8,7 @@
 import { api, BotApiError, EndpointError } from 'sdk';
 import { isUnreachable } from '../lib/bot-errors.js';
 import { dashboardButton } from '../lib/buttons.js';
-import { cachedCardId, sendCard } from '../lib/card/send.js';
+import { cachedCardId, photoFileId, sendCard } from '../lib/card/send.js';
 import { formatHazeCaption, formatShareCaption } from '../lib/format.js';
 import { getSnapshot } from '../lib/refresh.js';
 
@@ -22,11 +22,12 @@ export default async function (input, ctx) {
   let sentToChat = false;
   if (!fileId) {
     try {
-      const msg = await sendCard(userId, snap, formatHazeCaption(snap), dashboardButton(userId));
-      fileId = msg?.photo?.at(-1)?.file_id ?? null;
+      fileId = photoFileId(await sendCard(userId, snap, formatHazeCaption(snap), dashboardButton(userId)));
       sentToChat = true;
     } catch (e) {
-      if (isUnreachable(e)) throw new EndpointError('Start the bot in Telegram first, then try again.', { code: 'BOT_BLOCKED' });
+      if (isUnreachable(e)) {
+        throw new EndpointError('The bot can’t message you. If you blocked it, unblock it and try again.', { code: 'NO_WRITE_ACCESS' });
+      }
       throw e;
     }
   }

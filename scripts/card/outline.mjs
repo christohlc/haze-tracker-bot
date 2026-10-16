@@ -53,8 +53,10 @@ for (const f of geo.features) {
     // baseline, so simplify it as two halves split at the point farthest from the start.
     const pts = poly[0].map(project);
     let far = 0;
+    let farDist = 0;
     pts.forEach(([x, y], i) => {
-      if (Math.hypot(x - pts[0][0], y - pts[0][1]) > Math.hypot(pts[far][0] - pts[0][0], pts[far][1] - pts[0][1])) far = i;
+      const d = Math.hypot(x - pts[0][0], y - pts[0][1]);
+      if (d > farDist) (far = i), (farDist = d);
     });
     const ring = [...simplify(pts.slice(0, far + 1), 0.6), ...simplify(pts.slice(far), 0.6).slice(1, -1)];
     if (ring.length >= 3 && area(ring) >= 6) rings.push(ring);

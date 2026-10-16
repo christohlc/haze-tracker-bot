@@ -88,13 +88,10 @@ export async function runAlerts(snap, now = Date.now()) {
     const hour = sgtHourOf(now);
     const [subs, claimed] = await Promise.all([dailySubscribers(), dailyClaimedChats(date)]);
     const due = subs.filter((s) => dailyDue(s.dailyHour, hour) && !claimed.has(s.chatId));
+    const daily = { caption: `${DAILY_HEADER}${formatHazeCaption(snap)}`, text: `${DAILY_HEADER}${formatHaze(snap)}` };
     const res = await runBatched(
       due,
-      (sub) =>
-        sendNoting429(sub.chatId, `daily:${sub.chatId}:${date}`, {
-          caption: `${DAILY_HEADER}${formatHazeCaption(snap)}`,
-          text: `${DAILY_HEADER}${formatHaze(snap)}`,
-        }),
+      (sub) => sendNoting429(sub.chatId, `daily:${sub.chatId}:${date}`, daily),
       { deadline, sleep, firstAlone: await firstAlone() },
     );
     tally(res, 'daily');

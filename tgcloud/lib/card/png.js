@@ -63,12 +63,6 @@ class BitWriter {
       this.n -= 8;
     }
   }
-  /** A Huffman code, which deflate stores most significant bit first. @param {number} code @param {number} bits */
-  code(code, bits) {
-    let r = 0;
-    for (let i = 0; i < bits; i++) r = (r << 1) | ((code >>> i) & 1);
-    this.put(r, bits);
-  }
   bytes() {
     if (this.n) this.put(0, 8 - this.n);
     return this.buf.subarray(0, this.pos);
@@ -89,13 +83,22 @@ function codeFor(base, v) {
 }
 const LEN_CODE = Uint8Array.from({ length: 259 }, (_, len) => (len < 3 ? 0 : codeFor(LEN_BASE, len)));
 
+/** `code` with its low `bits` reversed: deflate stores Huffman codes most significant bit first. */
+const reverse = (/** @type {number} */ code, /** @type {number} */ bits) => {
+  let r = 0;
+  for (let i = 0; i < bits; i++) r = (r << 1) | ((code >>> i) & 1);
+  return r;
+};
+
+// The fixed Huffman code (RFC 1951 §3.2.6), pre-reversed for the bit writer.
+const SYM_BITS = Uint8Array.from({ length: 288 }, (_, s) => (s < 144 ? 8 : s < 256 ? 9 : s < 280 ? 7 : 8));
+const SYM_CODE = Uint16Array.from({ length: 288 }, (_, s) =>
+  reverse(s < 144 ? 0x30 + s : s < 256 ? 0x190 + s - 144 : s < 280 ? s - 256 : 0xc0 + s - 280, SYM_BITS[s]),
+);
+const DIST_CODE = Uint8Array.from({ length: 30 }, (_, d) => reverse(d, 5));
+
 /** Fixed-Huffman literal/length symbol. @param {BitWriter} w @param {number} sym 0–285 */
-function symbol(w, sym) {
-  if (sym < 144) w.code(0x30 + sym, 8);
-  else if (sym < 256) w.code(0x190 + sym - 144, 9);
-  else if (sym < 280) w.code(sym - 256, 7);
-  else w.code(0xc0 + sym - 280, 8);
-}
+const symbol = (w, sym) => w.put(SYM_CODE[sym], SYM_BITS[sym]);
 
 const WINDOW = 32768;
 const HASH_BITS = 15;
@@ -147,7 +150,7 @@ export function zlibDeflate(input) {
       symbol(w, 257 + lc);
       if (LEN_EXTRA[lc]) w.put(bestLen - LEN_BASE[lc], LEN_EXTRA[lc]);
       const dc = codeFor(DIST_BASE, bestDist);
-      w.code(dc, 5);
+      w.put(DIST_CODE[dc], 5);
       if (DIST_EXTRA[dc]) w.put(bestDist - DIST_BASE[dc], DIST_EXTRA[dc]);
       const end = i + bestLen;
       for (; i < end; i++) if (i + 3 <= n) insert(i);

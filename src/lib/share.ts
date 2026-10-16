@@ -1,5 +1,5 @@
 import type { Snapshot } from './api';
-import { callEndpoint, EndpointCallError, inTelegram, requestWriteAccess, tg } from './telegram';
+import { callEndpoint, inTelegram, tg, withWriteAccess } from './telegram';
 
 /**
  * The summary card as a PNG object URL, drawn in the browser by the same pure module the bot
@@ -33,20 +33,14 @@ export async function shareCard(url: string): Promise<ShareOutcome> {
     return { result: 'downloaded', alsoSentToChat: false };
   }
   const canShare = typeof tg.shareMessage === 'function' && tg.isVersionAtLeast?.('8.0');
-  const call = () =>
-    callEndpoint<{ preparedId?: string; sentToChat: boolean }>('shareCard', { action: canShare ? 'share' : 'send' });
-  let res;
-  try {
-    res = await call();
-  } catch (e) {
-    if (!(e instanceof EndpointCallError && e.code === 'BOT_BLOCKED')) throw e;
-    if (!(await requestWriteAccess())) throw new Error('Sharing needs permission for the bot to message you.');
-    res = await call();
-  }
-  if (!canShare || !res.preparedId) return { result: 'sent', alsoSentToChat: false };
-  const id = res.preparedId;
-  const alsoSentToChat = res.sentToChat;
+  const res = await withWriteAccess(
+    () => callEndpoint<{ preparedId?: string; sentToChat: boolean }>('shareCard', { action: canShare ? 'share' : 'send' }),
+    'Sharing needs permission for the bot to message you.',
+  );
+  if (!res.preparedId) return { result: 'sent', alsoSentToChat: false };
   return new Promise((resolve) =>
-    tg.shareMessage(id, (sent: boolean) => resolve({ result: sent ? 'shared' : 'cancelled', alsoSentToChat })),
+    tg.shareMessage(res.preparedId, (sent: boolean) =>
+      resolve({ result: sent ? 'shared' : 'cancelled', alsoSentToChat: res.sentToChat }),
+    ),
   );
 }

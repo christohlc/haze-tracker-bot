@@ -30,8 +30,7 @@ const FONTS = {
 
 /** @param {string} svg @param {string[]} [fontFiles] */
 function render(svg, fontFiles = []) {
-  const r = new Resvg(svg, { font: { fontFiles, loadSystemFonts: false, defaultFontFamily: 'Nunito' } });
-  return { r, img: r.render() };
+  return new Resvg(svg, { font: { fontFiles, loadSystemFonts: false, defaultFontFamily: 'Nunito' } }).render();
 }
 
 const esc = (/** @type {string} */ s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -117,7 +116,7 @@ function buildFont(file, size, chars) {
   const texts = list
     .map((ch, i) => `<text x="${i * cell + padX}" y="${baseY}" font-size="${size}" xml:space="preserve">${esc(ch)}</text>`)
     .join('');
-  const px = render(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${texts}</svg>`, [path]).img.pixels;
+  const px = render(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${texts}</svg>`, [path]).pixels;
 
   const glyphs = [];
   /** @type {number[]} */
@@ -162,7 +161,7 @@ export const FONTS = ${JSON.stringify(fonts)};
 );
 
 // `pixels` copies the bitmap on every read, so read it once.
-const mapPx = render(readFileSync(new URL('./singapore.svg', import.meta.url), 'utf8')).img.pixels;
+const mapPx = render(readFileSync(new URL('./singapore.svg', import.meta.url), 'utf8')).pixels;
 const alpha = new Uint8Array(CARD_W * CARD_H);
 for (let i = 0; i < alpha.length; i++) alpha[i] = mapPx[i * 4 + 3];
 
@@ -171,7 +170,7 @@ const logoSvg = readFileSync(new URL('../../public/logo.svg', import.meta.url), 
   .replace(/<svg([^>]*)width="512" height="512"/, `<svg$1width="${LOGO_SIZE}" height="${LOGO_SIZE}"`)
   .replace('</defs>', '<clipPath id="card-round"><rect width="512" height="512" rx="112"/></clipPath></defs><g clip-path="url(#card-round)">')
   .replace(/<\/svg>\s*$/, '</g></svg>');
-const logo = render(logoSvg).img;
+const logo = render(logoSvg);
 
 writeFileSync(
   new URL('../../tgcloud/lib/card/art.js', import.meta.url),

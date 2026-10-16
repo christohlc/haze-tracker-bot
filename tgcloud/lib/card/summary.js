@@ -7,6 +7,7 @@
 import { REGIONS } from '../config.js';
 import { PM25_BANDS, PSI_BANDS, pm25Band, psiBand } from '../psi.js';
 import { LOGO, MAP_MASK } from './art.js';
+import { sgtDayMonth, sgtHour } from '../time.js';
 import { CARD_H, CARD_W } from './geometry.js';
 import { encodePng } from './png.js';
 import { Canvas, decodeMask, fromBase64, rgb } from './raster.js';
@@ -68,19 +69,8 @@ export const CARD_AT = {
   south: [409, 848],
 };
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-/** "2026-10-16T13:00:00+08:00" (already SGT) → "1 pm", "1:30 pm". @param {string} iso */
-export function cardTime(iso) {
-  const h = Number(iso.slice(11, 13));
-  const m = iso.slice(14, 16);
-  return `${h % 12 || 12}${m === '00' ? '' : `:${m}`} ${h < 12 ? 'am' : 'pm'}`;
-}
-
 /** → "16 Oct, 1 pm SGT". @param {string} iso */
-export function cardDate(iso) {
-  return `${Number(iso.slice(8, 10))} ${MONTHS[Number(iso.slice(5, 7)) - 1]}, ${cardTime(iso)} SGT`;
-}
+export const cardDate = (iso) => `${sgtDayMonth(iso)}, ${sgtHour(iso)} SGT`;
 
 /** "0–55", …, ">250" for a band list with inclusive `max`. @param {Array<{ max: number }>} bands */
 export function bandRanges(bands) {
@@ -90,10 +80,10 @@ export function bandRanges(bands) {
   });
 }
 
-/** @param {number | null | undefined} v */
-const fmt = (v) => (v == null ? '–' : String(Math.round(v)));
-/** Rounded like the number shown, so a 55.4 drawn as "55" also gets 55's band. @param {number | null | undefined} v */
+/** Rounded as shown, so a 55.4 drawn as "55" also gets 55's band. @param {number | null | undefined} v */
 const shown = (v) => (v == null ? null : Math.round(v));
+/** @param {number | null | undefined} v */
+const fmt = (v) => String(shown(v) ?? '–');
 
 /**
  * A pill: band colour, label in the band's ink, vertically centred on `y + h / 2`.
@@ -162,13 +152,13 @@ export function drawSummaryCard(snap) {
   const band = psiBand(worst?.value);
   const sky = SKY[band?.id ?? 'none'] ?? SKY.none;
 
-  const c = new Canvas(CARD_W, CARD_H, sky.top);
+  const c = new Canvas(CARD_W, CARD_H);
   c.verticalGradient(sky.top, sky.bottom);
   // The hero's haze: radial-gradient(120% 60% at 20% 105%, haze, transparent 70%).
   c.glow(CARD_W * 0.2, CARD_H * 1.05, CARD_W * 1.2, CARD_H * 0.6, sky.haze, sky.hazeAlpha, 0.7);
 
   mapAlpha ??= decodeMask(fromBase64(MAP_MASK.data), 0, MAP_MASK.w * MAP_MASK.h);
-  c.blitMask(mapAlpha, MAP_MASK.w, MAP_MASK.h, 0, 0, rgb('#ffffff'), sky.land);
+  c.blitMask(mapAlpha, MAP_MASK.w, MAP_MASK.h, 0, 0, C.card, sky.land);
 
   // Brand, then the answer: the worst official reading and its band.
   logoRgba ??= fromBase64(LOGO.data);
@@ -190,7 +180,7 @@ export function drawSummaryCard(snap) {
   legendRow(c, 1136, '24-hr PSI', PSI_BANDS, PSI_BANDS.map((b) => b.id));
   legendRow(c, 1230, '1-hr PM2.5 (µg/m³)', PM25_BANDS, PM25_BANDS.map((b) => PM25_COLOUR[/** @type {keyof typeof PM25_COLOUR} */ (b.id)]));
 
-  const psiNote = snap.psiAsOf && snap.psiAsOf !== snap.asOf ? ` 24-hr PSI as at ${cardTime(snap.psiAsOf)}.` : '';
+  const psiNote = snap.psiAsOf && snap.psiAsOf !== snap.asOf ? ` 24-hr PSI as at ${sgtHour(snap.psiAsOf)}.` : '';
   c.text(`Readings from NEA.${psiNote} Advisories: haze.gov.sg`, 56, 1332, 'label', sky.ink);
   return c;
 }

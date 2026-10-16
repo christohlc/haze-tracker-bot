@@ -84,13 +84,15 @@ export function font(name) {
   return f;
 }
 
+/** A glyph's advance; a character the atlas lacks takes half an em. @param {ReturnType<typeof font>} f @param {string} ch */
+const advanceOf = (f, ch) => f.glyphs.get(ch)?.advance ?? f.size * 0.5;
+
 export class Canvas {
-  /** @param {number} width @param {number} height @param {Rgb} background */
-  constructor(width, height, background) {
+  /** Starts black; callers paint the background first. @param {number} width @param {number} height */
+  constructor(width, height) {
     this.width = width;
     this.height = height;
     this.data = new Uint8Array(width * height * 3);
-    this.fillRect(0, 0, width, height, background);
   }
 
   /** @param {number} x @param {number} y @param {number} w @param {number} h @param {Rgb} color */
@@ -110,15 +112,23 @@ export class Canvas {
 
   /** Blend one pixel. @param {number} x @param {number} y @param {Rgb} color @param {number} a 0–255 */
   blend(x, y, color, a) {
+    this.blendRgb(x, y, color[0], color[1], color[2], a);
+  }
+
+  /** `blend` with the colour as separate channels, for loops that would otherwise build arrays. */
+  blendRgb(/** @type {number} */ x, /** @type {number} */ y, /** @type {number} */ r, /** @type {number} */ g, /** @type {number} */ b, /** @type {number} */ a) {
     if (x < 0 || y < 0 || x >= this.width || y >= this.height || a <= 0) return;
+    const d = this.data;
     const i = (y * this.width + x) * 3;
     if (a >= 255) {
-      this.data[i] = color[0];
-      this.data[i + 1] = color[1];
-      this.data[i + 2] = color[2];
+      d[i] = r;
+      d[i + 1] = g;
+      d[i + 2] = b;
       return;
     }
-    for (let c = 0; c < 3; c++) this.data[i + c] += ((color[c] - this.data[i + c]) * a) / 255;
+    d[i] += ((r - d[i]) * a) / 255;
+    d[i + 1] += ((g - d[i + 1]) * a) / 255;
+    d[i + 2] += ((b - d[i + 2]) * a) / 255;
   }
 
   /**
@@ -163,11 +173,18 @@ export class Canvas {
    * @param {number} cx @param {number} cy @param {number} rx @param {number} ry @param {Rgb} color @param {number} alpha @param {number} fade
    */
   glow(cx, cy, rx, ry, color, alpha, fade) {
-    for (let y = 0; y < this.height; y++) {
+    // Only the ellipse's bounding box can be lit.
+    const y0 = Math.max(0, Math.floor(cy - ry * fade));
+    const y1 = Math.min(this.height, Math.ceil(cy + ry * fade));
+    const x0 = Math.max(0, Math.floor(cx - rx * fade));
+    const x1 = Math.min(this.width, Math.ceil(cx + rx * fade));
+    const f2 = fade * fade;
+    for (let y = y0; y < y1; y++) {
       const dy = (y + 0.5 - cy) / ry;
-      for (let x = 0; x < this.width; x++) {
-        const d = Math.hypot((x + 0.5 - cx) / rx, dy) / fade;
-        if (d < 1) this.blend(x, y, color, Math.round((1 - d) * alpha * 255));
+      for (let x = x0; x < x1; x++) {
+        const dx = (x + 0.5 - cx) / rx;
+        const d2 = dx * dx + dy * dy;
+        if (d2 < f2) this.blend(x, y, color, Math.round((1 - Math.sqrt(d2) / fade) * alpha * 255));
       }
     }
   }
@@ -177,7 +194,7 @@ export class Canvas {
     for (let yy = 0; yy < h; yy++) {
       for (let xx = 0; xx < w; xx++) {
         const i = (yy * w + xx) * 4;
-        if (rgba[i + 3]) this.blend(x + xx, y + yy, [rgba[i], rgba[i + 1], rgba[i + 2]], rgba[i + 3]);
+        if (rgba[i + 3]) this.blendRgb(x + xx, y + yy, rgba[i], rgba[i + 1], rgba[i + 2], rgba[i + 3]);
       }
     }
   }
@@ -199,7 +216,7 @@ export class Canvas {
   measure(text, fontName) {
     const f = font(fontName);
     let w = 0;
-    for (const ch of text) w += f.glyphs.get(ch)?.advance ?? f.size * 0.5;
+    for (const ch of text) w += advanceOf(f, ch);
     return w;
   }
 
@@ -213,12 +230,8 @@ export class Canvas {
     let pen = align === 'left' ? x : x - this.measure(text, fontName) / (align === 'center' ? 2 : 1);
     for (const ch of text) {
       const g = f.glyphs.get(ch);
-      if (!g) {
-        pen += f.size * 0.5;
-        continue;
-      }
-      if (g.w) this.blitMask(g.alpha, g.w, g.h, Math.round(pen + g.x), Math.round(baseline + g.y), color);
-      pen += g.advance;
+      if (g?.w) this.blitMask(g.alpha, g.w, g.h, Math.round(pen + g.x), Math.round(baseline + g.y), color);
+      pen += advanceOf(f, ch);
     }
   }
 
