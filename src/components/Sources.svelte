@@ -18,6 +18,13 @@
   };
 </script>
 
+{#snippet status(ok: boolean, text: string)}
+  <span class="status">
+    <span class="dot" style:background={ok ? 'var(--status-good)' : 'var(--status-critical)'}></span>
+    {text}
+  </span>
+{/snippet}
+
 <section class="card" aria-labelledby="sources-title">
   <h2 id="sources-title" class="section-title">Data sources</h2>
   {#if !sources.length}
@@ -25,10 +32,7 @@
   {:else}
     <details>
       <summary>
-        <span class="status">
-          <span class="dot" style:background={failing ? 'var(--status-critical)' : 'var(--status-good)'}></span>
-          {failing ? `${failing} of ${sources.length} feeds failing` : 'All feeds working'}
-        </span>
+        {@render status(!failing, failing ? `${failing} of ${sources.length} feeds failing` : 'All feeds working')}
         <span class="more" aria-hidden="true"><span class="show">Details</span><span class="hide">Hide</span></span>
       </summary>
       <p class="note">Which feeds are working right now, and what each one contributes.</p>
@@ -39,10 +43,7 @@
           <li>
             <div class="head">
               <span class="name">{meta.name}</span>
-              <span class="status">
-                <span class="dot" style:background={ok ? 'var(--status-good)' : 'var(--status-critical)'}></span>
-                {ok ? 'Working' : 'Failing'}
-              </span>
+              {@render status(ok, ok ? 'Working' : 'Failing')}
             </div>
             <p class="note">{meta.role}</p>
             <p class="note">
@@ -101,12 +102,8 @@
     border-radius: 50%;
   }
   summary {
-    display: flex;
-    align-items: center;
     justify-content: space-between;
     gap: 12px;
-    min-height: 44px;
-    cursor: pointer;
     list-style: none;
   }
   summary::-webkit-details-marker {
@@ -115,10 +112,6 @@
   summary .status {
     color: var(--ink);
     font-size: 0.9375rem;
-  }
-  .more {
-    color: var(--link);
-    font-size: 0.875rem;
   }
   .hide,
   details[open] .show {

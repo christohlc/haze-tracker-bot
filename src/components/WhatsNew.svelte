@@ -1,20 +1,22 @@
 <script lang="ts">
   import { CHANGELOG, type ChangelogEntry } from '../lib/changelog';
   import { sgtDayMonth } from '../lib/format';
+  import { newCount } from '../lib/whats-new';
 
-  // How many of the newest entries arrived since the user last looked.
-  let { fresh = 0 }: { fresh?: number } = $props();
+  // The latest entry the user had seen before this visit; newer ones get a "New" label.
+  let { seen }: { seen: string | null | undefined } = $props();
+  const fresh = $derived(newCount(seen ?? null));
 
   const SHOWN = 3;
   const latest = CHANGELOG.slice(0, SHOWN);
   const earlier = CHANGELOG.slice(SHOWN);
 </script>
 
-{#snippet entry(e: ChangelogEntry, isNew: boolean)}
+{#snippet entry(e: ChangelogEntry)}
   <li>
-    <p class="meta">
+    <p class="note meta">
       <time datetime={e.date}>{sgtDayMonth(e.date)}</time>
-      {#if isNew}<span class="new">New</span>{/if}
+      {#if CHANGELOG.indexOf(e) < fresh}<span class="new">New</span>{/if}
     </p>
     <h3>{e.title}</h3>
     <p class="body">{e.body}</p>
@@ -24,13 +26,13 @@
 <section class="card" aria-labelledby="whats-new-title">
   <h2 id="whats-new-title" class="section-title">What’s new</h2>
   <ol>
-    {#each latest as e, i (e.id)}{@render entry(e, i < fresh)}{/each}
+    {#each latest as e (e.id)}{@render entry(e)}{/each}
   </ol>
   {#if earlier.length}
     <details>
       <summary>Earlier updates</summary>
       <ol>
-        {#each earlier as e, i (e.id)}{@render entry(e, i + SHOWN < fresh)}{/each}
+        {#each earlier as e (e.id)}{@render entry(e)}{/each}
       </ol>
     </details>
   {/if}
@@ -49,21 +51,10 @@
   details ol li:first-child {
     border-top: 1px solid var(--hairline);
   }
-  summary {
-    display: flex;
-    align-items: center;
-    min-height: 44px;
-    color: var(--link);
-    font-size: 0.875rem;
-    cursor: pointer;
-  }
   .meta {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin: 0;
-    font-size: 0.8125rem;
-    color: var(--muted);
   }
   .new {
     padding: 1px 7px;

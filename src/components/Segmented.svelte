@@ -6,39 +6,63 @@
     value = $bindable(),
     label,
     kind = 'radio',
+    id,
     controls,
   }: {
-    options: { value: T; label: string; dot?: boolean }[];
+    /** `dot` shows an unseen marker; its text is read out to screen readers ("new updates"). */
+    options: { value: T; label: string; dot?: string }[];
     value: T;
     label: string;
-    /** 'tab' switches panels: tablist semantics, and `controls(v)` names each option's panel. */
+    /** 'tab' switches panels: tablist semantics, each tab gets the id `${id}-${value}`, and
+        `controls(v)` names its panel (undefined while the panel isn't mounted). */
     kind?: 'radio' | 'tab';
-    controls?: (v: T) => string;
+    id?: string;
+    controls?: (v: T) => string | undefined;
   } = $props();
 
   const index = $derived(Math.max(0, options.findIndex((o) => o.value === value)));
+  let buttons: HTMLButtonElement[] = [];
 
   function pick(v: T) {
     if (v === value) return;
     value = v;
     selectionHaptic();
   }
+
+  // One tab stop for the group; arrow keys, Home and End move between options.
+  function onKey(e: KeyboardEvent) {
+    const last = options.length - 1;
+    const to =
+      e.key === 'ArrowRight' ? (index === last ? 0 : index + 1)
+      : e.key === 'ArrowLeft' ? (index === 0 ? last : index - 1)
+      : e.key === 'Home' ? 0
+      : e.key === 'End' ? last
+      : -1;
+    if (to < 0) return;
+    e.preventDefault();
+    pick(options[to].value);
+    buttons[to]?.focus();
+  }
 </script>
 
-<div class="seg" role={kind === 'tab' ? 'tablist' : 'radiogroup'} aria-label={label} style:--n={options.length}>
+<div class="seg" role={kind === 'tab' ? 'tablist' : 'radiogroup'} aria-label={label} style:--n={options.length} onkeydown={onKey}>
   <span class="thumb" style:transform="translateX({index * 100}%)" aria-hidden="true"></span>
-  {#each options as o (o.value)}
+  {#each options as o, i (o.value)}
+    {@const on = o.value === value}
     <button
+      bind:this={buttons[i]}
       type="button"
       role={kind}
-      aria-checked={kind === 'radio' ? o.value === value : undefined}
-      aria-selected={kind === 'tab' ? o.value === value : undefined}
+      id={kind === 'tab' && id ? `${id}-${o.value}` : undefined}
+      aria-checked={kind === 'radio' ? on : undefined}
+      aria-selected={kind === 'tab' ? on : undefined}
       aria-controls={controls?.(o.value)}
-      class:on={o.value === value}
+      tabindex={on ? 0 : -1}
+      class:on
       onpointerdown={() => pick(o.value)}
       onclick={() => pick(o.value)}
     >
-      {o.label}{#if o.dot}<span class="dot" aria-hidden="true"></span><span class="visually-hidden">{' (new updates)'}</span>{/if}
+      {o.label}{#if o.dot}<span class="dot" aria-hidden="true"></span><span class="visually-hidden">{` (${o.dot})`}</span>{/if}
     </button>
   {/each}
 </div>

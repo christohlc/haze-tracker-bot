@@ -44,8 +44,7 @@ which is described below.
 | Regions | `--region-north` … `--region-south` | Fixed order matching `REGIONS`. Never cycled or reassigned |
 | Status | `--status-good`, `--status-critical` | Feed health, errors, “Stop all alerts” |
 | Shape | `--radius` 16px, `--gutter` 16px | |
-| Motion | `--ease-out`, `--ease-in-out`, `--ease-drawer` | `--ease-drawer` for bottom sheets |
-| Overlay | `--scrim` | Behind modal sheets |
+| Motion | `--ease-out`, `--ease-in-out` | |
 
 Dark mode sets `:root[data-theme='dark']`. `src/lib/telegram.ts` takes the scheme from Telegram
 or, outside Telegram, from the OS. A new colour token needs both a light and a dark value.
@@ -71,8 +70,10 @@ or, outside Telegram, from the OS. A new colour token needs both a light and a d
   - **Now:** hero, regions, advice, alerts, share.
   - **Outlook:** forecast, wind and rain, history.
   - **More:** live views, news, cigarettes, what’s new, sources (collapsed).
-- A tab mounts the first time it’s opened and then stays mounted, hidden, so its controls keep
-  their state and Live views loads its pictures only once More is opened. Switching keeps the
+- A tab mounts the first time it’s opened and then stays mounted, hidden (laid out at zero
+  height rather than `display: none`), so its controls keep their state, its cards rise in only
+  once, charts keep their width, and Live views loads its pictures only once More is opened.
+  The tab bar takes arrow keys, Home and End. Switching keeps the
   header scrolled away if it already was. Away from Now, Telegram’s back arrow returns to Now.
 - Tap targets are at least 44px. Segmented controls and chips switch on `pointerdown` so they
   respond straight away.
@@ -88,7 +89,7 @@ of the sky and the haze. Check that again whenever a sky colour changes.
 ## Motion
 
 - Short and purposeful: cards rise 8px over 280ms with a small stagger, the first time a tab is
-  shown; going back to a tab just fades it in (150ms). The hero number counts
+  shown; showing a tab fades it in (150ms). The hero number counts
   up once on first load (600ms) and moves quickly when the period changes (220ms). Buttons
   scale to 0.97 when pressed.
 - Use `--ease-out` for things entering and `--ease-in-out` for things moving on screen.

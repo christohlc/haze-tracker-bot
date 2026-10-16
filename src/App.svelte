@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import Advice from './components/Advice.svelte';
   import AlertsCard from './components/AlertsCard.svelte';
   import BrandHeader from './components/BrandHeader.svelte';
@@ -19,10 +19,14 @@
   import { LATEST_ID } from './lib/changelog';
   import type { Period } from './lib/period';
   import { inTelegram, showBackButton } from './lib/telegram';
-  import { getSeen, markSeen, newCount } from './lib/whats-new';
+  import { getSeen, markSeen } from './lib/whats-new';
 
   type Tab = 'now' | 'outlook' | 'more';
-  const TABS: Tab[] = ['now', 'outlook', 'more'];
+  const TABS: { value: Tab; label: string }[] = [
+    { value: 'now', label: 'Now' },
+    { value: 'outlook', label: 'Outlook' },
+    { value: 'more', label: 'More' },
+  ];
 
   const DevToggle = import.meta.env.DEV && !inTelegram ? import('./dev/DevDataToggle.svelte') : null;
 
@@ -35,43 +39,37 @@
 
   // Dev only: ?tab=outlook|more opens on that tab, for checking it in the preview.
   const devTab = import.meta.env.DEV ? new URLSearchParams(location.search).get('tab') : null;
-  const firstTab: Tab = TABS.includes(devTab as Tab) ? (devTab as Tab) : 'now';
-  let tab = $state<Tab>(firstTab);
-  // A tab mounts on its first visit and then stays mounted (hidden), so its controls keep their
-  // state and Live views fetches only once More is opened.
+  let tab = $state<Tab>(TABS.find((t) => t.value === devTab)?.value ?? 'now');
+  // A tab mounts on its first visit and then stays mounted (just hidden), so its controls keep
+  // their state, its cards rise in only once, and Live views fetches only once More is opened.
   let visited = $state<Record<Tab, boolean>>({ now: false, outlook: false, more: false });
-  // Tabs whose cards have already risen in; showing them again just fades the panel.
-  let settled = $state<Record<Tab, boolean>>({ now: false, outlook: false, more: false });
-  let shown: Tab = firstTab;
-  let barTop = $state<HTMLElement>();
-
-  // Latest What's new id the user has seen; undefined until storage answers.
-  let seen = $state<string | null | undefined>(undefined);
-  // Entries that were new when More was opened, so they keep their "New" label there.
-  let fresh = $state(0);
-  const unseen = $derived(seen !== undefined && seen !== LATEST_ID);
-
   $effect(() => {
     visited[tab] = true;
-    if (tab === 'more' && seen !== undefined && seen !== LATEST_ID) {
-      fresh = newCount(seen);
-      seen = LATEST_ID;
-      markSeen();
-    }
+  });
+  let tabsAnchor = $state<HTMLElement>();
+
+  // Latest What's new id the user had seen when the app opened; undefined until storage answers.
+  let seen = $state<string | null | undefined>(undefined);
+  const behind = $derived(seen !== undefined && seen !== LATEST_ID);
+  const unseen = $derived(behind && !visited.more);
+  $effect(() => {
+    if (visited.more && behind) markSeen();
   });
 
   // Away from Now, Telegram's back arrow returns to it, like a native screen.
+  const away = $derived(tab !== 'now');
   $effect(() => {
-    if (tab !== 'now') return showBackButton(() => (tab = 'now'));
+    if (away) return showBackButton(() => (tab = 'now'));
   });
 
+  // Start each tab at its top, keeping the header scrolled away if it already was.
   $effect(() => {
-    if (tab === shown || !barTop) return;
-    settled[shown] = true;
-    shown = tab;
-    // Start the new tab at its top, keeping the header scrolled away if it already was.
-    const y = barTop.getBoundingClientRect().top + window.scrollY;
-    if (window.scrollY > y) window.scrollTo({ top: y, behavior: 'instant' });
+    tab;
+    untrack(() => {
+      if (!tabsAnchor || window.scrollY === 0) return;
+      const y = tabsAnchor.getBoundingClientRect().top + window.scrollY;
+      if (window.scrollY > y) window.scrollTo({ top: y, behavior: 'instant' });
+    });
   });
 
   async function load() {
@@ -85,9 +83,7 @@
   }
 
   onMount(() => {
-    getSeen().then((v) => {
-      if (seen === undefined) seen = v;
-    });
+    getSeen().then((v) => (seen = v));
     weatherFirst = loadWeather();
     weatherFirst.catch(() => {}); // the card shows the error
     load();
@@ -120,22 +116,19 @@
         NEA hasn’t published a new reading recently, so these numbers may be out of date.
       </div>
     {/if}
-    <div bind:this={barTop}></div>
+    <div bind:this={tabsAnchor}></div>
     <div class="tabbar">
       <Segmented
         kind="tab"
+        id="tab"
         label="Sections"
         bind:value={tab}
-        controls={(t) => `panel-${t}`}
-        options={[
-          { value: 'now', label: 'Now' },
-          { value: 'outlook', label: 'Outlook' },
-          { value: 'more', label: 'More', dot: unseen },
-        ]}
+        controls={(t) => (visited[t] ? `panel-${t}` : undefined)}
+        options={TABS.map((t) => (t.value === 'more' && unseen ? { ...t, dot: 'new updates' } : t))}
       />
     </div>
     {#if visited.now}
-      <div id="panel-now" class="sections" class:settled={settled.now} role="tabpanel" aria-label="Now" hidden={tab !== 'now'}>
+      <div id="panel-now" class="sections" class:off={tab !== 'now'} role="tabpanel" aria-labelledby="tab-now">
         <Hero snapshot={data.snapshot} bind:period />
         <RegionTable snapshot={data.snapshot} {period} />
         <Advice snapshot={data.snapshot} />
@@ -144,18 +137,18 @@
       </div>
     {/if}
     {#if visited.outlook}
-      <div id="panel-outlook" class="sections" class:settled={settled.outlook} role="tabpanel" aria-label="Outlook" hidden={tab !== 'outlook'}>
+      <div id="panel-outlook" class="sections" class:off={tab !== 'outlook'} role="tabpanel" aria-labelledby="tab-outlook">
         {#if data.forecast}<ForecastSection forecast={data.forecast} history={data.history} />{/if}
         <WindRain snapshot={data.snapshot} first={weatherFirst} />
         <HistoryChart snapshot={data.snapshot} history={data.history} />
       </div>
     {/if}
     {#if visited.more}
-      <div id="panel-more" class="sections" class:settled={settled.more} role="tabpanel" aria-label="More" hidden={tab !== 'more'}>
+      <div id="panel-more" class="sections" class:off={tab !== 'more'} role="tabpanel" aria-labelledby="tab-more">
         <LiveViews />
         {#if data.news}<NewsCard news={data.news} serverTime={data.serverTime} />{/if}
         <CigCalc snapshot={data.snapshot} />
-        <WhatsNew {fresh} />
+        <WhatsNew {seen} />
         <Sources sources={data.sources} />
       </div>
     {/if}
@@ -196,18 +189,20 @@
     background: linear-gradient(var(--page), transparent);
     pointer-events: none;
   }
-  .sections[hidden] {
-    display: none;
+  /* Showing a tab fades it in. */
+  .sections {
+    animation: fade 150ms var(--ease-out);
+  }
+  /* Hidden tabs keep their layout rather than display: none, so their cards' rise doesn't
+     replay on every visit and charts keep their measured width. */
+  .sections.off {
+    height: 0;
+    overflow: hidden;
+    visibility: hidden;
+    animation: none;
   }
   .sections > :global(*) {
     animation: rise 280ms var(--ease-out) both;
-  }
-  /* Coming back to a tab: its cards have already risen in once, so the panel just fades. */
-  .sections.settled {
-    animation: fade 150ms var(--ease-out);
-  }
-  .sections.settled > :global(*) {
-    animation: none;
   }
   @keyframes fade {
     from {
@@ -270,9 +265,6 @@
   @media (prefers-reduced-motion: reduce) {
     .sections > :global(*) {
       animation: fade 200ms ease both;
-    }
-    .sections.settled {
-      animation: none;
     }
     .sk {
       animation: none;
