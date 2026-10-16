@@ -1,7 +1,8 @@
 # Heartbeat, every 15 minutes. Telegram Serverless has no built-in scheduler, so GitHub Actions
 # runs endpoints/tick in the bot's cloud environment (pattern from telegram-assistant-bot).
 #
-# Needs the repo secret TGCLOUD_TOKEN (the CLI access token from @BotFather).
+# Needs the secret TGCLOUD_TOKEN (the CLI access token from @BotFather) in the `production`
+# environment, which only main may deploy from, so a workflow on another branch can't read it.
 #
 # Every 15 min so alerts left over from a run (time budget, rate limit) go out soon after.
 # NEA and news are fetched about once an hour, so the extra runs are cheap.
@@ -32,6 +33,7 @@ jobs:
   tick:
     if: github.event.schedule != '33 3 * * 1'
     runs-on: ubuntu-latest
+    environment: production
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7

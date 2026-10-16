@@ -96,7 +96,8 @@ To run a module in the cloud by hand:
 npx tgcloud run endpoints/tick
 ```
 
-The tick workflow needs the repository secret `TGCLOUD_TOKEN`.
+The tick workflow needs the secret `TGCLOUD_TOKEN` in the `production` environment (Settings →
+Environments), which only `main` can use.
 
 ### Groups
 
