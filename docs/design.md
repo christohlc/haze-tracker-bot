@@ -100,7 +100,8 @@ of the sky and the haze. Check that again whenever a sky colour changes.
 ## States
 
 Every section handles loading, empty and failed states. To check them outside Telegram, use
-the dev toolbar (`?demo=worst|empty|error|loading`). The worst-case data has long names,
+the dev toolbar (`?demo=worst|empty|error|loading`). Those last two hide every card, so Live
+views also takes `?cams=error|loading` for its own. The worst-case data has long names,
 missing readings and extreme values, so use it before shipping a layout change.
 
 ## What’s new

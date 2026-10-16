@@ -1,6 +1,6 @@
 // Dev-only camera data for the Live views card (see loadCameras in lib/api.ts).
 import { parseCameras } from '../../tgcloud/lib/cameras-parse.js';
-import type { Camera, CamerasResult } from '../lib/api';
+import type { CamerasResult } from '../lib/api';
 
 // Real pictures from 16 Oct 2026; data.gov.sg may stop serving them, which then shows the broken-image state.
 const PICTURES: [string, string][] = [
@@ -18,19 +18,21 @@ const ago = (min: number) => new Date(Date.now() - min * 60_000).toISOString();
 
 export function demoCameras(): CamerasResult {
   const feed = { items: [{ cameras: PICTURES.map(([camera_id, image]) => ({ camera_id, image, timestamp: ago(1) })) }] };
-  return { cameras: parseCameras(feed) as Camera[], serverTime: Date.now() };
+  return { cameras: parseCameras(feed), serverTime: Date.now() };
 }
 
 /** A long unknown camera, one that stopped updating, a picture that won't load and one from the future. */
 export function worstCameras(): CamerasResult {
-  const [first, second, ...rest] = demoCameras().cameras!;
+  const cams = demoCameras().cameras!;
   return {
     cameras: [
-      { ...first, takenAt: ago(60 * 26) },
-      { ...second, image: 'https://images.data.gov.sg/api/traffic-images/2026/10/does-not-exist.jpg' },
-      ...rest.slice(0, 3),
-      { ...rest[3], takenAt: ago(-5) },
-      { id: '123456789012', name: 'Camera 123456789012 at the very long and unbreakable Ayer_Rajah_Expressway_towards_Tuas_Checkpoint', region: null, image: rest[4].image, takenAt: ago(45) },
+      ...cams.slice(0, 7).map((c, i) =>
+        i === 0 ? { ...c, takenAt: ago(60 * 26) }
+        : i === 1 ? { ...c, image: 'https://images.data.gov.sg/api/traffic-images/2026/10/does-not-exist.jpg' }
+        : i === 5 ? { ...c, takenAt: ago(-5) }
+        : c,
+      ),
+      { id: '123456789012', name: 'Camera 123456789012 at the very long and unbreakable Ayer_Rajah_Expressway_towards_Tuas_Checkpoint', region: null, image: cams[7].image, takenAt: ago(45) },
     ],
     serverTime: Date.now(),
   };

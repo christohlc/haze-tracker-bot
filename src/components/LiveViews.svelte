@@ -1,10 +1,11 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { loadCameras, type CamerasResult, type RegionId } from '../lib/api';
+  import { REGIONS } from '../../tgcloud/lib/config.js';
+  import { loadCameras, type CamerasResult } from '../lib/api';
   import { timeAgo } from '../lib/format';
   import { openLink } from '../lib/telegram';
 
-  const REGION_NAMES: Record<RegionId, string> = { north: 'North', west: 'West', central: 'Central', east: 'East', south: 'South' };
+  const REGION_NAMES = Object.fromEntries(REGIONS.map((r) => [r.id, r.name]));
   const STALE_MS = 30 * 60_000;
   const SATELLITE = [
     { title: 'Satellite pictures of the smoke', meta: 'Himawari images of Sumatra and Malaysia, from ASMC', link: 'https://asmc.asean.org/satellite-geo-sat/' },
@@ -14,14 +15,14 @@
   let result = $state<CamerasResult | null>(null);
   let error = $state<string | null>(null);
   let broken = $state<Record<string, boolean>>({});
-  let loaded = $state<Record<string, boolean>>({});
+  // Pictures are full-size (1920×1080), so only the tiles scrolled to (plus the next one) load.
+  let reach = $state(2);
 
   async function load() {
     error = null;
     try {
       result = await loadCameras();
       broken = {};
-      loaded = {};
     } catch {
       // Our own words, not the transport's: a failed call here only ever means no pictures.
       error = 'Couldn’t load the camera pictures. Check your connection and try again.';
@@ -29,6 +30,12 @@
   }
 
   onMount(load);
+
+  function onRowScroll(e: Event) {
+    const row = e.currentTarget as HTMLElement;
+    const tile = (row.firstElementChild as HTMLElement | null)?.offsetWidth ?? row.clientWidth;
+    reach = Math.max(reach, Math.ceil((row.scrollLeft + row.clientWidth) / tile) + 1);
+  }
 
   function open(e: MouseEvent, link: string) {
     if (openLink(link)) e.preventDefault();
@@ -54,22 +61,21 @@
   {:else if !result.cameras?.length}
     <p class="note empty">No cameras are sending pictures right now.</p>
   {:else}
-    <ul class="row">
-      {#each result.cameras as cam (cam.id)}
+    <ul class="row" onscroll={onRowScroll}>
+      {#each result.cameras as cam, i (cam.id)}
         {@const stale = result.serverTime - Date.parse(cam.takenAt) > STALE_MS}
         <li class="tile">
           <a href={cam.image} target="_blank" rel="noopener noreferrer" onclick={(e) => open(e, cam.image)}>
             <div class="frame">
               {#if broken[cam.id]}
                 <span class="note missing">Picture didn’t load</span>
-              {:else}
+              {:else if i < reach}
                 <img
                   src={cam.image}
                   alt="Road camera view: {cam.name}"
                   loading="lazy"
                   decoding="async"
-                  class:loaded={loaded[cam.id]}
-                  onload={() => (loaded[cam.id] = true)}
+                  onload={(e) => e.currentTarget.classList.add('loaded')}
                   onerror={() => (broken[cam.id] = true)}
                 />
               {/if}
@@ -165,7 +171,7 @@
     -webkit-touch-callout: none;
     -webkit-user-drag: none;
   }
-  img.loaded {
+  img:global(.loaded) {
     opacity: 1;
   }
   .name {
