@@ -7,10 +7,13 @@ import { recentReadings } from './store.js';
 
 /** @typedef {{ outlook: import('./outlook-parse.js').Outlook | null, range: import('./range.js').Range | null }} Ahead */
 
-/** Also returns the readings it read, oldest first, so the dashboard needn't read them again. */
-export async function getAhead() {
-  const [rows, outlook] = await Promise.all([recentReadings(HISTORY_HOURS), getOutlook()]);
-  /** @type {Ahead} */
-  const ahead = { outlook, range: nextHours(rows) };
-  return { rows, ahead };
+/**
+ * `refreshed` is the getSnapshot() call in flight: the range waits for its readings, while NEA's
+ * outlook is fetched alongside it.
+ * @param {Promise<unknown>} refreshed
+ * @returns {Promise<Ahead>}
+ */
+export async function getAhead(refreshed) {
+  const [rows, outlook] = await Promise.all([refreshed.then(() => recentReadings(HISTORY_HOURS)), getOutlook()]);
+  return { outlook, range: nextHours(rows) };
 }

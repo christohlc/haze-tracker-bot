@@ -3,6 +3,7 @@
 // haze episodes only. Pure (no sdk) so tests and the Mini App can load it; lib/outlook.js fetches it.
 // The feed is the JSON haze.gov.sg itself uses, not a documented API, so nothing here may throw.
 
+import { decodeEntities } from './html.js';
 import { PSI_BANDS } from './psi.js';
 import { MONTHS, sgtToday, toSgtIso } from './time.js';
 
@@ -14,19 +15,10 @@ export const OUTLOOK_FEED = 'https://www.nea.gov.sg/api/advisory/latesthazesitua
  * @typedef {{ text: string, from: string, to: string, forDate: string, issuedAt: string, expires: string | null }} Outlook
  */
 
-const ENTITIES = /** @type {Record<string, string>} */ ({
-  nbsp: ' ', ndash: '–', mdash: '—', amp: '&', quot: '"', apos: '’',
-  lsquo: '‘', rsquo: '’', ldquo: '“', rdquo: '”', lt: '<', gt: '>', micro: 'µ',
-});
-
 /** HTML → plain text. @param {unknown} html */
 function plain(html) {
   if (typeof html !== 'string') return '';
-  return html
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
-    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(Number(dec)))
-    .replace(/&([a-z]+);/gi, (m, name) => ENTITIES[name.toLowerCase()] ?? m)
+  return decodeEntities(html.replace(/<[^>]*>/g, ' '))
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -51,7 +43,7 @@ function sgtIso(v) {
 }
 
 /**
- * Whether a parsed forecast still applies at `now`: for today or tomorrow (SGT), not expired.
+ * Whether a forecast still applies at `now`: for today or tomorrow (SGT), and not expired.
  * @param {Outlook} o @param {number} [now] ms
  */
 export function isCurrent(o, now = Date.now()) {
@@ -59,13 +51,12 @@ export function isCurrent(o, now = Date.now()) {
 }
 
 /**
- * The forecast in NEA's words, mapped to our band ids. Null when there's none we can read, or it
- * no longer applies at `now`. Never throws.
+ * The forecast in NEA's words, mapped to our band ids. Null when there's none we can read. Whether
+ * it still applies is isCurrent's call, made when it's read. Never throws.
  * @param {any} json
- * @param {number} [now] ms
  * @returns {Outlook | null}
  */
-export function parseOutlook(json, now = Date.now()) {
+export function parseOutlook(json) {
   const body = plain(json?.BodyText);
   const day = body.match(/forecast for (\d{1,2} [A-Za-z]{3,9} \d{4})/i);
   const forDate = day ? isoDate(day[1]) : null;
@@ -82,7 +73,5 @@ export function parseOutlook(json, now = Date.now()) {
   // NEA fills one or the other; the site hides the box after it.
   const expires = sgtIso(json?.ExpiryDateHazeDisplayDt) ?? sgtIso(json?.ExpiryDateHazeDisplay);
   if (!forDate || !from || !to || parts.length > 2 || !issuedAt) return null;
-  /** @type {Outlook} */
-  const outlook = { text, from, to, forDate, issuedAt, expires };
-  return isCurrent(outlook, now) ? outlook : null;
+  return { text, from, to, forDate, issuedAt, expires };
 }

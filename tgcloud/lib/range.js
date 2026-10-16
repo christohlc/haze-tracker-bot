@@ -9,7 +9,7 @@ import { toSgtIso, unixHour } from './time.js';
 
 /** Hours of readings the range is worked out from. */
 export const HISTORY_HOURS = 14 * 24;
-const AHEAD = [1, 3, 6];
+export const AHEAD = [1, 3, 6];
 // With fewer hours of readings (three days) the range would be a guess.
 const MIN_HOURS = 72;
 // A latest reading older than this isn't "now" any more (NEA publishes hourly).

@@ -15,8 +15,8 @@ export async function getOutlook() {
     const json = await getJson(`${OUTLOOK_FEED}/${Math.floor(Date.now() / 1000)}`, 'NEA haze update');
     if (typeof json?.BodyText !== 'string') throw new Error('NEA haze update had an unexpected shape');
     const value = parseOutlook(json);
-    return { value, detail: value ? `for ${value.forDate}` : 'no forecast issued' };
+    return { value, detail: value ? `latest for ${value.forDate}` : 'no forecast we could read' };
   });
-  // The stored copy can pass its day or expiry while NEA is unreachable.
+  // NEA leaves its last update up between episodes, and a stored copy ages while NEA is unreachable.
   return outlook && isCurrent(outlook) ? outlook : null;
 }

@@ -38,8 +38,8 @@ export default async function (message) {
     case 'help':
       return reply(message, HELP, dashboardButton(message.chat.id));
     case 'haze': {
-      const snap = await getSnapshot();
-      const { ahead } = await getAhead();
+      const refreshed = getSnapshot();
+      const [snap, ahead] = await Promise.all([refreshed, getAhead(refreshed)]);
       return sendCardOrText(message.chat.id, snap, {
         caption: formatHazeCaption(snap, ahead),
         text: formatHaze(snap, ahead),
@@ -47,8 +47,7 @@ export default async function (message) {
       });
     }
     case 'forecast': {
-      await getSnapshot(); // refreshes the readings the range is worked out from, when they're due
-      const { ahead } = await getAhead();
+      const ahead = await getAhead(getSnapshot());
       if (!ahead.outlook && !ahead.range) return reply(message, 'Nothing to show yet. NEA issues a 24-hr PSI forecast only during haze episodes, and our range for the next few hours needs three days of recent readings.');
       return reply(message, formatForecast(ahead), dashboardButton(message.chat.id));
     }

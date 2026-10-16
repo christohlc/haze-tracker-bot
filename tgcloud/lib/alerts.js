@@ -10,9 +10,9 @@ import { dashboardButton } from './buttons.js';
 import { isRateLimited, isUnreachable } from './bot-errors.js';
 import { cachedCardId, sendCardOrText } from './card/send.js';
 import { formatBandAlert, formatHaze, formatHazeCaption } from './format.js';
-import { sgtDate } from './nea.js';
 import { psiBand } from './psi.js';
 import { getState, setState } from './store.js';
+import { sgtToday } from './time.js';
 import {
   bandSubscribers,
   claimAlert,
@@ -84,7 +84,7 @@ export async function runAlerts(snap, now = Date.now()) {
   const canWait = bandStopped !== 'limited' || (sleep && Date.now() + retryAfter + SEND_INTERVAL_MS < deadline);
   if (canWait) {
     if (bandStopped === 'limited' && sleep) await sleep(retryAfter);
-    const date = sgtDate(0, now);
+    const date = sgtToday(now);
     const hour = sgtHourOf(now);
     const [subs, claimed] = await Promise.all([dailySubscribers(), dailyClaimedChats(date)]);
     const due = subs.filter((s) => dailyDue(s.dailyHour, hour) && !claimed.has(s.chatId));

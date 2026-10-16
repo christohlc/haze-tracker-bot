@@ -185,11 +185,6 @@
   .stale {
     color: var(--status-critical);
   }
-  .sub {
-    margin: 16px 0 0;
-    font-size: 0.9375rem;
-    font-weight: 650;
-  }
   .links li + li {
     border-top: 1px solid var(--hairline);
   }

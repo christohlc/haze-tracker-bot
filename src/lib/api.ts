@@ -135,21 +135,14 @@ export async function loadDashboard(): Promise<Dashboard> {
   if (import.meta.env.DEV) {
     // Dev-only data switch (see DevDataToggle): ?demo=worst | empty | error | loading
     const demo = new URLSearchParams(location.search).get('demo');
+    if (demo === 'worst') return { ...(await import('../dev/worst')).worstCase(), ahead: (await import('../dev/ahead')).worstAhead() };
+    if (demo === 'empty') return (await import('../dev/worst')).emptyCase();
     if (demo === 'error') throw new Error('Couldn’t reach the haze service. Check your connection and try again.');
     if (demo === 'loading') return new Promise(() => {});
-    const data =
-      demo === 'worst'
-        ? (await import('../dev/worst')).worstCase()
-        : demo === 'empty'
-          ? (await import('../dev/worst')).emptyCase()
-          : ({ ...(await import('../dev/fixture.json')).default } as Dashboard);
+    const data = (await import('../dev/fixture.json')).default as Dashboard;
     // ?card=ahead:range (no NEA forecast, as outside a haze episode) | outlook (no range yet)
     const { state } = await devQuery('ahead', '');
-    const dev = await import('../dev/ahead');
-    data.ahead = demo === 'empty' ? null : demo === 'worst' ? dev.worstAhead() : dev.demoAhead(data);
-    if (data.ahead && state === 'range') data.ahead = { ...data.ahead, outlook: null };
-    if (data.ahead && state === 'outlook') data.ahead = { ...data.ahead, range: null };
-    return data;
+    return { ...data, ahead: (await import('../dev/ahead')).demoAhead(data, state) };
   }
   throw new Error('Open this dashboard from the bot in Telegram.');
 }

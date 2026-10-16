@@ -1,9 +1,8 @@
 <script lang="ts">
   import { psiBand } from '../../tgcloud/lib/psi.js';
   import { RANGE_RECORD } from '../../tgcloud/lib/range.js';
-  import { sgtDayName } from '../../tgcloud/lib/time.js';
   import type { Ahead } from '../lib/api';
-  import { sgtDayMonth, sgtHour } from '../lib/format';
+  import { sgtDayMonth, sgtDayName, sgtHour } from '../lib/format';
   import { openLink } from '../lib/telegram';
   import BandPill from './BandPill.svelte';
 
@@ -32,10 +31,10 @@
   {#if outlook}
     <h3 class="sub">{day[0].toUpperCase()}{day.slice(1)} · NEA forecast</h3>
     <p class="bands">
-      <BandPill bandId={outlook.from} size="lg" />
+      <BandPill bandId={outlook.from} showLabel size="lg" />
       {#if outlook.to !== outlook.from}
         <!-- "to" wraps with the second band, never alone at the end of a line. -->
-        <span class="pair"><span class="to">to</span> <BandPill bandId={outlook.to} size="lg" /></span>
+        <span class="pair"><span class="to">to</span> <BandPill bandId={outlook.to} showLabel size="lg" /></span>
       {/if}
     </p>
     <p class="note">
@@ -78,9 +77,7 @@
     margin: 0;
   }
   .sub {
-    margin: 12px 0 0;
-    font-size: 0.9375rem;
-    font-weight: 650;
+    margin-top: 12px;
   }
   .sub + .note {
     margin-top: 2px;

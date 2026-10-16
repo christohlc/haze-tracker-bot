@@ -23,7 +23,7 @@ export function sgtDayMonth(ymd) {
   return `${Number(ymd.slice(8, 10))} ${MONTHS[Number(ymd.slice(5, 7)) - 1]}`;
 }
 
-/** Today's date in SGT, "2026-10-16". @param {number} [now] ms */
+/** The SGT date at `now`, "2026-10-16". @param {number} [now] ms */
 export const sgtToday = (now = Date.now()) => new Date(now + 8 * 3600_000).toISOString().slice(0, 10);
 
 /** "today" or "tomorrow" for an SGT date, else "on 18 Oct". @param {string} ymd @param {number} [now] ms */

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-import { parseOutlook } from '../tgcloud/lib/outlook-parse.js';
+import { isCurrent, parseOutlook } from '../tgcloud/lib/outlook-parse.js';
 import { nextHours } from '../tgcloud/lib/range.js';
 import { pm25ToPsi } from '../tgcloud/lib/psi.js';
 import { sgtDayName } from '../tgcloud/lib/time.js';
@@ -12,7 +12,7 @@ const at = (iso) => Date.parse(iso);
 const DAY_OF = at('2026-10-16T09:00:00+08:00');
 
 test('reads NEA’s forecast', () => {
-  assert.deepEqual(parseOutlook(sample, DAY_OF), {
+  assert.deepEqual(parseOutlook(sample), {
     text: 'Unhealthy to Low Very Unhealthy',
     from: 'unhealthy',
     to: 'very_unhealthy',
@@ -21,14 +21,14 @@ test('reads NEA’s forecast', () => {
     expires: null,
   });
   // Times come back in SGT whatever offset NEA uses.
-  assert.equal(parseOutlook({ ...sample, DateOfArticle: '2026-10-15T10:19:00Z' }, DAY_OF)?.issuedAt, '2026-10-15T18:19:00+08:00');
+  assert.equal(parseOutlook({ ...sample, DateOfArticle: '2026-10-15T10:19:00Z' })?.issuedAt, '2026-10-15T18:19:00+08:00');
 });
 
 test('handles NEA’s other wordings', () => {
   const blurb = (text) => ({ ...sample, AirQualityBlurb: `24-hr PSI Forecast: ${text}` });
   assert.deepEqual(
     [blurb('High Moderate to Mid Unhealthy'), blurb('Moderate &ndash; Low Unhealthy'), blurb('Good')].map((j) => {
-      const o = parseOutlook(j, DAY_OF);
+      const o = parseOutlook(j);
       return o && [o.from, o.to];
     }),
     [
@@ -38,19 +38,25 @@ test('handles NEA’s other wordings', () => {
     ],
   );
   // No short line: the underlined sentence in the body.
-  assert.equal(parseOutlook({ ...sample, AirQualityBlurb: '' }, DAY_OF)?.text, 'Unhealthy to Low Very Unhealthy');
-  assert.equal(parseOutlook(blurb('Moderate&#x2013;Low&nbsp;Unhealthy &amp; worse'), DAY_OF), null, 'three parts');
-  assert.deepEqual(parseOutlook(blurb('Moderate &#8211; Low&nbsp;Unhealthy'), DAY_OF)?.text, 'Moderate – Low Unhealthy');
+  assert.equal(parseOutlook({ ...sample, AirQualityBlurb: '' })?.text, 'Unhealthy to Low Very Unhealthy');
+  assert.equal(parseOutlook(blurb('Moderate&#x2013;Low&nbsp;Unhealthy &amp; worse')), null, 'three parts');
+  assert.deepEqual(parseOutlook(blurb('Moderate &#8211; Low&nbsp;Unhealthy'))?.text, 'Moderate – Low Unhealthy');
 });
 
-test('no forecast when it’s for a past day, expired, or unreadable', () => {
-  assert.equal(parseOutlook(sample, at('2026-10-17T00:05:00+08:00')), null);
-  assert.equal(parseOutlook({ ...sample, ExpiryDateHazeDisplayDt: '2026-10-16T08:00:00+08:00' }, DAY_OF), null);
-  assert.equal(parseOutlook({ ...sample, ExpiryDateHazeDisplay: '2026-10-16T08:00:00+08:00' }, DAY_OF), null);
+test('a forecast stops applying after its day, at its expiry, or days ahead', () => {
+  const current = (json, now) => isCurrent(/** @type {any} */ (parseOutlook(json)), now);
+  assert.equal(current(sample, DAY_OF), true);
+  assert.equal(current(sample, at('2026-10-15T19:00:00+08:00')), true, 'issued the evening before');
+  assert.equal(current(sample, at('2026-10-17T00:05:00+08:00')), false);
+  assert.equal(current({ ...sample, ExpiryDateHazeDisplayDt: '2026-10-16T08:00:00+08:00' }, DAY_OF), false);
+  assert.equal(current({ ...sample, ExpiryDateHazeDisplay: '2026-10-16T08:00:00+08:00' }, DAY_OF), false);
   // Days ahead of tomorrow mean a misread date, not a forecast.
-  assert.equal(parseOutlook(sample, at('2026-10-10T09:00:00+08:00')), null);
-  assert.equal(parseOutlook({ ...sample, AirQualityBlurb: '24-hr PSI Forecast: Smoky', BodyText: '' }, DAY_OF), null);
-  for (const junk of [null, {}, 'oops', { BodyText: 42 }]) assert.equal(parseOutlook(junk, DAY_OF), null);
+  assert.equal(current(sample, at('2026-10-10T09:00:00+08:00')), false);
+});
+
+test('no forecast when NEA’s update is unreadable', () => {
+  assert.equal(parseOutlook({ ...sample, AirQualityBlurb: '24-hr PSI Forecast: Smoky', BodyText: '' }), null);
+  for (const junk of [null, {}, 'oops', { BodyText: 42 }]) assert.equal(parseOutlook(junk), null);
 });
 
 test('today, tomorrow or a date', () => {

@@ -1,25 +1,30 @@
 // Dev-only data for the What's ahead section (see loadDashboard in src/lib/api.ts).
 import { pm25ToPsi } from '../../tgcloud/lib/psi.js';
 import { islandMean } from '../../tgcloud/lib/snapshot.js';
+import { AHEAD } from '../../tgcloud/lib/range.js';
 import { sgtToday, toSgtIso, unixHour } from '../../tgcloud/lib/time.js';
 import type { Ahead, Dashboard } from '../lib/api';
 
 const tomorrow = () => sgtToday(Date.now() + 86_400_000);
 const issued = () => `${sgtToday()}T18:19:00+08:00`;
 
-/** NEA's outlook from 15 Oct 2026, and a range around the fixture's latest reading, like a hazy week gives. */
-export function demoAhead(data: Dashboard): Ahead {
+/**
+ * NEA's outlook from 15 Oct 2026, and a range around the fixture's latest reading, like a hazy week
+ * gives. `only` keeps one half: 'range' (as outside a haze episode) or 'outlook'.
+ */
+export function demoAhead(data: Dashboard, only: string | null): Ahead {
   const last = data.history.at(-1)!;
   const pm = islandMean(last) ?? 50;
   const t0 = unixHour(last.t);
   const spread: Record<number, [number, number]> = { 1: [0.87, 1.14], 3: [0.74, 1.3], 6: [0.6, 1.45] };
-  return {
+  const ahead: Ahead = {
     outlook: { text: 'Unhealthy to Low Very Unhealthy', from: 'unhealthy', to: 'very_unhealthy', forDate: tomorrow(), issuedAt: issued(), expires: null },
     range: {
       now: pm25ToPsi(pm)!,
-      steps: [1, 3, 6].map((h) => ({ h, t: toSgtIso((t0 + h) * 3600), lo: pm25ToPsi(pm * spread[h][0])!, hi: pm25ToPsi(pm * spread[h][1])! })),
+      steps: AHEAD.map((h) => ({ h, t: toSgtIso((t0 + h) * 3600), lo: pm25ToPsi(pm * spread[h][0])!, hi: pm25ToPsi(pm * spread[h][1])! })),
     },
   };
+  return only === 'range' ? { ...ahead, outlook: null } : only === 'outlook' ? { ...ahead, range: null } : ahead;
 }
 
 /** The longest wording NEA uses, the top band, and a range from 0 past the top of the scale. */

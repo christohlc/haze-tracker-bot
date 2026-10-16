@@ -2,6 +2,8 @@
 // Haze headlines from publishers' RSS feeds. Pure (no sdk) so tests and the Mini App
 // can load it; lib/news.js does the fetching and storing.
 
+import { decodeEntities } from './html.js';
+
 /** The one list of news sources: display name and RSS feed. Story links must be on the feed's host. */
 export const PUBLISHERS = {
   st: { name: 'The Straits Times', feed: 'https://www.straitstimes.com/news/singapore/rss.xml' },
@@ -19,27 +21,13 @@ const HOSTS = Object.fromEntries(Object.entries(PUBLISHERS).map(([id, p]) => [id
 const KEEP_DAYS = 14;
 const MAX_ITEMS = 30;
 
-/** @type {Record<string, string>} */
-const NAMED = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
-
-/** @param {string} s */
-function decode(s) {
-  return s.replace(/&(#x[0-9a-f]+|#\d+|\w+);/gi, (m, e) => {
-    if (e[0] === '#') {
-      const code = /x/i.test(e[1]) ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10);
-      return Number.isFinite(code) && code > 0 ? String.fromCodePoint(code) : m;
-    }
-    return NAMED[e.toLowerCase()] ?? m;
-  });
-}
-
 /** Text of the first <tag>, with CDATA unwrapped, entities decoded and markup stripped. @param {string} xml @param {string} tag */
 function field(xml, tag) {
   const m = xml.match(new RegExp(`<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)</${tag}>`, 'i'));
   if (!m) return '';
   const raw = m[1].replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1');
   // Decode first: feeds escape their HTML (&lt;p&gt;), so tags only appear after decoding.
-  return decode(raw)
+  return decodeEntities(raw)
     .replace(/<[^>]*>/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();

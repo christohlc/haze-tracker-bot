@@ -2,7 +2,8 @@
 // Telegram HTML for chat replies. Pure: takes a snapshot, returns strings.
 
 import { advice, maskCard } from './advice.js';
-import { PSI_BANDS, psiBand } from './psi.js';
+import { escapeHtml } from './html.js';
+import { bandById, PSI_BANDS, psiBand } from './psi.js';
 import { RANGE_RECORD } from './range.js';
 import { sgtDayMonth, sgtDayName, sgtHour } from './time.js';
 
@@ -82,8 +83,8 @@ export function formatCigs(c, { place, outdoorPct }) {
  * @param {string} toId new band id
  */
 export function formatBandAlert(snap, fromId, toId) {
-  const to = PSI_BANDS.find((b) => b.id === toId);
-  const from = PSI_BANDS.find((b) => b.id === fromId);
+  const to = bandById(toId);
+  const from = bandById(fromId);
   const head = snap.worst.psi3h;
   const worse = PSI_BANDS.indexOf(/** @type {any} */ (to)) > PSI_BANDS.indexOf(/** @type {any} */ (from));
   const tips = advice(snap.worst.psi24h?.value ?? null, snap.worst.pm25?.value ?? null);
@@ -100,9 +101,6 @@ export function formatBandAlert(snap, fromId, toId) {
 
 /** "NEA’s 24-hr PSI forecast for tomorrow: <b>Unhealthy to Low Very Unhealthy</b>" @param {import('./outlook-parse.js').Outlook} o */
 const outlookLine = (o) => `NEA’s 24-hr PSI forecast for ${sgtDayName(o.forDate)}: <b>${escapeHtml(o.text)}</b>`;
-
-/** @param {string} s */
-const escapeHtml = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 /** /forecast: NEA's outlook when there is one, then our range for the next few hours. @param {import('./ahead.js').Ahead} ahead */
 export function formatForecast({ outlook, range }) {

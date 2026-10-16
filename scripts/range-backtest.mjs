@@ -8,13 +8,14 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { pm25ToPsi } from '../tgcloud/lib/psi.js';
 import { HISTORY_HOURS, nextHours } from '../tgcloud/lib/range.js';
 import { islandMean } from '../tgcloud/lib/snapshot.js';
+import { unixHour } from '../tgcloud/lib/time.js';
 
 const dir = process.argv[2];
 if (!dir) throw new Error('Usage: node scripts/range-backtest.mjs <dir>');
 const byTime = new Map();
 for (const f of readdirSync(dir)) for (const i of JSON.parse(readFileSync(`${dir}/${f}`, 'utf8'))) byTime.set(i.t, i.pm25);
 const rows = [...byTime].sort((a, b) => Date.parse(a[0]) - Date.parse(b[0])).map(([timestamp, readings]) => ({ timestamp, readings }));
-const at = new Map(rows.map((r, i) => [Math.floor(Date.parse(r.timestamp) / 3_600_000), i]));
+const at = new Map(rows.map((r, i) => [unixHour(r.timestamp), i]));
 
 const stats = {};
 for (let i = HISTORY_HOURS; i < rows.length; i++) {
@@ -22,7 +23,7 @@ for (let i = HISTORY_HOURS; i < rows.length; i++) {
   const r = nextHours(rows.slice(i - HISTORY_HOURS + 1, i + 1), now);
   if (!r) continue;
   for (const s of r.steps) {
-    const j = at.get(Math.floor(now / 3_600_000) + s.h);
+    const j = at.get(unixHour(rows[i].timestamp) + s.h);
     const actual = j == null ? null : pm25ToPsi(islandMean(rows[j].readings));
     if (actual == null) continue;
     for (const k of [`+${s.h}h all`, ...(r.now > 100 ? [`+${s.h}h haze`] : [])]) {
