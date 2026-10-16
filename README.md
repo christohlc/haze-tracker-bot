@@ -3,8 +3,8 @@
 <img src="public/logo.svg" alt="" width="72" align="right" />
 
 A Telegram bot and Mini App for haze in Singapore. It shows current PSI by region, a cigarette
-equivalent, a 24-hour PSI forecast and NEA’s health advice, and sends alerts to a chat when the
-haze band changes.
+equivalent, a 24-hour PSI forecast, NEA’s health advice and the latest haze headlines from The
+Straits Times, CNA and Mothership, and sends alerts to a chat when the haze band changes.
 
 - **Bot:** `/haze`, `/cigs [region] [% outdoors]`, `/forecast`, `/subscribe`, `/alerts`,
   `/unsubscribe`

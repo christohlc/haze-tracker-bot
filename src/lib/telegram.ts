@@ -34,6 +34,13 @@ export function selectionHaptic() {
   tg?.HapticFeedback?.selectionChanged?.();
 }
 
+/** Open an outside link in Telegram's in-app browser. Returns false outside Telegram. */
+export function openLink(url: string): boolean {
+  if (!inTelegram || !tg.openLink) return false;
+  tg.openLink(url);
+  return true;
+}
+
 /** Success / error buzz after an action completes. No-op outside Telegram. */
 export function notifyHaptic(type: 'success' | 'error' | 'warning') {
   tg?.HapticFeedback?.notificationOccurred?.(type);

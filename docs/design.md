@@ -65,7 +65,7 @@ or, outside Telegram, from the OS. A new colour token needs both a light and a d
 - One column, at most 720px wide, with 16px gutters and 12px between cards. Padding respects
   Telegram’s safe-area insets.
 - Each section is a `.card` with a `.section-title`, an optional `.note` and its content.
-- Section order: header, hero, alerts, regions, cigarettes, forecast, history, advice, sources.
+- Section order: header, hero, alerts, regions, cigarettes, forecast, history, advice, news, sources.
   [ui-audit.md](ui-audit.md) proposes moving advice and the forecast up; that change is still
   open.
 - Tap targets are at least 44px. Segmented controls and chips switch on `pointerdown` so they

@@ -9,6 +9,12 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-16-news',
+    date: '2026-10-16',
+    title: 'Haze in the news',
+    body: 'The latest haze stories from The Straits Times, CNA and Mothership, in one place. Tap a headline to read it on their site.',
+  },
+  {
     id: '2026-10-16-forecast',
     date: '2026-10-16',
     title: 'See the next 24 hours',
