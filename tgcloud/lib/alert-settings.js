@@ -1,7 +1,7 @@
 // @ts-check
 // The /alerts settings message: text + inline keyboard. Pure.
 
-const DAILY_HOURS = [7, 8, 12, 18];
+export const DAILY_HOURS = [7, 8, 12, 18];
 
 /** @param {number} h */
 const hourLabel = (h) => `${h % 12 === 0 ? 12 : h % 12} ${h < 12 ? 'am' : 'pm'}`;
@@ -52,4 +52,21 @@ export function applyAlertAction(sub, data) {
     return { bandAlerts: cur.bandAlerts, dailyHour };
   }
   return cur;
+}
+
+/**
+ * Validate settings sent by the Mini App. Returns the settings, or null when both are off
+ * (unsubscribe). Throws an Error with a user-facing message on bad input.
+ * @param {unknown} input
+ * @returns {{ bandAlerts: boolean, dailyHour: number | null } | null}
+ */
+export function parseAlertInput(input) {
+  const o = /** @type {Record<string, unknown>} */ (input ?? {});
+  if (typeof o.bandAlerts !== 'boolean') throw new Error('bandAlerts must be true or false');
+  const dailyHour = o.dailyHour ?? null;
+  if (dailyHour !== null && !DAILY_HOURS.includes(/** @type {number} */ (dailyHour))) {
+    throw new Error(`dailyHour must be one of ${DAILY_HOURS.join(', ')} or null`);
+  }
+  const settings = { bandAlerts: o.bandAlerts, dailyHour: /** @type {number | null} */ (dailyHour) };
+  return settings.bandAlerts || settings.dailyHour != null ? settings : null;
 }

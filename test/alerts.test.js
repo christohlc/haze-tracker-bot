@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { DEESCALATE_HOLD_MS, dailyDue, nextAlertBand, sgtHourOf } from '../tgcloud/lib/alert-rules.js';
-import { applyAlertAction, renderAlertSettings } from '../tgcloud/lib/alert-settings.js';
+import { applyAlertAction, parseAlertInput, renderAlertSettings } from '../tgcloud/lib/alert-settings.js';
 import { formatBandAlert } from '../tgcloud/lib/format.js';
 
 const H = 3600_000;
@@ -72,4 +72,13 @@ test('band alert says up/down and from what', () => {
   assert.match(up, /Haze up to Very unhealthy<\/b> \(was Unhealthy\)/);
   assert.match(up, /1:00 pm SGT/);
   assert.match(formatBandAlert(snap, 'hazardous', 'very_unhealthy'), /Haze down to/);
+});
+
+test('Mini App alert settings are validated, and all-off means unsubscribe', () => {
+  assert.deepEqual(parseAlertInput({ bandAlerts: true }), { bandAlerts: true, dailyHour: null });
+  assert.deepEqual(parseAlertInput({ bandAlerts: false, dailyHour: 8 }), { bandAlerts: false, dailyHour: 8 });
+  assert.equal(parseAlertInput({ bandAlerts: false, dailyHour: null }), null);
+  assert.throws(() => parseAlertInput({ bandAlerts: 'yes' }));
+  assert.throws(() => parseAlertInput({ bandAlerts: true, dailyHour: 9 }));
+  assert.throws(() => parseAlertInput(null));
 });

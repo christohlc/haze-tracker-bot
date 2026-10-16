@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Advice from './components/Advice.svelte';
+  import AlertsCard from './components/AlertsCard.svelte';
   import BrandHeader from './components/BrandHeader.svelte';
   import CigCalc from './components/CigCalc.svelte';
   import Hero, { type Period } from './components/Hero.svelte';
@@ -60,6 +61,7 @@
     {/if}
     <div class="sections">
       <Hero snapshot={data.snapshot} bind:period />
+      <AlertsCard />
       <RegionTable snapshot={data.snapshot} {period} />
       <CigCalc snapshot={data.snapshot} />
       <HistoryChart snapshot={data.snapshot} history={data.history} />
