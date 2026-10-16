@@ -29,8 +29,6 @@ const TRAIL_LIFE = 0.14; // s a blade point lingers
 const MIN_SLICE_LEN = 5; // logical px; shorter moves (taps) don't slice
 const FOG_TIME = 0.6; // s the field stays hazy after slicing a cloud
 
-const DISPLAY_FONT = 'ui-rounded, "SF Pro Rounded", Nunito, system-ui, -apple-system, sans-serif';
-
 // The nut art is fixed (like the hero sky), taken from public/logo.svg. Only the field, the
 // blade and the text follow the theme.
 const SHELL = ['#c88b4f', '#9a6332', '#6a4120'];
@@ -46,6 +44,7 @@ const CLOUD = ['#8f8a80', '#aaa498', '#c4bdb0'];
 const CLOUD_FACE = '#45413a';
 
 export interface Theme {
+  font: string;
   card: string;
   ink: string;
   accent: string;
@@ -56,13 +55,14 @@ export interface Theme {
 /** Reads the colours the game uses from the app's CSS tokens. */
 export function readTheme(el: Element = document.documentElement): Theme {
   const cs = getComputedStyle(el);
-  const v = (name: string, fallback: string) => cs.getPropertyValue(name).trim() || fallback;
+  const v = (name: string) => cs.getPropertyValue(name).trim();
   return {
-    card: v('--card', '#fcfcfb'),
-    ink: v('--ink', '#0b0b0b'),
-    accent: v('--accent', '#8a5a2e'),
-    haze: v('--brand-haze', '#e2b84a'),
-    critical: v('--status-critical', '#d03b3b'),
+    font: v('--font-display'),
+    card: v('--card'),
+    ink: v('--ink'),
+    accent: v('--accent'),
+    haze: v('--brand-haze'),
+    critical: v('--status-critical'),
   };
 }
 
@@ -191,6 +191,7 @@ export function createGame(canvas: HTMLCanvasElement, events: GameEvents, theme:
   let gs = initState();
   let playing = false;
   let paused = false;
+  let down = false; // blade touching the field
   let shownSec = ARCADE_TIME;
 
   // ---------------------------------------------------------------- spawning
@@ -327,6 +328,7 @@ export function createGame(canvas: HTMLCanvasElement, events: GameEvents, theme:
       }
       if (gs.timeLeft <= 0) {
         playing = false;
+        down = false; // a finger held through Time's up needs a fresh touch for the next run
         gs.trail = [];
         events.onOver(gs.score);
       }
@@ -530,7 +532,7 @@ export function createGame(canvas: HTMLCanvasElement, events: GameEvents, theme:
       ctx.moveTo(p0.x, p0.y);
       ctx.lineTo(p1.x, p1.y);
       ctx.stroke();
-      ctx.strokeStyle = '#fff';
+      ctx.strokeStyle = theme.card;
       ctx.globalAlpha = a * 0.9;
       ctx.lineWidth = 5 * a + 1;
       ctx.beginPath();
@@ -570,7 +572,7 @@ export function createGame(canvas: HTMLCanvasElement, events: GameEvents, theme:
     for (const t of gs.texts) {
       ctx.globalAlpha = Math.max(0, 1 - t.life / t.maxLife);
       ctx.fillStyle = t.color;
-      ctx.font = `800 ${t.size}px ${DISPLAY_FONT}`;
+      ctx.font = `800 ${t.size}px ${theme.font}`;
       ctx.fillText(t.text, t.x, t.y);
     }
     ctx.globalAlpha = 1;
@@ -610,7 +612,6 @@ export function createGame(canvas: HTMLCanvasElement, events: GameEvents, theme:
       y: ((e.clientY - rect.top) / rect.height) * LOGH,
     };
   };
-  let down = false;
   let lastX = 0;
   let lastY = 0;
   const pushTrail = (x: number, y: number) => {
@@ -643,7 +644,7 @@ export function createGame(canvas: HTMLCanvasElement, events: GameEvents, theme:
 
   return {
     start() {
-      // Keep whatever is still in the air from the demo; it just can't be sliced for points twice.
+      // Nuts still in the air from the demo stay, and count once the run starts.
       gs = { ...initState(), items: gs.items, halves: gs.halves, particles: gs.particles };
       shownSec = ARCADE_TIME;
       playing = true;
@@ -664,8 +665,8 @@ export function createGame(canvas: HTMLCanvasElement, events: GameEvents, theme:
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       canvas.width = Math.max(1, Math.round(width * dpr));
       canvas.height = Math.max(1, Math.round(height * dpr));
-      const scale = (Math.max(1, width) / LOGW) * dpr;
-      ctx.setTransform(scale, 0, 0, scale, 0, 0);
+      // Separate x and y scales, so rounding never leaves a strip undrawn.
+      ctx.setTransform((canvas.width / LOGW), 0, 0, canvas.height / LOGH, 0, 0);
       draw();
     },
     destroy() {

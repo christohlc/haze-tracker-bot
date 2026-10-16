@@ -5,7 +5,7 @@
   import { scale } from 'svelte/transition';
   import { reducedMotion } from '../lib/motion';
   import { ARCADE_TIME, createGame, readTheme, type Game } from '../lib/ninja';
-  import { lockVerticalSwipes, notifyHaptic, selectionHaptic } from '../lib/telegram';
+  import { getStored, lockVerticalSwipes, notifyHaptic, selectionHaptic, setStored } from '../lib/telegram';
 
   let { onclose }: { onclose: () => void } = $props();
 
@@ -21,7 +21,7 @@
   let startButton = $state<HTMLButtonElement>();
   let game: Game | undefined;
 
-  const reduce = reducedMotion();
+  let reduce = $state(reducedMotion());
 
   function start() {
     newBest = false;
@@ -30,11 +30,10 @@
   }
 
   onMount(() => {
-    try {
-      best = Number(localStorage.getItem(BEST_KEY)) || 0;
-    } catch {
-      // storage blocked: Best just starts at 0
-    }
+    // In Telegram, Best follows the user across devices (CloudStorage).
+    getStored(BEST_KEY).then((v) => (best = Math.max(best, Number(v) || 0)));
+    // Back to whatever opened the game (the header) on close.
+    const opener = document.activeElement as HTMLElement | null;
 
     let lastTick = 0;
     game = createGame(
@@ -54,11 +53,7 @@
           if (s > best) {
             best = s;
             newBest = true;
-            try {
-              localStorage.setItem(BEST_KEY, String(s));
-            } catch {
-              // not kept, that's fine
-            }
+            setStored(BEST_KEY, String(s));
           }
         },
       },
@@ -76,7 +71,10 @@
     mo.observe(document.documentElement, { attributes: true, attributeFilter: ['style', 'data-theme'] });
 
     const motion = matchMedia('(prefers-reduced-motion: reduce)');
-    const onMotion = () => game?.setReducedMotion(motion.matches);
+    const onMotion = () => {
+      reduce = motion.matches;
+      game?.setReducedMotion(reduce);
+    };
     motion.addEventListener('change', onMotion);
 
     const onVisible = () => game?.setPaused(document.hidden);
@@ -84,7 +82,8 @@
 
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onclose();
-      else if ((e.key === 'Enter' || e.key === ' ') && status !== 'playing' && document.activeElement !== startButton) {
+      // A focused button (Start, ×) handles Enter and Space itself.
+      else if ((e.key === 'Enter' || e.key === ' ') && status !== 'playing' && !(document.activeElement instanceof HTMLButtonElement)) {
         e.preventDefault();
         start();
       }
@@ -107,6 +106,7 @@
       window.removeEventListener('keydown', onKey);
       root.style.overflow = overflow;
       unlockSwipes();
+      opener?.focus({ preventScroll: true });
     };
   });
 </script>
@@ -166,7 +166,8 @@
     padding: calc(12px + var(--tg-content-safe-area-inset-top, 0px)) var(--gutter)
       calc(16px + var(--tg-safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
     background: var(--page);
-    overscroll-behavior: contain;
+    /* Nothing in here scrolls, and iOS ignores overflow: hidden on <html> for touch. */
+    touch-action: none;
     user-select: none;
     -webkit-user-select: none;
     /* A long press mid-swipe shouldn't pop iOS's “Save image” callout on the canvas. */
@@ -191,8 +192,8 @@
     transition: background-color 200ms var(--ease-out), color 200ms var(--ease-out);
   }
   .pill.low {
-    background: var(--status-critical);
-    color: #fff;
+    background: color-mix(in srgb, var(--status-critical) 16%, var(--card));
+    color: var(--status-critical);
   }
   .best {
     color: var(--muted);
@@ -212,7 +213,7 @@
     transition: transform 120ms var(--ease-out);
   }
   .close:active {
-    transform: scale(0.92);
+    transform: scale(0.97);
   }
   /* The field is 3:4 and as big as fits, on short screens as well as tall ones. */
   .stage {

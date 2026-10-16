@@ -152,8 +152,8 @@ shows a dot, and entries added since the last visit get a “New” label.
 
 ## Easter egg
 
-Tapping the header's logo or name opens **Hazelnut Ninja** (`src/components/HazelnutNinja.svelte`,
-engine in `src/lib/ninja.ts`, ported from GameKit UI's Fruit Ninja, MIT): slice hazelnuts, dodge
-haze clouds, 60 seconds. It's a secret, so it has **no What's new entry** and isn't mentioned in
+Tapping the header’s logo or name opens **Hazelnut Ninja** (`src/components/HazelnutNinja.svelte`,
+engine in `src/lib/ninja.ts`, ported from GameKit UI’s Fruit Ninja, MIT): slice hazelnuts, dodge
+haze clouds, 60 seconds. It’s a secret, so it has **no What’s new entry** and isn't mentioned in
 `/help`. The nuts copy the logo's colours; the field, blade and text follow the tokens. The code
 loads only when the game is opened.

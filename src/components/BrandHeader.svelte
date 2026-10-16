@@ -7,7 +7,8 @@
 </script>
 
 <header>
-  <button type="button" class="logo" aria-label="Play Hazelnut Ninja" onclick={onsecret}>
+  <!-- One tab stop for the secret (the name); the logo is the same thing for fingers only. -->
+  <button type="button" class="logo" tabindex="-1" aria-hidden="true" onclick={onsecret}>
     <img src="/logo.svg" alt="" width="40" height="40" />
   </button>
   <div class="text">
@@ -48,9 +49,16 @@
   .name:active {
     transform: scale(0.97);
   }
+  /* Hit areas grow to 44px without moving anything. */
   .logo {
     flex: none;
     display: block;
+    padding: 2px;
+    margin: -2px;
+  }
+  .name {
+    padding-block: 8px;
+    margin-block: -8px;
   }
   .logo img {
     display: block;
