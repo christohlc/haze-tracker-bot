@@ -9,6 +9,12 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-16-nea-outlook',
+    date: '2026-10-16',
+    title: 'NEA’s forecast for tomorrow',
+    body: 'During a haze episode, What’s ahead shows NEA’s official 24-hour PSI forecast. For the next few hours there’s now a simple likely range from recent readings, which lands right about 8 times in 10.',
+  },
+  {
     id: '2026-10-16-tabs',
     date: '2026-10-16',
     title: 'Find things faster with tabs',
@@ -31,12 +37,6 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: '2026-10-16',
     title: 'See the haze for yourself',
     body: 'Live pictures from the road cameras at Woodlands, Tuas and Sentosa, plus satellite pictures of the smoke and a map of fire hotspots around the region.',
-  },
-  {
-    id: '2026-10-16-nea-outlook',
-    date: '2026-10-16',
-    title: 'NEA’s forecast for tomorrow',
-    body: 'During a haze episode, What’s ahead shows NEA’s official 24-hour PSI forecast. For the next few hours there’s now a simple likely range from recent readings, which lands right about 8 times in 10.',
   },
   {
     id: '2026-10-16-privacy',
