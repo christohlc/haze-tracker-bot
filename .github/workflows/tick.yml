@@ -1,19 +1,19 @@
-# Heartbeat, every 15 minutes. Telegram Serverless has no built-in scheduler, so GitHub Actions
+# Heartbeat, every 30 minutes. Telegram Serverless has no built-in scheduler, so GitHub Actions
 # runs endpoints/tick in the bot's cloud environment (pattern from telegram-assistant-bot).
 #
 # Needs the repo secret TGCLOUD_TOKEN (the CLI access token from @BotFather).
 #
-# Every 15 min so alerts left over from a run (time budget, rate limit) go out soon after.
+# Every 30 min so alerts left over from a run (time budget, rate limit) go out soon after.
 # NEA, news and the forecast are fetched about once an hour, so the extra runs are cheap.
-# Cost note: on a private repo each run uses ~1 billed Actions minute, so this is ~2,900
-# min/month, over the 2,000 free minutes (public repos are free). '12 * * * *' is hourly.
+# Cost note: on a private repo each run uses ~1 billed Actions minute, so this is ~1,450
+# min/month, inside the 2,000 free minutes. Every 15 min would be ~2,900 (over the free tier).
 # GitHub may delay scheduled runs at busy times; /haze and the Mini App refetch on their own
 # when the snapshot is stale.
 name: tick
 
 on:
   schedule:
-    - cron: '12,27,42,57 * * * *' # NEA publishes ~15 min past the hour; off the congested :00 slot
+    - cron: '12,42 * * * *' # NEA publishes ~15 min past the hour; off the congested :00 slot
   workflow_dispatch:
 
 concurrency:

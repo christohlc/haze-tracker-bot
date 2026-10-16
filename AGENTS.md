@@ -21,7 +21,7 @@ in this project.
 Singapore haze bot + Mini App. User-facing overview in [README.md](README.md); visual
 and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious from the code:
 
-- **The 15-minute job is `endpoints/tick`**, run by `.github/workflows/tick.yml` (the
+- **The 30-minute job is `endpoints/tick`**, run by `.github/workflows/tick.yml` (the
   platform has no scheduler). It refreshes NEA, then sends alerts, runs the forecast and
   refreshes news in parallel.
   `tick` and `admin` call `requireCli(ctx)`: they're CLI-only, never Mini App endpoints.

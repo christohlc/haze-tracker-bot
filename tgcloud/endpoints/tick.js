@@ -1,5 +1,5 @@
 // @ts-check
-// endpoints/tick.js — the 15-minute job. Run by .github/workflows/tick.yml:
+// endpoints/tick.js — the 30-minute job. Run by .github/workflows/tick.yml:
 //   npx tgcloud run endpoints/tick            ('{"force":true}' refetches NEA and news regardless)
 // (Telegram Serverless has no built-in scheduler.) NEA and news are fetched about once an hour
 // and the forecast once per NEA hour; the extra runs are for alerts a previous run didn't reach.
