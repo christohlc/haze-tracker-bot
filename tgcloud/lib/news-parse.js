@@ -9,8 +9,12 @@ export const PUBLISHERS = {
   mothership: { name: 'Mothership', feed: 'https://mothership.sg/feed/' },
 };
 
+// The Serverless runtime has no URL global, so links are split by hand: https only,
+// host (anything before / ? #, so user@host or host:port never match), then path.
+const HTTPS_LINK = /^https:\/\/([^/?#]+)([^?#]*)/i;
+
 /** @type {Record<string, string>} */
-const HOSTS = Object.fromEntries(Object.entries(PUBLISHERS).map(([id, p]) => [id, new URL(p.feed).host]));
+const HOSTS = Object.fromEntries(Object.entries(PUBLISHERS).map(([id, p]) => [id, p.feed.match(HTTPS_LINK)?.[1] ?? '']));
 
 const KEEP_DAYS = 14;
 const MAX_ITEMS = 30;
@@ -78,13 +82,9 @@ export function isHaze(title, description = '') {
  * @param {{ source: string, link: string }} item
  */
 function storyKey(item) {
-  try {
-    const u = new URL(item.link);
-    if (u.protocol !== 'https:' || u.host !== HOSTS[item.source]) return null;
-    return `${u.host}${u.pathname.replace(/\/+$/, '')}`;
-  } catch {
-    return null;
-  }
+  const m = item.link.match(HTTPS_LINK);
+  if (!m || m[1].toLowerCase() !== HOSTS[item.source]) return null;
+  return `${m[1].toLowerCase()}${m[2].replace(/\/+$/, '')}`;
 }
 
 /**

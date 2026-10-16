@@ -96,6 +96,22 @@ test('mergeNews only keeps https links on the publisher’s own site', () => {
     item({ source: 'cna', link: 'https://www.straitstimes.com/singapore/a' }),
     item({ link: 'javascript:alert(1)' }),
     item({ link: 'not a url' }),
+    item({ link: 'https://evil.example@www.straitstimes.com.evil.example/singapore/a' }),
+    item({ link: 'https://www.straitstimes.com:8443/singapore/a' }),
+    item({ source: 'unknown', link: 'https://www.straitstimes.com/singapore/a' }),
   ];
   assert.deepEqual(mergeNews([], bad, NOW), []);
+});
+
+test('works without a URL global (the Serverless runtime has none)', async () => {
+  const saved = globalThis.URL;
+  // @ts-ignore
+  delete globalThis.URL;
+  try {
+    const m = await import('../tgcloud/lib/news-parse.js?no-url-global');
+    const [st] = m.parseFeed(ST, 'st');
+    assert.equal(m.mergeNews([], [st], Date.parse('2026-10-16T08:00:00Z')).length, 1);
+  } finally {
+    globalThis.URL = saved;
+  }
 });
