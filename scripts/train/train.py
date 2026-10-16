@@ -1,6 +1,11 @@
-"""Build the dataset, fit quantile models per horizon, backtest, export JS coefficients.
+"""Build the dataset, choose input groups, fit quantile models per horizon, backtest, export JS.
 
 Run (after fetch.py): uv run --project scripts/train python scripts/train/train.py
+
+Splits (by issue hour, UTC):
+  train        < TRAIN_END          everything up to the end of September 2026
+  calibration  TRAIN_END..TEST_START  first week of October: picks input groups, widens the range
+  test         >= TEST_START        unseen; reported in report.json, never used for any choice
 """
 
 import json
@@ -12,24 +17,37 @@ import numpy as np
 from sklearn.linear_model import QuantileRegressor
 
 from config import HORIZONS, POINTS, QUANTILES
-from features import FEATURES, GROUP_LABELS, NAMES, features
+from features import CANDIDATES, GROUP_LABELS, base, features, names_in
 
 HERE = Path(__file__).parent
 CACHE = HERE / ".cache"
 ROOT = HERE.parent.parent
 REGIONS = ["north", "west", "central", "east", "south"]
 
-TRAIN_END = datetime(2026, 9, 16, tzinfo=timezone.utc)  # includes the start of the 2026 episode
-CALIB_END = datetime(2026, 10, 1, tzinfo=timezone.utc)  # 16–30 Sep tunes the range; October is unseen
-HAZE_UG = 35  # PM2.5 above this (≈ PSI 75) counts as a haze hour for weighting
+TRAIN_END = datetime(2026, 10, 1, tzinfo=timezone.utc)
+TEST_START = datetime(2026, 10, 8, tzinfo=timezone.utc)
+HAZE_UG = 35  # current PM2.5 above this (≈ PSI 75) counts as a haze hour for weighting
+PSI100_UG = 55  # PM2.5 at PSI 100: the "haze hours" slice of the test report
 HAZE_WEIGHT = 10.0
-# Groups that beat persistence in the October 2026 ablation. "recent" (beyond the current
-# reading) and "upstream" pulled forecasts toward clean air; mixing height didn't help.
-USE_GROUPS = {"time", "cams", "wind", "rain"}
+ALL_NAMES = list(CANDIDATES)
+ALL_GROUPS = sorted({g for g, _, _ in CANDIDATES.values()})
+
+# NEA PM2.5 sub-index breakpoints. test/forecast.test.js checks these against tgcloud/lib/psi.js.
+BP = [(0, 0), (12, 50), (55, 100), (150, 200), (250, 300), (350, 400), (500, 500)]
 
 
 def hour_key(dt: datetime) -> int:
     return int(dt.timestamp()) // 3600
+
+
+def psi(pm25):
+    c = np.maximum(np.asarray(pm25, dtype=float), 0)
+    out = np.empty_like(c)
+    for i in range(1, len(BP)):
+        (c0, i0), (c1, i1) = BP[i - 1], BP[i]
+        m = (c >= c0) & ((c <= c1) | (i == len(BP) - 1))
+        out[m] = i0 + (c[m] - c0) * (i1 - i0) / (c1 - c0)
+    return np.round(out)
 
 
 def load_series():
@@ -37,35 +55,32 @@ def load_series():
     pm = {}
     for f in sorted((CACHE / "nea").glob("*.json")):
         for item in json.loads(f.read_text()):
-            vals = [item["pm25"].get(r) for r in REGIONS]
-            vals = [v for v in vals if v is not None]
+            vals = [v for v in (item["pm25"].get(r) for r in REGIONS) if v is not None]
             if vals:
                 pm[hour_key(datetime.fromisoformat(item["t"]))] = sum(vals) / len(vals)
 
-    def om(hourly, key):
-        out = {}
-        for t, v in zip(hourly["time"], hourly[key]):
-            if v is not None:
-                out[hour_key(datetime.fromisoformat(t).replace(tzinfo=timezone.utc))] = float(v)
-        return out
+    def series(hourly, key):
+        return {
+            hour_key(datetime.fromisoformat(t).replace(tzinfo=timezone.utc)): float(v)
+            for t, v in zip(hourly["time"], hourly[key])
+            if v is not None
+        }
 
-    w = json.loads((CACHE / "weather.json").read_text())["hourly"]
+    fc = json.loads((CACHE / "weather_fc.json").read_text())["hourly"]
+    era5 = json.loads((CACHE / "era5.json").read_text())["hourly"]
     weather = {
-        k: om(w, src)
-        for k, src in [
-            ("blh", "boundary_layer_height"),
-            ("ws", "wind_speed_10m"),
-            ("wd", "wind_direction_10m"),
-            ("precip", "precipitation"),
-        ]
+        "ws": series(fc, "wind_speed_10m"),
+        "wd": series(fc, "wind_direction_10m"),
+        "precip": series(fc, "precipitation"),
+        "blh": series(era5, "boundary_layer_height"),
     }
     aq_raw = json.loads((CACHE / "aq.json").read_text())
-    aq = {name: om(aq_raw[name]["hourly"], "pm2_5") for name in POINTS}
+    aq = {name: series(aq_raw[name]["hourly"], "pm2_5") for name in POINTS}
     return pm, weather, aq
 
 
 def window(t, pm, weather, aq):
-    """Raw window for issue hour t, or None if anything is missing."""
+    """Raw window for issue hour t, or None if anything is missing (training skips gaps)."""
     try:
         return {
             "pm": [pm[t - 24 + i] for i in range(25)],
@@ -78,161 +93,210 @@ def window(t, pm, weather, aq):
 
 
 def build(pm, weather, aq):
-    rows = {h: ([], [], []) for h in HORIZONS}  # X, y, t
+    """Per horizon: X (all candidates), base, target (log1p PM2.5 at t+h), issue hour."""
+    rows = {h: ([], [], [], []) for h in HORIZONS}
     for t in sorted(pm):
         raw = window(t, pm, weather, aq)
         if raw is None:
             continue
+        b = base(raw)
         for h in HORIZONS:
             target = pm.get(t + h)
             if target is None:
                 continue
-            X, y, ts = rows[h]
-            X.append(features(raw, h))
+            X, B, y, ts = rows[h]
+            X.append(features(raw, h, ALL_NAMES))
+            B.append(b)
             y.append(math.log1p(target))
             ts.append(t)
     return {h: tuple(np.array(a) for a in rows[h]) for h in HORIZONS}
 
 
-# NEA PM2.5 sub-index breakpoints — same as tgcloud/lib/psi.js
-BP = [(0, 0), (12, 50), (55, 100), (150, 200), (250, 300), (350, 400), (500, 500)]
+class Split:
+    def __init__(self, ts):
+        self.train = ts < hour_key(TRAIN_END)
+        self.calib = (ts >= hour_key(TRAIN_END)) & (ts < hour_key(TEST_START))
+        self.test = ts >= hour_key(TEST_START)
 
 
-def psi(pm25):
-    c = np.maximum(pm25, 0)
-    out = np.empty_like(c)
-    for i in range(1, len(BP)):
-        (c0, i0), (c1, i1) = BP[i - 1], BP[i]
-        m = (c >= c0) & ((c <= c1) | (i == len(BP) - 1))
-        out[m] = i0 + (c[m] - c0) * (i1 - i0) / (c1 - c0)
-    return np.round(out)
-
-
-USE = np.array([g in USE_GROUPS for _, g in FEATURES])
-
-
-def fit_horizon(X, y, ts):
-    tr = ts < hour_key(TRAIN_END)
-    ca = (ts >= hour_key(TRAIN_END)) & (ts < hour_key(CALIB_END))
-    te = ts >= hour_key(CALIB_END)
-    mu, sd = X[tr].mean(0), X[tr].std(0) + 1e-9
-    # Unused features get mean 0 / scale 1 / weight 0, so the JS side can stay generic.
-    mu = np.where(USE, mu, 0.0)
-    sd = np.where(USE, sd, 1.0)
-    Z = (X - mu) / sd
-    # Predict the change from the current reading (log space), not the level: in a mostly-clean
-    # history the level model learns "fall back to clean air", which is wrong during haze.
-    d = y - X[:, 0]
-    # Subsample clean hours for speed (consecutive hours are highly correlated); keep every haze hour.
-    haze_row = np.expm1(X[:, 0]) > HAZE_UG
-    idx = np.where(tr & (haze_row | (np.arange(len(y)) % 2 == 0)))[0]
-    weight = np.where(haze_row[idx], HAZE_WEIGHT, 1.0)
+def fit(X, B, y, split, cols, quantiles=QUANTILES):
+    """Quantile models on the change from base, haze hours weighted. Returns (mu, sd, {q: (b, w)})."""
+    tr = split.train
+    mu = X[tr][:, cols].mean(0)
+    sd = X[tr][:, cols].std(0) + 1e-9
+    Z = (X[:, cols] - mu) / sd
+    d = y - B
+    haze = np.expm1(B) > HAZE_UG
+    # Keep every haze hour; thin clean hours (consecutive hours are highly correlated).
+    idx = np.where(tr & (haze | (np.arange(len(y)) % 2 == 0)))[0]
+    weight = np.where(haze[idx], HAZE_WEIGHT, 1.0)
     models = {}
-    for q in QUANTILES:
-        m = QuantileRegressor(quantile=q, alpha=1e-4, solver="highs").fit(Z[idx][:, USE], d[idx], sample_weight=weight)
-        coef = np.zeros(X.shape[1])
-        coef[USE] = m.coef_
-        models[q] = (m.intercept_, coef)
-
-    def pred(q, Zs, rows):
-        b, w = models[q]
-        return X[rows, 0] + b + Zs @ w
-
-    # Conformalised widening (CQR) so the 10–90% band covers ~80% on unseen hours.
-    lo, hi = pred(0.1, Z[ca], ca), pred(0.9, Z[ca], ca)
-    scores = np.maximum(lo - y[ca], y[ca] - hi)
-    widen = float(np.quantile(scores, 0.8)) if ca.any() else 0.0
-
-    def evaluate(mask):
-        if not mask.any():
-            return None
-        obs = psi(np.expm1(y[mask]))
-        med = psi(np.expm1(pred(0.5, Z[mask], mask)))
-        lo_ = psi(np.expm1(pred(0.1, Z[mask], mask) - widen))
-        hi_ = psi(np.expm1(pred(0.9, Z[mask], mask) + widen))
-        persist = psi(np.expm1(X[mask][:, 0]))
-        return {
-            "n": int(mask.sum()),
-            "mae_psi": round(float(np.abs(med - obs).mean()), 2),
-            "persistence_mae_psi": round(float(np.abs(persist - obs).mean()), 2),
-            "coverage_80": round(float(((obs >= lo_) & (obs <= hi_)).mean()), 3),
-        }
-
-    haze = te & (np.expm1(X[:, 0]) > 55)  # test hours that start above PSI 100
-    report = {"calibration": evaluate(ca), "test": evaluate(te), "test_haze_hours": evaluate(haze)}
-    return {"mu": mu, "sd": sd, "models": models, "widen": widen, "median_x": np.median(X[tr], 0)}, report
+    for q in quantiles:
+        if cols:
+            m = QuantileRegressor(quantile=q, alpha=1e-4, solver="highs").fit(Z[idx], d[idx], sample_weight=weight)
+            models[q] = (float(m.intercept_), m.coef_)
+        else:
+            models[q] = (float(np.quantile(np.repeat(d[idx], weight.astype(int)), q)), np.zeros(0))
+    return mu, sd, models
 
 
-def export(fitted, reports, n_rows):
-    groups = sorted({g for _, g in FEATURES})
-    model = {
-        "version": 3,
-        "target": "delta",  # prediction = y0 + b + w·z (log1p PM2.5)
-        "trainedAt": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "trainEnd": TRAIN_END.date().isoformat(),
-        "features": NAMES,
-        "groups": {g: [i for i, (_, gg) in enumerate(FEATURES) if gg == g] for g in groups if g in USE_GROUPS},
-        "groupLabels": GROUP_LABELS,
-        "horizons": {},
-    }
-    for h, f in fitted.items():
-        model["horizons"][str(h)] = {
-            "mean": [round(float(x), 6) for x in f["mu"]],
-            "scale": [round(float(x), 6) for x in f["sd"]],
-            "typical": [round(float(x), 6) for x in f["median_x"]],
-            "widen": round(f["widen"], 6),
-            "q": {
-                str(q): {"b": round(float(b), 6), "w": [round(float(x), 6) for x in w]}
-                for q, (b, w) in f["models"].items()
-            },
-        }
-    js = (
-        "// Generated by scripts/train/train.py — do not edit by hand.\n"
-        f"// Rows per horizon: {n_rows}. Backtest: scripts/train/report.json.\n"
-        f"export const MODEL = {json.dumps(model, separators=(',', ':'))};\n"
-    )
-    out = ROOT / "tgcloud" / "lib" / "forecast" / "model.js"
-    out.write_text(js)
-    (HERE / "report.json").write_text(json.dumps(reports, indent=2) + "\n")
+def predict(X, B, cols, mu, sd, model):
+    b, w = model
+    return B + b + ((X[:, cols] - mu) / sd) @ w
 
 
-def export_parity_vectors(pm, weather, aq, fitted):
-    """A few real raw windows + expected features/predictions for the JS parity test."""
-    ts = [t for t in sorted(pm) if t >= hour_key(CALIB_END)]
-    picked = []
-    for t in ts[:: max(1, len(ts) // 6)]:
-        raw = window(t, pm, weather, aq)
-        if raw is None:
-            continue
-        exp = {}
+def mae_psi(pred_log, y):
+    return float(np.abs(psi(np.expm1(pred_log)) - psi(np.expm1(y))).mean())
+
+
+def choose_groups(data):
+    """Greedy forward selection on the calibration week: add the group that most lowers the
+    median-forecast error (summed over horizons, relative to persistence); stop when none helps."""
+    cols_of = {g: [ALL_NAMES.index(n) for n in names_in({g})] for g in ALL_GROUPS}
+
+    def score(groups):
+        total = 0.0
         for h in HORIZONS:
-            # Same rounding as the exported model, so JS and Python agree to ~1e-6.
-            f = fitted[h]
-            mu = np.round(f["mu"], 6)
-            sd = np.round(f["sd"], 6)
-            b, w = f["models"][0.5]
-            x = np.array(features(raw, h))
-            z = (x - mu) / sd
-            exp[str(h)] = {"features": x.tolist(), "q50_log": float(x[0] + round(float(b), 6) + z @ np.round(w, 6))}
-        picked.append({"raw": raw, "expected": exp})
-        if len(picked) == 3:
+            X, B, y, ts = data[h]
+            s = Split(ts)
+            cols = sorted(c for g in groups for c in cols_of[g])
+            mu, sd, models = fit(X, B, y, s, cols, quantiles=[0.5])
+            total += mae_psi(predict(X[s.calib], B[s.calib], cols, mu, sd, models[0.5]), y[s.calib]) / max(
+                mae_psi(B[s.calib], y[s.calib]), 1e-9
+            )
+        return total / len(HORIZONS)
+
+    chosen, best = [], score([])
+    trail = [{"groups": [], "relative_mae": round(best, 4)}]
+    while True:
+        trials = {g: score(chosen + [g]) for g in ALL_GROUPS if g not in chosen}
+        if not trials:
             break
-    (ROOT / "test" / "forecast-vectors.json").write_text(json.dumps(picked) + "\n")
+        g, s = min(trials.items(), key=lambda kv: kv[1])
+        if s >= best - 0.002:  # needs a real improvement, not noise
+            break
+        chosen.append(g)
+        best = s
+        trail.append({"groups": list(chosen), "relative_mae": round(s, 4)})
+        print(f"  + {g}: relative MAE {s:.4f}", flush=True)
+    return chosen, trail
+
+
+def evaluate(mask, X, B, y, cols, mu, sd, models, widen):
+    if not mask.any():
+        return None
+    obs = psi(np.expm1(y[mask]))
+    q50 = predict(X[mask], B[mask], cols, mu, sd, models[0.5])
+    # Same crossing guard as predict.js: lo ≤ median ≤ hi (widen can be negative).
+    q10 = np.minimum(predict(X[mask], B[mask], cols, mu, sd, models[0.1]) - widen, q50)
+    q90 = np.maximum(predict(X[mask], B[mask], cols, mu, sd, models[0.9]) + widen, q50)
+    med, lo, hi = (psi(np.expm1(q)) for q in (q50, q10, q90))
+    persist = psi(np.expm1(B[mask]))
+    return {
+        "n": int(mask.sum()),
+        "mae_psi": round(float(np.abs(med - obs).mean()), 2),
+        "persistence_mae_psi": round(float(np.abs(persist - obs).mean()), 2),
+        "coverage_80": round(float(((obs >= lo) & (obs <= hi)).mean()), 3),
+    }
+
+
+def needs_for(names):
+    needs = sorted({need for n in names for need in CANDIDATES[n][1]} - {"pm"})
+    return {
+        "weather": [k for k in needs if not k.startswith("aq:")],
+        "aq": [k.removeprefix("aq:") for k in needs if k.startswith("aq:")],
+    }
 
 
 def main():
     pm, weather, aq = load_series()
-    print(f"hours: pm {len(pm)}, weather {len(weather['blh'])}, aq {len(aq['sg'])}")
+    print(f"hours: pm {len(pm)}, wind {len(weather['ws'])}, aq {len(aq['sg'])}")
     data = build(pm, weather, aq)
-    fitted, reports = {}, {}
+
+    print("choosing input groups on the calibration week…")
+    groups, trail = choose_groups(data)
+    names = names_in(set(groups))
+    cols = [ALL_NAMES.index(n) for n in names]
+    print(f"groups: {groups} → {len(names)} features")
+
+    report = {"groups": groups, "selection": trail, "splits": {
+        "train_end": TRAIN_END.isoformat(), "test_start": TEST_START.isoformat()}, "horizons": {}}
+    model = {
+        "version": 4,
+        "target": "delta",  # level = base + b + w·z, in log1p(PM2.5)
+        "trainedAt": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "features": names,
+        "groups": {g: [names.index(n) for n in names_in({g})] for g in groups},
+        "groupLabels": {g: GROUP_LABELS[g] for g in groups},
+        "needs": needs_for(names),
+        # Singapore (weather) plus any air-quality points the chosen features read.
+        "points": {p: list(POINTS[p]) for p in ["sg", *needs_for(names)["aq"]]},
+        "horizons": {},
+    }
+    fitted = {}
     for h in HORIZONS:
-        X, y, ts = data[h]
-        print(f"h={h}: {len(y)} rows, fitting…", flush=True)
-        fitted[h], reports[f"+{h}h"] = fit_horizon(X, y, ts)
-        print(json.dumps(reports[f"+{h}h"]), flush=True)
-    export(fitted, reports, {h: len(data[h][1]) for h in HORIZONS})
-    export_parity_vectors(pm, weather, aq, fitted)
+        X, B, y, ts = data[h]
+        s = Split(ts)
+        mu, sd, models = fit(X, B, y, s, cols)
+        # Conformalised widening (CQR) on the calibration week, so the 10–90% band covers ~80%.
+        lo = predict(X[s.calib], B[s.calib], cols, mu, sd, models[0.1])
+        hi = predict(X[s.calib], B[s.calib], cols, mu, sd, models[0.9])
+        widen = float(np.quantile(np.maximum(lo - y[s.calib], y[s.calib] - hi), 0.8))
+        haze = np.expm1(B) > PSI100_UG
+        report["horizons"][f"+{h}h"] = {
+            "calibration": evaluate(s.calib, X, B, y, cols, mu, sd, models, widen),
+            "test": evaluate(s.test, X, B, y, cols, mu, sd, models, widen),
+            "test_haze_hours": evaluate(s.test & haze, X, B, y, cols, mu, sd, models, widen),
+        }
+        print(f"h={h}: {json.dumps(report['horizons'][f'+{h}h']['test'])}", flush=True)
+        fitted[h] = (mu, sd, models)
+        model["horizons"][str(h)] = {
+            "mean": [round(float(x), 6) for x in mu],
+            "scale": [round(float(x), 6) for x in sd],
+            "typical": [round(float(x), 6) for x in np.median(X[s.train][:, cols], 0)],
+            "widen": round(widen, 6),
+            "q": {str(q): {"b": round(b, 6), "w": [round(float(x), 6) for x in w]} for q, (b, w) in models.items()},
+        }
+
+    cover = [r["test"]["coverage_80"] for r in report["horizons"].values() if r["test"]]
+    # What the UI may honestly claim about the range: how often it held on the unseen test week.
+    model["backtest"] = {"testFrom": TEST_START.date().isoformat(), "coverage": [min(cover), max(cover)]}
+    (ROOT / "tgcloud" / "lib" / "forecast" / "model.js").write_text(
+        "// Generated by scripts/train/train.py — do not edit by hand. Backtest: scripts/train/report.json.\n"
+        f"export const MODEL = {json.dumps(model, separators=(',', ':'))};\n"
+    )
+    (HERE / "report.json").write_text(json.dumps(report, indent=2) + "\n")
+    export_parity_vectors(pm, weather, aq, model)
     print("wrote tgcloud/lib/forecast/model.js, scripts/train/report.json, test/forecast-vectors.json")
+
+
+def export_parity_vectors(pm, weather, aq, model):
+    """Real raw windows with every candidate feature and the exported model's median, plus PSI
+    samples, for the JS parity test."""
+    ts = [t for t in sorted(pm) if t >= hour_key(TRAIN_END)]
+    windows = []
+    for t in ts[:: max(1, len(ts) // 6)]:
+        raw = window(t, pm, weather, aq)
+        if raw is None:
+            continue
+        expected = {}
+        for h in HORIZONS:
+            m = model["horizons"][str(h)]
+            x = np.array(features(raw, h, model["features"]))
+            q = m["q"]["0.5"]
+            z = (x - np.array(m["mean"])) / np.array(m["scale"])
+            expected[str(h)] = {
+                "candidates": dict(zip(ALL_NAMES, features(raw, h, ALL_NAMES))),
+                "q50_log": float(base(raw) + q["b"] + z @ np.array(q["w"])),
+            }
+        windows.append({"raw": raw, "expected": expected})
+        if len(windows) == 3:
+            break
+    samples = [0, 5, 12, 13, 30, 55, 56, 100, 150, 151, 200, 250, 300, 350, 420, 500, 650]
+    (ROOT / "test" / "forecast-vectors.json").write_text(
+        json.dumps({"psi": [[c, float(psi([c])[0])] for c in samples], "windows": windows})
+        + "\n"
+    )
 
 
 if __name__ == "__main__":

@@ -12,8 +12,7 @@ export default async function (input, ctx) {
   requireCli(ctx);
   const started = Date.now();
   const snap = await refreshNea();
-  const alerts = await runAlerts(snap);
-  const forecast = await runForecast(snap);
+  const [alerts, forecast] = await Promise.all([runAlerts(snap), runForecast(snap)]);
   return {
     asOf: snap.asOf,
     psi3h: snap.worst.psi3h,

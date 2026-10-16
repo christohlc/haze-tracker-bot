@@ -4,14 +4,16 @@
 import { advice, maskCard } from './advice.js';
 import { PSI_BANDS, psiBand } from './psi.js';
 
-/** "2026-10-16T13:00:00+08:00" → "1:00 pm" (the timestamp is already in SGT). */
+/** "2026-10-16T13:00:00+08:00" → "1:00 pm" (the timestamp is already in SGT). @param {string} iso */
 export function sgtTime(iso) {
   const [h, m] = iso.slice(11, 16).split(':').map(Number);
   const h12 = h % 12 === 0 ? 12 : h % 12;
   return `${h12}:${String(m).padStart(2, '0')} ${h < 12 ? 'am' : 'pm'}`;
 }
 
+/** @param {number | null | undefined} v @param {number} [digits] */
 const n = (v, digits = 0) => (v == null ? '–' : v.toFixed(digits));
+/** @param {string | number} s @param {number} w */
 const pad = (s, w) => String(s).padStart(w);
 
 /** @param {any} snap @param {any} [forecast] */
@@ -22,7 +24,7 @@ export function formatHaze(snap, forecast) {
   const tips = advice(snap.worst.psi24h?.value ?? null, snap.worst.pm25?.value ?? null);
 
   const rows = snap.regions.map(
-    (r) => `${r.name.padEnd(8)}${pad(n(r.pm25), 6)}${pad(n(r.psi1h), 5)}${pad(n(r.psi3h), 5)}${pad(n(r.psi24h), 5)}`,
+    (/** @type {any} */ r) => `${r.name.padEnd(8)}${pad(n(r.pm25), 6)}${pad(n(r.psi1h), 5)}${pad(n(r.psi3h), 5)}${pad(n(r.psi24h), 5)}`,
   );
   const table = [`${'Region'.padEnd(8)}${pad('PM2.5', 6)}${pad('1h', 5)}${pad('3h', 5)}${pad('24h', 5)}`, ...rows].join(
     '\n',
@@ -41,14 +43,17 @@ export function formatHaze(snap, forecast) {
   if (mask) lines.push(`😷 <b>${mask.title}.</b> ${mask.text}`);
   if (tips.rightNow) lines.push(`👉 Band ${tips.rightNow.band} (${tips.rightNow.label}): ${tips.rightNow.text}`);
   if (forecast?.steps?.length) {
-    const pick = forecast.steps.filter((/** @type {any} */ s) => [1, 3, 6].includes(s.h));
-    lines.push(`📈 Island-wide 1h PSI ahead: ${pick.map((/** @type {any} */ s) => `+${s.h}h <b>${s.psi}</b>`).join(' · ')} (/forecast)`);
+    const ahead = forecast.steps.filter((/** @type {any} */ s) => [1, 3, 6].includes(s.h));
+    lines.push(`📈 Island-wide 1h PSI ahead: ${ahead.map((/** @type {any} */ s) => `+${s.h}h <b>${s.psi}</b>`).join(' · ')} (/forecast)`);
   }
   lines.push('', '<i>Not official. Check haze.gov.sg for NEA advisories.</i>');
   return lines.join('\n');
 }
 
-/** @param {ReturnType<import('./cigs.js').cigarettes>} c */
+/**
+ * @param {ReturnType<import('./cigs.js').cigarettes>} c
+ * @param {{ place: string, outdoorPct: number }} where
+ */
 export function formatCigs(c, { place, outdoorPct }) {
   return [
     `🚬 <b>${n(c.past24h, 1)}</b> cigarettes over the past 24 hours`,
@@ -80,6 +85,27 @@ export function formatBandAlert(snap, fromId, toId) {
   return lines.join('\n');
 }
 
+/**
+ * What the range has actually done on the model's held-out test week (one week of hourly
+ * readings, so a rough guide, not a guarantee).
+ * @param {{ coverage: [number, number], testFrom: string } | null | undefined} backtest
+ */
+export function coverageNote(backtest) {
+  if (!backtest) return 'The range aims to hold the reading about 8 times in 10.';
+  const [lo, hi] = backtest.coverage.map((c) => Math.round(c * 100));
+  const from = new Date(`${backtest.testFrom}T00:00:00+08:00`).toLocaleDateString('en-SG', { day: 'numeric', month: 'short' });
+  return `The range aims to hold the reading 8 times in 10; in a test week from ${from} it held ${lo === hi ? lo : `${lo}–${hi}`}% of hours.`;
+}
+
+/**
+ * The "biggest factor" sentence, or null if no input moves the forecast by a whole PSI.
+ * @param {{ label: string, delta: number } | undefined} top
+ */
+export function factorSentence(top) {
+  if (!top || Math.abs(top.delta) < 1) return null;
+  return `${top.label}, ${top.delta > 0 ? 'raising' : 'lowering'} the forecast by about ${Math.abs(top.delta)} PSI compared with a typical hour.`;
+}
+
 /** @param {any} forecast */
 export function formatForecast(forecast) {
   const rows = forecast.steps.map(
@@ -87,18 +113,14 @@ export function formatForecast(forecast) {
       `${`+${s.h}h`.padEnd(5)}${sgtTime(s.t).padStart(9)}${pad(s.psi, 6)}  ${`${s.lo}–${s.hi}`.padEnd(9)}`,
   );
   const table = [`${'When'.padEnd(5)}${'SGT'.padStart(9)}${pad('PSI', 6)}  80% range`, ...rows].join('\n');
-  const top = forecast.factors?.[0];
+  const factor = factorSentence(forecast.factors?.[0]);
   const lines = [
     `📈 <b>Haze forecast</b> · island-wide 1-hour PSI`,
     `<i>Now ${n(forecast.now)} · based on data to ${sgtTime(forecast.issuedAt)} SGT</i>`,
     '',
     `<pre>${table}</pre>`,
   ];
-  if (top && Math.abs(top.delta) >= 1) {
-    lines.push(
-      `Biggest factor for the next hour (besides current PSI): ${top.label}, ${top.delta > 0 ? 'raising' : 'lowering'} it by about ${Math.abs(top.delta)} PSI vs a typical hour.`,
-    );
-  }
-  lines.push('', '<i>Model forecast, not official. About 8 times in 10 the reading should land inside the range.</i>');
+  if (factor) lines.push(`Biggest factor for the next hour (besides the current PSI): ${factor}`);
+  lines.push('', `<i>Model forecast, not official. ${coverageNote(forecast.model?.backtest)}</i>`);
   return lines.join('\n');
 }

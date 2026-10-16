@@ -7,7 +7,7 @@
   const NAMES: Record<string, { name: string; role: string }> = {
     nea_pm25: { name: 'NEA PM2.5 readings', role: 'Hourly readings by region, history and everything calculated from PM2.5' },
     nea_psi: { name: 'NEA PSI', role: 'Official 24-hour PSI by region' },
-    openmeteo: { name: 'Open-Meteo', role: 'Weather and upstream smoke for the forecast' },
+    openmeteo: { name: 'Open-Meteo', role: 'Weather forecast inputs for the haze forecast' },
     firms: { name: 'NASA FIRMS', role: 'Satellite fire detections for the forecast' },
   };
 </script>

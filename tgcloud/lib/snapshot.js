@@ -7,6 +7,17 @@ import { meanOfLast, pm25ToPsi } from './psi.js';
 import { cigarettes } from './cigs.js';
 
 /**
+ * Mean PM2.5 over the regions that reported; null if none did. The island-wide figure, and
+ * the quantity the forecast model predicts.
+ * @param {Record<string, any> | undefined} readings region id → µg/m³ (other keys ignored)
+ * @returns {number | null}
+ */
+export function islandMean(readings) {
+  const xs = /** @type {number[]} */ (REGIONS.map((r) => readings?.[r.id]).filter((v) => v != null));
+  return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null;
+}
+
+/**
  * @param {Array<{ timestamp: string, readings: Record<string, number> }>} pm25History oldest first
  * @param {{ timestamp: string, readings: Record<string, Record<string, number>> }} psi
  */
@@ -28,18 +39,19 @@ export function buildSnapshot(pm25History, psi) {
     };
   });
 
-  const islandSeries = history.map((h) => {
-    const xs = REGIONS.map((r) => h.readings?.[r.id]).filter((v) => v != null);
-    return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null;
-  });
+  const islandSeries = history.map((h) => islandMean(h.readings));
   const island = { now: islandSeries.at(-1) ?? null, mean24h: meanOfLast(islandSeries, 24) };
 
   /** @param {'psi1h'|'psi3h'|'psi24h'|'pm25'} key */
   const worst = (key) =>
-    regions.reduce((best, r) => (r[key] != null && (best == null || r[key] > best[key]) ? r : best), null);
+    regions.reduce(
+      (/** @type {(typeof regions)[number] | null} */ best, r) =>
+        r[key] != null && (best == null || r[key] > /** @type {number} */ (best[key])) ? r : best,
+      null,
+    );
 
   return {
-    asOf: history.at(-1).timestamp,
+    asOf: history[history.length - 1].timestamp,
     psiAsOf: psi.timestamp,
     regions,
     island,
@@ -54,6 +66,7 @@ export function buildSnapshot(pm25History, psi) {
   };
 }
 
+/** @param {any} region @param {string} key */
 function pick(region, key) {
   return region ? { region: region.id, name: region.name, value: region[key] } : null;
 }

@@ -1,41 +1,53 @@
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { test } from 'node:test';
+import { pm25ToPsi } from '../tgcloud/lib/psi.js';
 
-// Vectors exported by scripts/train/train.py from real data: the JS features and median
-// prediction must match Python's, or the deployed model is not the model we backtested.
+// Exported by scripts/train/train.py from real data. If the JS features, model maths or PSI
+// breakpoints drift from Python, the deployed model isn't the one we backtested.
 const VECTORS = new URL('./forecast-vectors.json', import.meta.url);
 const MODEL_JS = new URL('../tgcloud/lib/forecast/model.js', import.meta.url);
 const ready = existsSync(VECTORS) && existsSync(MODEL_JS);
+const vectors = () => JSON.parse(readFileSync(VECTORS, 'utf8'));
 
-test('JS forecast features and predictions match Python', { skip: !ready && 'run scripts/train/train.py first' }, async () => {
-  const { features } = await import('../tgcloud/lib/forecast/features.js');
-  const { MODEL } = await import('../tgcloud/lib/forecast/model.js');
-  const vectors = JSON.parse(readFileSync(VECTORS, 'utf8'));
-  assert.ok(vectors.length > 0);
-  for (const { raw, expected } of vectors) {
+test('every candidate feature matches Python', { skip: !ready && 'run scripts/train/train.py first' }, async () => {
+  const { features, CANDIDATE_NAMES } = await import('../tgcloud/lib/forecast/features.js');
+  const { windows } = vectors();
+  assert.ok(windows.length > 0);
+  for (const { raw, expected } of windows) {
     for (const [h, exp] of Object.entries(expected)) {
-      const x = features(raw, Number(h));
-      x.forEach((v, i) => assert.ok(Math.abs(v - exp.features[i]) < 1e-9, `h=${h} feature ${MODEL.features[i]}: ${v} vs ${exp.features[i]}`));
-      const m = MODEL.horizons[h];
-      const { b, w } = m.q['0.5'];
-      const base = (MODEL.target === 'delta' ? x[0] : 0) + b;
-      const q50 = x.reduce((s, xi, i) => s + w[i] * ((xi - m.mean[i]) / m.scale[i]), base);
+      assert.deepEqual(Object.keys(exp.candidates).sort(), [...CANDIDATE_NAMES].sort(), 'same candidate set');
+      const x = features(raw, Number(h), Object.keys(exp.candidates));
+      Object.values(exp.candidates).forEach((want, i) =>
+        assert.ok(Math.abs(x[i] - want) < 1e-9, `h=${h} ${Object.keys(exp.candidates)[i]}: ${x[i]} vs ${want}`),
+      );
+    }
+  }
+});
+
+test('median prediction and PSI breakpoints match Python', { skip: !ready && 'no model yet' }, async () => {
+  const { base, features } = await import('../tgcloud/lib/forecast/features.js');
+  const { quantile } = await import('../tgcloud/lib/forecast/predict.js');
+  const { MODEL } = await import('../tgcloud/lib/forecast/model.js');
+  const { psi, windows } = vectors();
+  for (const [pm, want] of psi) assert.equal(pm25ToPsi(pm), want, `PSI at ${pm} µg/m³`);
+  for (const { raw, expected } of windows) {
+    for (const [h, exp] of Object.entries(expected)) {
+      const q50 = quantile(MODEL.horizons[h], '0.5', base(raw), features(raw, Number(h), MODEL.features));
       assert.ok(Math.abs(q50 - exp.q50_log) < 1e-6, `h=${h} q50 ${q50} vs ${exp.q50_log}`);
     }
   }
 });
 
-test('predict() returns ordered ranges and handles missing inputs', { skip: !ready && 'no model yet' }, async () => {
+test('predict() keeps lo ≤ median ≤ hi and fills missing inputs', { skip: !ready && 'no model yet' }, async () => {
   const { predict } = await import('../tgcloud/lib/forecast/predict.js');
-  const [{ raw }] = JSON.parse(readFileSync(VECTORS, 'utf8'));
+  const [{ raw }] = vectors().windows;
   const out = predict(raw);
-  assert.equal(out.steps.length, 5);
+  assert.equal(out.steps.length, Object.keys((await import('../tgcloud/lib/forecast/model.js')).MODEL.horizons).length);
   for (const s of out.steps) assert.ok(s.lo <= s.psi && s.psi <= s.hi, JSON.stringify(s));
-  assert.ok(out.factors.every((f) => f.group !== 'recent'));
 
-  const broken = { ...raw, blh: raw.blh.map(() => NaN), aq: { ...raw.aq, kalbar: raw.aq.kalbar.map(() => NaN) } };
+  const nanAll = (/** @type {number[]} */ xs) => xs.map(() => NaN);
+  const broken = { ...raw, ws: nanAll(raw.ws), precip: nanAll(raw.precip), aq: { ...raw.aq, sg: nanAll(raw.aq.sg) } };
   const out2 = predict(broken);
-  assert.ok(out2.missing > 0);
   for (const s of out2.steps) assert.ok(Number.isFinite(s.psi));
 });

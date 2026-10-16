@@ -1,34 +1,33 @@
 <script lang="ts">
+  import { coverageNote, factorSentence } from '../../tgcloud/lib/format.js';
   import { psiBand, pm25ToPsi } from '../../tgcloud/lib/psi.js';
+  import { islandMean } from '../../tgcloud/lib/snapshot.js';
+  import { toSgtIso, unixHour } from '../../tgcloud/lib/time.js';
   import type { Forecast, HourRow } from '../lib/api';
   import { sgtHour } from '../lib/format';
+  import { niceMax } from '../lib/series';
   import BandPill from './BandPill.svelte';
 
   let { forecast, history }: { forecast: Forecast; history: HourRow[] } = $props();
 
-  const REGIONS = ['north', 'west', 'central', 'east', 'south'] as const;
-  const hour = (iso: string) => Math.floor(Date.parse(iso) / 3_600_000);
-  const t0 = $derived(hour(forecast.issuedAt));
+  const t0 = $derived(unixHour(forecast.issuedAt));
 
   // Past 24h island-wide 1-hour PSI, same definition the model forecasts.
   const past = $derived(
     history
-      .map((r) => {
-        const xs = REGIONS.map((k) => r[k]).filter((v): v is number => v != null);
-        return { dh: hour(r.t) - t0, v: xs.length ? pm25ToPsi(xs.reduce((a, b) => a + b, 0) / xs.length) : null };
-      })
+      .map((r) => ({ dh: unixHour(r.t) - t0, v: pm25ToPsi(islandMean(r)) }))
       .filter((p) => p.dh >= -24 && p.dh <= 0 && p.v != null) as { dh: number; v: number }[],
   );
-  const ahead = $derived([{ dh: 0, v: forecast.now ?? past.at(-1)?.v ?? 0, lo: forecast.now ?? 0, hi: forecast.now ?? 0 }, ...forecast.steps.map((s) => ({ dh: s.h, v: s.psi, lo: s.lo, hi: s.hi }))]);
+  const nowPsi = $derived(forecast.now ?? past.at(-1)?.v ?? 0);
+  const ahead = $derived([
+    { dh: 0, v: nowPsi, lo: nowPsi, hi: nowPsi },
+    ...forecast.steps.map((s) => ({ dh: s.h, v: s.psi, lo: s.lo, hi: s.hi })),
+  ]);
 
   let width = $state(320);
   const H = 200;
   const pad = { t: 12, r: 12, b: 24, l: 34 };
-  const maxV = $derived.by(() => {
-    const m = Math.max(100, ...past.map((p) => p.v), ...ahead.map((a) => a.hi));
-    const step = m <= 150 ? 50 : 100;
-    return Math.ceil(m / step) * step;
-  });
+  const maxV = $derived(niceMax(Math.max(100, ...past.map((p) => p.v), ...ahead.map((a) => a.hi))));
   const x = (dh: number) => pad.l + ((dh + 24) / 48) * (width - pad.l - pad.r);
   const y = (v: number) => pad.t + (1 - v / maxV) * (H - pad.t - pad.b);
   const line = (pts: { dh: number; v: number }[]) => pts.map((p, i) => `${i ? 'L' : 'M'}${x(p.dh).toFixed(1)},${y(p.v).toFixed(1)}`).join('');
@@ -40,14 +39,14 @@
   );
   const yTicks = $derived([0, 0.25, 0.5, 0.75, 1].map((f) => Math.round(maxV * f)));
   const xTicks = [-24, -12, 0, 12, 24];
-  const tickLabel = (dh: number) => (dh === 0 ? 'Now' : sgtHour(new Date((t0 + dh) * 3_600_000 + 8 * 3_600_000).toISOString().slice(0, 19) + '+08:00'));
+  const tickLabel = (dh: number) => (dh === 0 ? 'Now' : sgtHour(toSgtIso((t0 + dh) * 3600)));
 
   const rangeBand = (lo: number, hi: number) => {
     const a = psiBand(lo)?.label;
     const b = psiBand(hi)?.label;
     return a === b ? a : `${a} to ${b}`;
   };
-  const top = $derived(forecast.factors[0]);
+  const factor = $derived(factorSentence(forecast.factors[0]));
   const also = $derived(forecast.factors.slice(1).filter((f) => Math.abs(f.delta) >= 1));
 </script>
 
@@ -55,7 +54,7 @@
   <h2 id="fc-title" class="section-title">Haze forecast</h2>
   <p class="note">
     Model forecast of the island-wide 1-hour PSI (mean PM2.5 of the five regions, converted with NEA’s breakpoints).
-    The range is an 80% interval: about 8 times in 10 the reading should land inside it. Not an official forecast.
+    {coverageNote(forecast.model.backtest)} Not an official forecast.
   </p>
 
   <table>
@@ -85,10 +84,9 @@
     </tbody>
   </table>
 
-  {#if top && Math.abs(top.delta) >= 1}
+  {#if factor}
     <p class="factor">
-      <b>Biggest factor for the next hour</b> (besides the current PSI): {top.label}, {top.delta > 0 ? 'raising' : 'lowering'}
-      the forecast by about {Math.abs(top.delta)} PSI compared with a typical hour.
+      <b>Biggest factor for the next hour</b> (besides the current PSI): {factor}
       {#if also.length}<span class="also">Also: {also.map((f) => `${f.label} (${f.delta > 0 ? '+' : ''}${f.delta})`).join(', ')}.</span>{/if}
     </p>
   {/if}

@@ -51,7 +51,7 @@ export interface Forecast {
   steps: ForecastStep[];
   factors: { group: string; label: string; delta: number }[];
   missingInputs: number;
-  model: { version: number; trainedAt: string };
+  model: { version: number; trainedAt: string; backtest?: { coverage: [number, number]; testFrom: string } | null };
 }
 
 export interface Dashboard {

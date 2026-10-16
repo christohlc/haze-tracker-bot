@@ -1,4 +1,4 @@
-"""Download and cache raw history: NEA hourly PM2.5, Open-Meteo weather (ERA5) and air quality.
+"""Download and cache raw history: NEA hourly PM2.5, Open-Meteo weather and air quality.
 
 Run: uv run --project scripts/train python scripts/train/fetch.py [--nea-only]
 """
@@ -27,37 +27,30 @@ def get_json(url: str, tries: int = 6):
     if GOVSG_KEY and "data.gov.sg" in url:
         headers["x-api-key"] = GOVSG_KEY
     attempt = 0
-    while attempt < tries:
-        attempt += 1
+    while True:
         try:
             with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=120) as r:
                 return json.load(r)
         except urllib.error.HTTPError as e:
             if e.code == 404:  # data.gov.sg: no data for that day
                 return {}
-            if e.code == 429:  # anonymous data.gov.sg quota: wait it out, don't give up
+            if e.code == 429:  # quota: wait it out; doesn't use up a retry
                 wait = int(e.headers.get("Retry-After") or 30)
                 print(f"  HTTP 429, waiting {wait}s", flush=True)
                 time.sleep(wait)
-                attempt -= 1  # quota waits don't use up retries
                 continue
-            if attempt == tries:
-                raise
-            wait = 2**attempt
-            print(f"  HTTP {e.code}, retry in {wait}s")
-            time.sleep(wait)
+            error = e
         except Exception as e:  # noqa: BLE001 — retry anything transient
-            if attempt == tries:
-                raise
-            wait = 2**attempt
-            print(f"  retry {attempt} in {wait}s: {e}")
-            time.sleep(wait)
+            error = e
+        attempt += 1
+        if attempt >= tries:
+            raise error
+        print(f"  retry {attempt} in {2**attempt}s: {error}", flush=True)
+        time.sleep(2**attempt)
 
 
 def nea_day(d: date):
     path = CACHE / "nea" / f"{d.isoformat()}.json"
-    if path.exists() and d < date.today() - timedelta(days=1):
-        return
     body = get_json(f"https://api-open.data.gov.sg/v2/real-time/api/pm25?date={d.isoformat()}")
     items = [
         {"t": i["timestamp"], "pm25": i["readings"]["pm25_one_hourly"]}
@@ -84,15 +77,24 @@ def fetch_nea():
 
 
 def fetch_weather():
+    """Wind and rain as forecasts (what the live bot sees). Mixing height only exists as ERA5
+    reanalysis, so a model that picks it is trained on observed values but run on forecasts."""
     lat, lon = POINTS["sg"]
-    end = date.today().isoformat()
-    url = (
-        "https://archive-api.open-meteo.com/v1/archive"
-        f"?latitude={lat}&longitude={lon}&start_date={START}&end_date={end}"
-        "&hourly=boundary_layer_height,wind_speed_10m,wind_direction_10m,precipitation,relative_humidity_2m"
+    end = (date.today() + timedelta(days=1)).isoformat()
+    print("Open-Meteo weather (historical forecasts)")
+    fc = get_json(
+        "https://historical-forecast-api.open-meteo.com/v1/forecast"
+        f"?latitude={lat}&longitude={lon}&start_date={START}&end_date={end}&timezone=GMT"
+        "&hourly=wind_speed_10m,wind_direction_10m,precipitation"
     )
-    print("Open-Meteo weather (ERA5)")
-    (CACHE / "weather.json").write_text(json.dumps(get_json(url)))
+    (CACHE / "weather_fc.json").write_text(json.dumps(fc))
+    print("Open-Meteo mixing height (ERA5)")
+    era5 = get_json(
+        "https://archive-api.open-meteo.com/v1/archive"
+        f"?latitude={lat}&longitude={lon}&start_date={START}&end_date={date.today().isoformat()}"
+        "&hourly=boundary_layer_height"
+    )
+    (CACHE / "era5.json").write_text(json.dumps(era5))
 
 
 def fetch_aq():

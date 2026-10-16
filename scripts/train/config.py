@@ -1,4 +1,4 @@
-"""Shared constants. Points and feature definitions must match tgcloud/lib/forecast/*.js."""
+"""Shared constants for training. train.py writes the points a model needs into model.js."""
 
 START = "2022-09-01"  # Open-Meteo air-quality history begins around here
 

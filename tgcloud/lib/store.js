@@ -4,6 +4,7 @@
 import { db } from 'sdk';
 import { desc, eq, gte } from 'sdk/db';
 import { readings, settings, sourceStatus, state } from '../schema.js';
+import { toSgtIso } from './time.js';
 
 const nowSec = () => Math.floor(Date.now() / 1000);
 
@@ -57,10 +58,7 @@ export async function countReadings() {
   return db.$count(readings);
 }
 
-/** unix seconds → "2026-10-16T13:00:00+08:00" */
-export function toSgtIso(sec) {
-  return `${new Date(sec * 1000 + 8 * 3600_000).toISOString().slice(0, 19)}+08:00`;
-}
+export { toSgtIso } from './time.js';
 
 export async function recordSource(source, result) {
   const at = nowSec();

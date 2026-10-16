@@ -6,7 +6,7 @@ import { cigarettes } from '../lib/cigs.js';
 import { renderAlertSettings } from '../lib/alert-settings.js';
 import { dashboardButton } from '../lib/buttons.js';
 import { REGIONS } from '../lib/config.js';
-import { getForecast } from '../lib/forecast/run.js';
+import { getCurrentForecast } from '../lib/forecast/run.js';
 import { formatCigs, formatForecast, formatHaze } from '../lib/format.js';
 import { getSnapshot } from '../lib/refresh.js';
 import { deleteSubscriber, getSubscriber, saveSubscriber } from '../lib/subscriptions.js';
@@ -36,13 +36,12 @@ export default async function (message) {
       return reply(message, HELP, dashboardButton(message.chat.id));
     case 'haze': {
       const snap = await getSnapshot();
-      const fc = await getForecast();
-      return reply(message, formatHaze(snap, fc?.issuedAt === snap.asOf ? fc : null), dashboardButton(message.chat.id));
+      return reply(message, formatHaze(snap, await getCurrentForecast(snap)), dashboardButton(message.chat.id));
     }
     case 'forecast': {
-      const fc = await getForecast();
-      if (!fc) return reply(message, 'The forecast isn’t ready yet. It updates every hour.');
-      return reply(message, formatForecast(fc), dashboardButton(message.chat.id));
+      const forecast = await getCurrentForecast(await getSnapshot());
+      if (!forecast) return reply(message, 'The forecast for the latest reading isn’t ready yet. It updates every hour.');
+      return reply(message, formatForecast(forecast), dashboardButton(message.chat.id));
     }
     case 'cigs': {
       const { regionId, outdoorPct } = parseCigsArgs(args);
