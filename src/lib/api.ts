@@ -72,6 +72,37 @@ export interface Dashboard {
   serverTime: number;
 }
 
+export interface Camera {
+  id: string;
+  name: string;
+  region: RegionId | null;
+  image: string;
+  takenAt: string;
+}
+
+export interface CamerasResult {
+  /** Null until the feed has answered once. */
+  cameras: Camera[] | null;
+  serverTime: number;
+}
+
+export async function loadCameras(): Promise<CamerasResult> {
+  if (inTelegram) return callEndpoint<CamerasResult>('getCameras');
+  if (import.meta.env.DEV) {
+    // Dev-only: follows ?demo= (worst | empty), plus ?cams=error | loading, since ?demo=error hides the cards.
+    const q = new URLSearchParams(location.search);
+    const cams = q.get('cams');
+    if (cams === 'error') throw new Error('Couldn’t load the camera pictures.');
+    if (cams === 'loading') return new Promise(() => {});
+    const dev = await import('../dev/cameras');
+    const demo = q.get('demo');
+    if (demo === 'worst') return dev.worstCameras();
+    if (demo === 'empty') return { cameras: [], serverTime: Date.now() };
+    return dev.demoCameras();
+  }
+  throw new Error('Open this dashboard from the bot in Telegram.');
+}
+
 export async function loadDashboard(): Promise<Dashboard> {
   if (inTelegram) return callEndpoint<Dashboard>('getDashboard');
   if (import.meta.env.DEV) {

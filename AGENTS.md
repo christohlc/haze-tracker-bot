@@ -36,15 +36,18 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   `tgcloud run` isn't documented; tune `BUDGET_MS` in `lib/alerts.js`. Pacing needs
   `setTimeout`: the tick's `alerts.paced` says whether the runtime has it (if not, batches run
   back to back and a 429 ends the run).
+- **Camera pictures (`endpoints/getCameras`) are fetched only when the Mini App asks**, cached
+  for 60 s in `state('cameras')`, never by the tick. Since 30 June 2026 LTA runs only the 8
+  checkpoint and Sentosa cameras; names come from `CAMERAS` in `lib/cameras-parse.js`.
 - **Open-Meteo is tried at most once per 5 min per NEA hour** (`forecast_attempt` state), since
   /haze and the Mini App can trigger a forecast run.
 - **Some `tgcloud/lib/` modules are shared with the front-end and tests**
   (`psi`, `cigs`, `advice`, `alert-settings`, `alert-rules`, `format`, `snapshot`,
-  `forecast/features|predict|model`, `news-parse`,
+  `forecast/features|predict|model`, `news-parse`, `cameras-parse`,
   `card/geometry|png|raster|summary|glyphs|art`). Keep these pure: no `sdk` import, no DB, so
   Vite and `node --test` can load them. Modules that touch `sdk`, directly or via `store`, are
   `store`, `nea`, `refresh`, `alerts`, `subscriptions`, `cli-only`, `forecast/inputs`,
-  `forecast/run`, `news`, `bot-errors`, `messages`, `card/send`.
+  `forecast/run`, `news`, `cameras`, `bot-errors`, `messages`, `card/send`.
 - **The summary picture (`tgcloud/lib/card/`) is drawn in plain JS**: the runtime has no canvas,
   fonts or zlib, so `png.js` has its own deflate and `glyphs.js` / `art.js` are pre-rendered
   bitmaps **generated** by `npm run card:assets` (fonts in `scripts/card/fonts/`, island outline

@@ -15,6 +15,12 @@ export const CHANGELOG: ChangelogEntry[] = [
     body: 'Every region’s 24-hour PSI and 1-hour PM2.5 on one map, ready to send to a chat. /haze and the alerts now come with it too.',
   },
   {
+    id: '2026-10-16-live-views',
+    date: '2026-10-16',
+    title: 'See the haze for yourself',
+    body: 'Live pictures from the road cameras at Woodlands, Tuas and Sentosa, plus satellite pictures of the smoke and a map of fire hotspots around the region.',
+  },
+  {
     id: '2026-10-16-privacy',
     date: '2026-10-16',
     title: 'Know what we keep',
