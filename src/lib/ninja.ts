@@ -17,13 +17,12 @@
 //   USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 // Everything is drawn and simulated in this logical space; the canvas is scaled to fit.
-export const LOGW = 360;
-export const LOGH = 480;
+const LOGW = 360;
+const LOGH = 480;
 export const ARCADE_TIME = 60; // seconds; the clock is the only way a run ends
 
 const GRAVITY = 900; // px/s²
 const HAZE_PENALTY = 10; // points lost for slicing a haze cloud
-const GOLD_POINTS = 3;
 const COMBO_WINDOW = 0.45; // s; slices this close together stack a combo
 const TRAIL_LIFE = 0.14; // s a blade point lingers
 const MIN_SLICE_LEN = 5; // logical px; shorter moves (taps) don't slice
@@ -46,7 +45,6 @@ const CLOUD_FACE = '#45413a';
 export interface Theme {
   font: string;
   card: string;
-  ink: string;
   accent: string;
   haze: string;
   critical: string;
@@ -59,14 +57,21 @@ export function readTheme(el: Element = document.documentElement): Theme {
   return {
     font: v('--font-display'),
     card: v('--card'),
-    ink: v('--ink'),
     accent: v('--accent'),
     haze: v('--brand-haze'),
     critical: v('--status-critical'),
   };
 }
 
-export type Kind = 'nut' | 'gold' | 'haze';
+type Kind = 'nut' | 'gold' | 'haze';
+
+// What differs between the kinds, apart from how they're drawn. Haze has no points: slicing it
+// costs HAZE_PENALTY instead.
+const KINDS: Record<Kind, { r: [number, number]; points: number; chips: string[] }> = {
+  nut: { r: [23, 29], points: 1, chips: [SHELL[1]!, KERNEL, SHELL[2]!] },
+  gold: { r: [18, 22], points: 3, chips: [GOLD[1]!, KERNEL] },
+  haze: { r: [26, 31], points: 0, chips: CLOUD },
+};
 
 interface Item {
   x: number;
@@ -87,7 +92,7 @@ interface Half {
   vx: number;
   vy: number;
   r: number;
-  gold: boolean;
+  kind: Kind;
   rot: number;
   vrot: number;
   cut: number; // slice angle in the nut's own frame; orients the flat edge
@@ -104,7 +109,7 @@ interface Particle {
   color: string;
   life: number;
   maxLife: number;
-  grow: number; // haze puffs swell as they fade; shell chips shrink
+  puff: boolean; // haze puffs swell as they fade; shell chips shrink
 }
 
 interface FloatText {
@@ -157,7 +162,7 @@ function initState(): State {
 }
 
 /** Shortest distance from point (px,py) to segment (ax,ay)-(bx,by). */
-export function segPointDist(ax: number, ay: number, bx: number, by: number, px: number, py: number) {
+function segPointDist(ax: number, ay: number, bx: number, by: number, px: number, py: number) {
   const dx = bx - ax;
   const dy = by - ay;
   const len2 = dx * dx + dy * dy;
@@ -197,7 +202,7 @@ export function createGame(canvas: HTMLCanvasElement, events: GameEvents, theme:
   // ---------------------------------------------------------------- spawning
 
   const spawn = (kind: Kind) => {
-    const r = kind === 'gold' ? rand(18, 22) : kind === 'haze' ? rand(26, 31) : rand(23, 29);
+    const r = rand(...KINDS[kind].r);
     const x = rand(60, LOGW - 60);
     const apex = LOGH * rand(0.62, 0.92) * (reduce ? 0.82 : 1);
     gs.items.push({
@@ -234,20 +239,22 @@ export function createGame(canvas: HTMLCanvasElement, events: GameEvents, theme:
 
   // ---------------------------------------------------------------- slicing
 
-  const burst = (x: number, y: number, colors: string[], count: number, haze: boolean) => {
+  const burst = (f: Item, count: number) => {
+    const puff = f.kind === 'haze';
+    const colors = KINDS[f.kind].chips;
     for (let i = 0; i < count; i++) {
       const a = rand(0, Math.PI * 2);
-      const sp = haze ? rand(20, 110) : rand(40, 240);
+      const sp = puff ? rand(20, 110) : rand(40, 240);
       gs.particles.push({
-        x,
-        y,
+        x: f.x,
+        y: f.y,
         vx: Math.cos(a) * sp,
         vy: Math.sin(a) * sp - 60,
-        r: haze ? rand(6, 12) : rand(2, 4.5),
+        r: puff ? rand(6, 12) : rand(2, 4.5),
         color: colors[i % colors.length]!,
         life: 0,
-        maxLife: haze ? rand(0.6, 1.1) : rand(0.4, 0.85),
-        grow: haze ? 1 : 0,
+        maxLife: puff ? rand(0.6, 1.1) : rand(0.4, 0.85),
+        puff,
       });
     }
   };
@@ -267,21 +274,21 @@ export function createGame(canvas: HTMLCanvasElement, events: GameEvents, theme:
       gs.comboTimer = 0;
       gs.fog = FOG_TIME;
       events.onScore(gs.score);
-      burst(f.x, f.y, CLOUD, reduce ? 6 : 16, true);
+      burst(f, reduce ? 6 : 16);
       float(f.x, f.y - f.r, `−${HAZE_PENALTY}`, theme.critical, 22);
       return;
     }
 
     gs.combo = gs.comboTimer > 0 ? gs.combo + 1 : 1;
     gs.comboTimer = COMBO_WINDOW;
-    const base = f.kind === 'gold' ? GOLD_POINTS : 1;
-    gs.score += base + (gs.combo >= 2 ? 1 : 0);
+    const points = KINDS[f.kind].points;
+    gs.score += points + (gs.combo >= 2 ? 1 : 0);
     events.onScore(gs.score);
 
     if (gs.combo >= 2) {
       float(f.x, f.y - f.r, `Combo ×${gs.combo}`, theme.accent, Math.min(16 + gs.combo * 2, 30));
-    } else if (f.kind === 'gold') {
-      float(f.x, f.y - f.r, `+${GOLD_POINTS}`, theme.haze, 22);
+    } else if (points > 1) {
+      float(f.x, f.y - f.r, `+${points}`, theme.haze, 22);
     }
 
     // The halves fly apart across the blade.
@@ -296,7 +303,7 @@ export function createGame(canvas: HTMLCanvasElement, events: GameEvents, theme:
         vx: f.vx * 0.4 + px * kick * side,
         vy: f.vy * 0.4 + py * kick * side - 40,
         r: f.r,
-        gold: f.kind === 'gold',
+        kind: f.kind,
         rot: f.rot,
         vrot: f.vrot + side * rand(1, 4),
         cut: cut - f.rot,
@@ -304,8 +311,7 @@ export function createGame(canvas: HTMLCanvasElement, events: GameEvents, theme:
         life: 0,
       });
     }
-    const colors = f.kind === 'gold' ? [GOLD[1]!, KERNEL] : [SHELL[1]!, KERNEL, SHELL[2]!];
-    burst(f.x, f.y, colors, reduce ? 5 : 12, false);
+    burst(f, reduce ? 5 : 12);
   };
 
   const sliceAlong = (ax: number, ay: number, bx: number, by: number) => {
@@ -360,8 +366,8 @@ export function createGame(canvas: HTMLCanvasElement, events: GameEvents, theme:
     gs.halves = gs.halves.filter((h) => h.y - h.r <= LOGH + 40);
 
     for (const p of gs.particles) {
-      p.vy += GRAVITY * (p.grow ? 0.05 : 0.6) * dt;
-      p.vx *= p.grow ? 0.96 : 1;
+      p.vy += GRAVITY * (p.puff ? 0.05 : 0.6) * dt;
+      p.vx *= p.puff ? 0.96 : 1;
       p.x += p.vx * dt;
       p.y += p.vy * dt;
       p.life += dt;
@@ -388,15 +394,23 @@ export function createGame(canvas: HTMLCanvasElement, events: GameEvents, theme:
     ctx.closePath();
   };
 
-  const drawShell = (r: number, gold: boolean) => {
-    const g = ctx.createRadialGradient(-0.3 * r, -0.4 * r, 0, -0.3 * r, -0.4 * r, 1.5 * r);
-    const c = gold ? GOLD : SHELL;
+  // Shell shading at unit radius, built once and scaled per nut rather than every frame.
+  const shading = (c: string[]) => {
+    const g = ctx.createRadialGradient(-0.3, -0.4, 0, -0.3, -0.4, 1.5);
     g.addColorStop(0, c[0]!);
     g.addColorStop(0.6, c[1]!);
     g.addColorStop(1, c[2]!);
-    nutPath(r);
-    ctx.fillStyle = g;
+    return g;
+  };
+  const SHADING = { nut: shading(SHELL), gold: shading(GOLD) };
+
+  const drawShell = (r: number, gold: boolean) => {
+    ctx.save();
+    ctx.scale(r, r);
+    nutPath(1);
+    ctx.fillStyle = gold ? SHADING.gold : SHADING.nut;
     ctx.fill();
+    ctx.restore();
 
     ctx.save();
     nutPath(r);
@@ -505,7 +519,7 @@ export function createGame(canvas: HTMLCanvasElement, events: GameEvents, theme:
     ctx.rect(-2 * r, h.side === 1 ? 0 : -2 * r, 4 * r, 2 * r);
     ctx.rotate(-h.cut);
     ctx.clip();
-    drawShell(r, h.gold);
+    drawShell(r, h.kind === 'gold');
     nutPath(r * 0.78);
     ctx.fillStyle = KERNEL;
     ctx.fill();
@@ -525,41 +539,42 @@ export function createGame(canvas: HTMLCanvasElement, events: GameEvents, theme:
       const p1 = trail[i]!;
       const a = 1 - p1.age / TRAIL_LIFE;
       if (a <= 0) continue;
-      ctx.strokeStyle = theme.accent;
-      ctx.globalAlpha = a * 0.55;
-      ctx.lineWidth = 14 * a + 2;
-      ctx.beginPath();
-      ctx.moveTo(p0.x, p0.y);
-      ctx.lineTo(p1.x, p1.y);
-      ctx.stroke();
-      ctx.strokeStyle = theme.card;
-      ctx.globalAlpha = a * 0.9;
-      ctx.lineWidth = 5 * a + 1;
-      ctx.beginPath();
-      ctx.moveTo(p0.x, p0.y);
-      ctx.lineTo(p1.x, p1.y);
-      ctx.stroke();
+      // An accent glow with a thin card-coloured edge down the middle.
+      for (const [color, alpha, width, min] of [[theme.accent, 0.55, 14, 2], [theme.card, 0.9, 5, 1]] as const) {
+        ctx.strokeStyle = color;
+        ctx.globalAlpha = a * alpha;
+        ctx.lineWidth = width * a + min;
+        ctx.beginPath();
+        ctx.moveTo(p0.x, p0.y);
+        ctx.lineTo(p1.x, p1.y);
+        ctx.stroke();
+      }
     }
     ctx.globalAlpha = 1;
   };
 
+  // A low band of haze along the bottom of the field; only the theme changes it.
+  const hazeBand = () => {
+    const g = ctx.createLinearGradient(0, LOGH * 0.55, 0, LOGH);
+    g.addColorStop(0, theme.card);
+    g.addColorStop(1, theme.haze);
+    return g;
+  };
+  let sky = hazeBand();
+
   const draw = () => {
     ctx.fillStyle = theme.card;
     ctx.fillRect(0, 0, LOGW, LOGH);
-    // A low band of haze along the bottom of the field.
-    const sky = ctx.createLinearGradient(0, LOGH * 0.55, 0, LOGH);
-    sky.addColorStop(0, theme.card);
-    sky.addColorStop(1, theme.haze);
     ctx.globalAlpha = 0.22;
     ctx.fillStyle = sky;
     ctx.fillRect(0, LOGH * 0.55, LOGW, LOGH * 0.45);
 
     for (const p of gs.particles) {
       const a = Math.max(0, 1 - p.life / p.maxLife);
-      ctx.globalAlpha = p.grow ? a * 0.7 : a;
+      ctx.globalAlpha = p.puff ? a * 0.7 : a;
       ctx.fillStyle = p.color;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, p.grow ? p.r * (1 + (1 - a) * 1.5) : p.r * a, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, p.puff ? p.r * (1 + (1 - a) * 1.5) : p.r * a, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.globalAlpha = 1;
@@ -657,6 +672,7 @@ export function createGame(canvas: HTMLCanvasElement, events: GameEvents, theme:
     },
     setTheme(t) {
       theme = t;
+      sky = hazeBand();
     },
     setReducedMotion(r) {
       reduce = r;
@@ -666,7 +682,7 @@ export function createGame(canvas: HTMLCanvasElement, events: GameEvents, theme:
       canvas.width = Math.max(1, Math.round(width * dpr));
       canvas.height = Math.max(1, Math.round(height * dpr));
       // Separate x and y scales, so rounding never leaves a strip undrawn.
-      ctx.setTransform((canvas.width / LOGW), 0, 0, canvas.height / LOGH, 0, 0);
+      ctx.setTransform(canvas.width / LOGW, 0, 0, canvas.height / LOGH, 0, 0);
       draw();
     },
     destroy() {

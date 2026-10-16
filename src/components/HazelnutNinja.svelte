@@ -90,10 +90,7 @@
     };
     window.addEventListener('keydown', onKey);
 
-    // The page behind stays put, and a downward swipe slices instead of closing the Mini App.
-    const root = document.documentElement;
-    const overflow = root.style.overflow;
-    root.style.overflow = 'hidden';
+    // A downward swipe slices instead of closing the Mini App.
     const unlockSwipes = lockVerticalSwipes();
     startButton?.focus({ preventScroll: true });
 
@@ -104,7 +101,6 @@
       motion.removeEventListener('change', onMotion);
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('keydown', onKey);
-      root.style.overflow = overflow;
       unlockSwipes();
       opener?.focus({ preventScroll: true });
     };
