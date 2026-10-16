@@ -106,11 +106,14 @@ test('legend ranges come from the band tables', () => {
 });
 
 test('captions fit Telegram’s 1,024-character limit', () => {
-  const forecast = { steps: [1, 3, 6].map((h) => ({ h, psi: 999 })) };
+  const ahead = {
+    outlook: { text: 'High Very Unhealthy to Hazardous', from: 'very_unhealthy', to: 'hazardous', forDate: '2099-01-01', issuedAt: '2026-10-16T18:19:00+08:00' },
+    range: null,
+  };
   // The Mini App's snapshots leave out the cigarette numbers; the bot's have them.
   const cigs = { past24h: 999.9, lastHour: 99.99, perDayAtCurrent: 999.9 };
   for (const snap of [fixture, worst].map((s) => ({ ...s, cigs }))) {
-    const daily = `☀️ <b>Daily haze update</b>\n\n${formatHazeCaption(snap, forecast)}`;
+    const daily = `☀️ <b>Daily haze update</b>\n\n${formatHazeCaption(snap, ahead)}`;
     assert.ok(daily.length <= 1024, `daily caption is ${daily.length}`);
     assert.ok(!daily.includes('<pre>'), 'the picture replaces the table');
     assert.ok(formatBandAlert(snap, 'good', 'hazardous').length <= 1024);

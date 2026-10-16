@@ -22,3 +22,13 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 export function sgtDayMonth(ymd) {
   return `${Number(ymd.slice(8, 10))} ${MONTHS[Number(ymd.slice(5, 7)) - 1]}`;
 }
+
+/** Today's date in SGT, "2026-10-16". @param {number} [now] ms */
+export const sgtToday = (now = Date.now()) => new Date(now + 8 * 3600_000).toISOString().slice(0, 10);
+
+/** "today" or "tomorrow" for an SGT date, else "on 18 Oct". @param {string} ymd @param {number} [now] ms */
+export function sgtDayName(ymd, now = Date.now()) {
+  if (ymd === sgtToday(now)) return 'today';
+  if (ymd === sgtToday(now + 86_400_000)) return 'tomorrow';
+  return `on ${sgtDayMonth(ymd)}`;
+}

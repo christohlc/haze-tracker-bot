@@ -1,9 +1,15 @@
 <script lang="ts">
-  import { psiBand } from '../../tgcloud/lib/psi.js';
+  import { PSI_BANDS, psiBand } from '../../tgcloud/lib/psi.js';
 
-  let { value, showLabel = false, size = 'sm' }: { value: number | null; showLabel?: boolean; size?: 'sm' | 'lg' } =
-    $props();
-  const band = $derived(psiBand(value));
+  // A band id (NEA's outlook gives bands, not numbers) always shows its label.
+  let {
+    value = null,
+    bandId = null,
+    showLabel = false,
+    size = 'sm',
+  }: { value?: number | null; bandId?: string | null; showLabel?: boolean; size?: 'sm' | 'lg' } = $props();
+  const band = $derived(bandId ? (PSI_BANDS.find((b) => b.id === bandId) ?? null) : psiBand(value));
+  const label = $derived(showLabel || bandId != null);
 </script>
 
 {#if band}
@@ -13,8 +19,8 @@
     style:color="var(--band-{band.id}-ink)"
     title={band.label}
   >
-    {showLabel ? band.label : value}
-    {#if !showLabel}<span class="visually-hidden">, {band.label}</span>{/if}
+    {label ? band.label : value}
+    {#if !label}<span class="visually-hidden">, {band.label}</span>{/if}
   </span>
 {:else}
   <span class="pill empty {size}">–</span>

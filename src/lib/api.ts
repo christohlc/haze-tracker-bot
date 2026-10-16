@@ -38,21 +38,13 @@ export interface SourceStatus {
   detail: string | null;
 }
 
-export interface ForecastStep {
-  h: number;
-  t: string;
-  psi: number;
-  lo: number;
-  hi: number;
-}
+export type Outlook = import('../../tgcloud/lib/outlook-parse.js').Outlook;
+export type Range = import('../../tgcloud/lib/range.js').Range;
 
-export interface Forecast {
-  issuedAt: string;
-  now: number | null;
-  steps: ForecastStep[];
-  factors: { group: string; label: string; delta: number }[];
-  missingInputs: number;
-  model: { version: number; trainedAt: string; backtest?: { coverage: [number, number]; testFrom: string } | null };
+/** NEA's 24-hr PSI forecast (only during haze episodes) and our range for the next few hours. */
+export interface Ahead {
+  outlook: Outlook | null;
+  range: Range | null;
 }
 
 export interface NewsItem {
@@ -66,7 +58,7 @@ export interface Dashboard {
   snapshot: Snapshot;
   history: HourRow[];
   sources: SourceStatus[];
-  forecast?: Forecast | null;
+  ahead?: Ahead | null;
   /** Haze headlines, newest first; null until the hourly job has fetched them once. */
   news?: NewsItem[] | null;
   serverTime: number;
@@ -143,11 +135,21 @@ export async function loadDashboard(): Promise<Dashboard> {
   if (import.meta.env.DEV) {
     // Dev-only data switch (see DevDataToggle): ?demo=worst | empty | error | loading
     const demo = new URLSearchParams(location.search).get('demo');
-    if (demo === 'worst') return (await import('../dev/worst')).worstCase();
-    if (demo === 'empty') return (await import('../dev/worst')).emptyCase();
     if (demo === 'error') throw new Error('Couldn’t reach the haze service. Check your connection and try again.');
     if (demo === 'loading') return new Promise(() => {});
-    return (await import('../dev/fixture.json')).default as Dashboard;
+    const data =
+      demo === 'worst'
+        ? (await import('../dev/worst')).worstCase()
+        : demo === 'empty'
+          ? (await import('../dev/worst')).emptyCase()
+          : ({ ...(await import('../dev/fixture.json')).default } as Dashboard);
+    // ?card=ahead:range (no NEA forecast, as outside a haze episode) | outlook (no range yet)
+    const { state } = await devQuery('ahead', '');
+    const dev = await import('../dev/ahead');
+    data.ahead = demo === 'empty' ? null : demo === 'worst' ? dev.worstAhead() : dev.demoAhead(data);
+    if (data.ahead && state === 'range') data.ahead = { ...data.ahead, outlook: null };
+    if (data.ahead && state === 'outlook') data.ahead = { ...data.ahead, range: null };
+    return data;
   }
   throw new Error('Open this dashboard from the bot in Telegram.');
 }

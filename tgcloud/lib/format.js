@@ -3,7 +3,7 @@
 
 import { advice, maskCard } from './advice.js';
 import { PSI_BANDS, psiBand } from './psi.js';
-import { sgtHour } from './time.js';
+import { sgtDayMonth, sgtDayName, sgtHour } from './time.js';
 
 /** "2026-10-16T13:00:00+08:00" → "1:00 pm" (the timestamp is already in SGT). @param {string} iso */
 export const sgtTime = (iso) => sgtHour(iso, true);
@@ -24,9 +24,9 @@ function regionTable(snap) {
 /**
  * The /haze and daily-update text. With `table: false` it's the caption under the summary card,
  * which already shows each region's readings (photo captions are capped at 1,024 characters).
- * @param {any} snap @param {any} [forecast] @param {{ table?: boolean }} [opts]
+ * @param {any} snap @param {import('./ahead.js').Ahead | null} [ahead] @param {{ table?: boolean }} [opts]
  */
-export function formatHaze(snap, forecast, { table = true } = {}) {
+export function formatHaze(snap, ahead, { table = true } = {}) {
   const head = snap.worst.psi3h;
   const band = psiBand(head?.value);
   const mask = maskCard(head?.value);
@@ -45,16 +45,15 @@ export function formatHaze(snap, forecast, { table = true } = {}) {
   ];
   if (mask) lines.push(`😷 <b>${mask.title}.</b> ${mask.text}`);
   if (tips.rightNow) lines.push(`👉 Band ${tips.rightNow.band} (${tips.rightNow.label}): ${tips.rightNow.text}`);
-  if (forecast?.steps?.length) {
-    const ahead = forecast.steps.filter((/** @type {any} */ s) => [1, 3, 6].includes(s.h));
-    lines.push(`📈 Island-wide 1h PSI ahead: ${ahead.map((/** @type {any} */ s) => `+${s.h}h <b>${s.psi}</b>`).join(' · ')} (/forecast)`);
-  }
+  const soon = ahead?.range?.steps.find((s) => s.h === 3);
+  if (ahead?.outlook) lines.push(`📅 ${outlookLine(ahead.outlook)} (/forecast)`);
+  else if (soon) lines.push(`📈 Island-wide 1h PSI in 3 hours: likely <b>${soon.lo}–${soon.hi}</b>, our calculation (/forecast)`);
   lines.push('', '<i>Not official. Check haze.gov.sg for NEA advisories.</i>');
   return lines.join('\n');
 }
 
-/** Caption for the summary card. @param {any} snap @param {any} [forecast] */
-export const formatHazeCaption = (snap, forecast) => formatHaze(snap, forecast, { table: false });
+/** Caption for the summary card. @param {any} snap @param {import('./ahead.js').Ahead | null} [ahead] */
+export const formatHazeCaption = (snap, ahead) => formatHaze(snap, ahead, { table: false });
 
 /** Short caption for a card shared from the Mini App into another chat. @param {any} snap */
 export function formatShareCaption(snap) {
@@ -98,42 +97,24 @@ export function formatBandAlert(snap, fromId, toId) {
   return lines.join('\n');
 }
 
-/**
- * What the range has actually done on the model's held-out test week (one week of hourly
- * readings, so a rough guide, not a guarantee).
- * @param {{ coverage: [number, number], testFrom: string } | null | undefined} backtest
- */
-export function coverageNote(backtest) {
-  if (!backtest) return 'The range aims to hold the reading about 8 times in 10.';
-  const [lo, hi] = backtest.coverage.map((c) => Math.round(c * 100));
-  const from = new Date(`${backtest.testFrom}T00:00:00+08:00`).toLocaleDateString('en-SG', { day: 'numeric', month: 'short' });
-  return `The range aims to hold the reading 8 times in 10; in a test week from ${from} it held ${lo === hi ? lo : `${lo}–${hi}`}% of hours.`;
-}
+/** "NEA’s 24-hr PSI forecast for tomorrow: <b>Unhealthy to Low Very Unhealthy</b>" @param {import('./outlook-parse.js').Outlook} o */
+const outlookLine = (o) => `NEA’s 24-hr PSI forecast for ${sgtDayName(o.forDate)}: <b>${escapeHtml(o.text)}</b>`;
 
-/**
- * The "biggest factor" sentence, or null if no input moves the forecast by a whole PSI.
- * @param {{ label: string, delta: number } | undefined} top
- */
-export function factorSentence(top) {
-  if (!top || Math.abs(top.delta) < 1) return null;
-  return `${top.label}, ${top.delta > 0 ? 'raising' : 'lowering'} the forecast by about ${Math.abs(top.delta)} PSI compared with a typical hour.`;
-}
+/** @param {string} s */
+const escapeHtml = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-/** @param {any} forecast */
-export function formatForecast(forecast) {
-  const rows = forecast.steps.map(
-    (/** @type {any} */ s) =>
-      `${`+${s.h}h`.padEnd(5)}${sgtTime(s.t).padStart(9)}${pad(s.psi, 6)}  ${`${s.lo}–${s.hi}`.padEnd(9)}`,
-  );
-  const table = [`${'When'.padEnd(5)}${'SGT'.padStart(9)}${pad('PSI', 6)}  80% range`, ...rows].join('\n');
-  const factor = factorSentence(forecast.factors?.[0]);
-  const lines = [
-    `📈 <b>Haze forecast</b> · island-wide 1-hour PSI`,
-    `<i>Now ${n(forecast.now)} · based on data to ${sgtTime(forecast.issuedAt)} SGT</i>`,
-    '',
-    `<pre>${table}</pre>`,
-  ];
-  if (factor) lines.push(`Biggest factor for the next hour (besides the current PSI): ${factor}`);
-  lines.push('', `<i>Model forecast, not official. ${coverageNote(forecast.model?.backtest)}</i>`);
+/** /forecast: NEA's outlook when there is one, then our range for the next few hours. @param {import('./ahead.js').Ahead} ahead */
+export function formatForecast({ outlook, range }) {
+  const lines = ['📈 <b>What’s ahead</b>', ''];
+  if (outlook) lines.push(`📅 ${outlookLine(outlook)}`, `<i>Issued by NEA ${sgtDayMonth(outlook.issuedAt)}, ${sgtTime(outlook.issuedAt)} SGT.</i>`, '');
+  else lines.push('<i>NEA hasn’t issued a 24-hr PSI forecast. It does daily during haze episodes, at haze.gov.sg.</i>', '');
+  if (range) {
+    const rows = range.steps.map((s) => `${`+${s.h}h`.padEnd(5)}${sgtTime(s.t).padStart(9)}  ${`${s.lo}–${s.hi}`}`);
+    lines.push(
+      `<b>Next few hours</b> · island-wide 1-hour PSI, now ${range.now}`,
+      `<pre>${[`${'In'.padEnd(5)}${'SGT'.padStart(9)}  Likely`, ...rows].join('\n')}</pre>`,
+      '<i>Our calculation, not official: how much the reading moved over the same hours in the past two weeks. In four years of NEA readings, the actual value landed in this range about 8 times in 10.</i>',
+    );
+  }
   return lines.join('\n');
 }

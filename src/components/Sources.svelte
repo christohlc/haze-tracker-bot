@@ -8,23 +8,24 @@
   const NAMES: Record<string, { name: string; role: string }> = {
     nea_pm25: { name: 'NEA PM2.5 readings', role: 'Hourly readings by region, history and everything calculated from PM2.5' },
     nea_psi: { name: 'NEA PSI', role: 'Official 24-hour PSI by region' },
-    openmeteo: { name: 'Open-Meteo', role: 'Weather forecast inputs for the haze forecast' },
+    nea_outlook: { name: 'NEA haze update', role: 'NEA’s 24-hr PSI forecast, during haze episodes' },
     ...Object.fromEntries(Object.entries(PUBLISHERS).map(([id, p]) => [`news_${id}`, { name: p.name, role: 'Haze headlines' }])),
     nea_weather: { name: 'NEA weather stations', role: 'Wind and rain' },
     lta_cameras: { name: 'LTA traffic cameras', role: 'Live views from Woodlands, Tuas and Sentosa' },
-    firms: { name: 'NASA FIRMS', role: 'Satellite fire detections for the forecast' },
   };
+  // Feeds we no longer use (Open-Meteo, FIRMS) keep their old rows in the database.
+  const known = $derived(sources.filter((s) => s.source in NAMES));
 </script>
 
 <section class="card" aria-labelledby="sources-title">
   <h2 id="sources-title" class="section-title">Data sources</h2>
   <p class="note">Which feeds are working right now, and what each one contributes.</p>
-  {#if !sources.length}
+  {#if !known.length}
     <p class="note empty">No feeds have reported yet. They’re checked every hour.</p>
   {/if}
   <ul>
-    {#each sources as s (s.source)}
-      {@const meta = NAMES[s.source] ?? { name: s.source, role: '' }}
+    {#each known as s (s.source)}
+      {@const meta = NAMES[s.source]}
       {@const ok = !s.lastError}
       <li>
         <div class="head">

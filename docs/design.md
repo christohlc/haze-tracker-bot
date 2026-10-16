@@ -13,9 +13,10 @@ code and this file disagree, fix one of them.
   what set it apart; keep them.
 - **Telegram-native.** Follow Telegram’s theme, use the MainButton for the main action, add
   haptics on selections and saves, and let alerts arrive in the chat. Use what a website can’t.
-- **Honest about the numbers.** Only NEA’s 24-hour PSI is official. The 1-hour and 3-hour PSI
-  are calculated from PM2.5, and the forecast comes from a model. Wherever they appear, the copy
-  says so in a short caption (“Our calculation, not official.”).
+- **Honest about the numbers.** Only NEA’s 24-hour PSI and NEA’s own forecast are official,
+  and the forecast keeps NEA’s wording. The 1-hour and 3-hour PSI are calculated from PM2.5, and
+  the next-hours range from past readings. Wherever they appear, the copy says so in a short
+  caption (“Our calculation, not official.”).
 
 ## Brand
 
@@ -65,8 +66,8 @@ or, outside Telegram, from the OS. A new colour token needs both a light and a d
 - One column, at most 720px wide, with 16px gutters and 12px between cards. Padding respects
   Telegram’s safe-area insets.
 - Each section is a `.card` with a `.section-title`, an optional `.note` and its content.
-- Section order: header, hero, alerts, regions, cigarettes, forecast, wind and rain, history, advice, news, sources.
-  [ui-audit.md](ui-audit.md) proposes moving advice and the forecast up; that change is still
+- Section order: header, hero, alerts, regions, cigarettes, what’s ahead, wind and rain, history, advice, news, sources.
+  [ui-audit.md](ui-audit.md) proposes moving advice and the forecast (now What’s ahead) up; that change is still
   open.
 - Tap targets are at least 44px. Segmented controls and chips switch on `pointerdown` so they
   respond straight away.
@@ -102,7 +103,7 @@ of the sky and the haze. Check that again whenever a sky colour changes.
 Every section handles loading, empty and failed states. To check them outside Telegram, use
 the dev toolbar (`?demo=worst|empty|error|loading`). Those last two hide every card, so a card's
 own states take `?card=<card>:<state>`, comma-separated: `cameras:error|loading` for Live views and
-`weather:error|loading|partial` for Wind and rain. The worst-case data has long names,
+`weather:error|loading|partial` for Wind and rain, `ahead:range|outlook` for one half of What’s ahead. The worst-case data has long names,
 missing readings and extreme values, so use it before shipping a layout change.
 
 ## Summary card

@@ -8,7 +8,7 @@ import { cigarettes } from './cigs.js';
 
 /**
  * Mean PM2.5 over the regions that reported; null if none did. The island-wide figure, and
- * the quantity the forecast model predicts.
+ * what the next-hours range is worked out from.
  * @param {Record<string, any> | undefined} readings region id → µg/m³ (other keys ignored)
  * @returns {number | null}
  */
