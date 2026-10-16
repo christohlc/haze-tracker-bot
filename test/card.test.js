@@ -75,26 +75,21 @@ test('the card decodes to the drawn pixels', () => {
   assert.deepEqual(back.data, drawSummaryCard(fixture).data);
 });
 
-test('the sky follows the worst 24-hour PSI band', () => {
-  const top = (snap) => [...drawSummaryCard(snap).data.subarray(0, 3)];
-  assert.deepEqual(top(worst), [0x4b, 0x2f, 0x45]); // hazardous
-  assert.deepEqual(top({ ...worst, worst: { ...worst.worst, psi24h: null } }), [0x8d, 0xb8, 0xea]); // no reading
-});
-
-test('each region’s band pill has its 24-hour PSI band colour', () => {
+test('each region’s card is filled with its 24-hour PSI band colour', () => {
+  const fill = (c, id) => {
+    const [x, y] = CARD_AT[id];
+    const i = ((y + 10) * c.width + x + 130) * 3; // top edge, clear of the text
+    return [...c.data.subarray(i, i + 3)];
+  };
+  const UNHEALTHY = [0xdc, 0xab, 0x00];
+  const VERY_UNHEALTHY = [0xe0, 0x48, 0x1f];
   const c = drawSummaryCard(fixture);
-  const BAND_HEX = { unhealthy: [0xdc, 0xab, 0x00], very_unhealthy: [0xe0, 0x48, 0x1f] };
-  for (const r of fixture.regions) {
-    const [x, y] = CARD_AT[r.id];
-    const i = ((y + 155) * c.width + x + 30) * 3; // inside the pill, left of its label
-    const expected = r.psi24h > 200 ? BAND_HEX.very_unhealthy : BAND_HEX.unhealthy;
-    assert.deepEqual([...c.data.subarray(i, i + 3)], expected, r.id);
-  }
-  // A reading that rounds to 55 is coloured as 55 (Normal), not 55.4 (Elevated).
-  const edge = drawSummaryCard({ ...fixture, regions: [{ ...fixture.regions[0], pm25: 55.4 }] });
-  const [x, y] = CARD_AT[fixture.regions[0].id];
-  const dot = ((y + 197) * edge.width + x + 32) * 3;
-  assert.deepEqual([...edge.data.subarray(dot, dot + 3)], [0x0c, 0xa3, 0x0c]);
+  for (const r of fixture.regions) assert.deepEqual(fill(c, r.id), r.psi24h > 200 ? VERY_UNHEALTHY : UNHEALTHY, r.id);
+  // A reading that rounds to 200 is coloured as 200 (Unhealthy), not 200.4 (Very unhealthy).
+  const edge = drawSummaryCard({ ...fixture, regions: [{ ...fixture.regions[0], psi24h: 200.4 }] });
+  assert.deepEqual(fill(edge, fixture.regions[0].id), UNHEALTHY);
+  // A region with no reading is grey.
+  assert.deepEqual(fill(drawSummaryCard(worst), 'north'), [0xdc, 0xdc, 0xdc]);
 });
 
 test('legend ranges come from the band tables', () => {
