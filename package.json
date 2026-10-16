@@ -9,9 +9,11 @@
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json",
     "deploy": "npm run build && tgcloud push",
-    "test": "node --test test/"
+    "test": "node --test test/",
+    "card:assets": "node scripts/card/build-assets.mjs"
   },
   "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "@sveltejs/vite-plugin-svelte": "^7.3.0",
     "@tgcloud/cli": "^0.2.0",
     "@tsconfig/svelte": "^5.0.8",

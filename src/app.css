@@ -126,6 +126,36 @@ select {
   color: var(--muted);
 }
 
+/* The main action in a card, and an error under it (AlertsCard, ShareCard). */
+.primary {
+  min-height: 48px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+  transition: transform 120ms var(--ease-out);
+}
+.primary:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.primary:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.error {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--status-critical);
+}
+@media (prefers-reduced-motion: reduce) {
+  .primary {
+    transition: none;
+  }
+}
+
 .num {
   font-variant-numeric: tabular-nums;
 }

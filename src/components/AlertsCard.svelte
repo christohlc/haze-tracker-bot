@@ -170,14 +170,6 @@
     opacity: 0.6;
     cursor: default;
   }
-  .primary {
-    min-height: 48px;
-    border: 0;
-    border-radius: 12px;
-    background: var(--accent);
-    color: var(--accent-ink);
-    font-weight: 650;
-  }
   .rows {
     display: grid;
   }
@@ -238,11 +230,6 @@
     color: var(--status-critical);
     font-size: 0.875rem;
     font-weight: 600;
-  }
-  .error {
-    margin: 0;
-    font-size: 0.875rem;
-    color: var(--status-critical);
   }
   @media (prefers-reduced-motion: reduce) {
     button {

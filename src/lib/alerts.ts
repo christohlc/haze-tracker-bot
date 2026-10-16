@@ -1,5 +1,5 @@
 import { isActive } from '../../tgcloud/lib/alert-settings.js';
-import { callEndpoint, EndpointCallError, inTelegram, requestWriteAccess } from './telegram';
+import { callEndpoint, inTelegram, withWriteAccess } from './telegram';
 
 export interface AlertSettings {
   bandAlerts: boolean;
@@ -23,12 +23,8 @@ export async function saveAlerts(next: AlertSettings): Promise<AlertSettings | n
     devSettings = isActive(next) ? next : null;
     return devSettings;
   }
-  const call = () => callEndpoint<AlertSettings | null>('alerts', { action: 'save', ...next });
-  try {
-    return await call();
-  } catch (e) {
-    if (!(e instanceof EndpointCallError && e.code === 'NO_WRITE_ACCESS')) throw e;
-    if (!(await requestWriteAccess())) throw new Error('Alerts need permission for the bot to message you.');
-    return call();
-  }
+  return withWriteAccess(
+    () => callEndpoint<AlertSettings | null>('alerts', { action: 'save', ...next }),
+    'Alerts need permission for the bot to message you.',
+  );
 }

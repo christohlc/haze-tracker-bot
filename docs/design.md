@@ -104,6 +104,26 @@ the dev toolbar (`?demo=worst|empty|error|loading`). Those last two hide every c
 views also takes `?cams=error|loading` for its own. The worst-case data has long names,
 missing readings and extreme values, so use it before shipping a layout change.
 
+## Summary card
+
+The picture that `/haze`, alerts and the Mini App’s share button send
+([`tgcloud/lib/card/summary.js`](../tgcloud/lib/card/summary.js)). It’s ours, not a copy of a
+newspaper graphic:
+
+- **The hero sky** for the worst 24-hour PSI band is the background, with the island as a soft
+  light silhouette. Text on the sky uses that sky’s fixed ink, as in the hero.
+- **Severity at a glance:** each region’s card is filled with its own 24-hour PSI band colour and
+  outlined in white, so it stands off a sky of a similar colour. No region colours and no second
+  palette for PM2.5: on the cards, colour only ever means the band.
+- **Answer first:** logo and name, then the band in big type and “24-hr PSI up to N in Region”.
+- **One card per region**, placed roughly where the region is: name, the 24-hour PSI as the big
+  number, the band in words, and the 1-hour PM2.5 as plain text.
+- **One legend row** of band chips (“Card colour: 24-hr PSI band”), ranges from `PSI_BANDS`.
+- Both numbers are NEA’s, so no “our calculation” note; the 3-hour PSI stays out of the picture.
+  Missing readings show “–” on a grey card; a stale snapshot gets the amber note.
+- The card is always light (it’s shared into other people’s chats), and its colours mirror the
+  light-theme tokens. Change one, change both. Check layout changes against the worst-case data.
+
 ## What’s new
 
 User-facing changes are listed in [`src/lib/changelog.ts`](../src/lib/changelog.ts), newest

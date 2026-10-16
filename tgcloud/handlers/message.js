@@ -1,19 +1,20 @@
 // @ts-check
 // Chat commands. Payload is the Message; the platform routes `message` updates here.
 
-import { api } from 'sdk';
 import { cigarettes } from '../lib/cigs.js';
 import { renderAlertSettings } from '../lib/alert-settings.js';
 import { dashboardButton } from '../lib/buttons.js';
 import { REGIONS } from '../lib/config.js';
 import { getCurrentForecast } from '../lib/forecast/run.js';
-import { formatCigs, formatForecast, formatHaze } from '../lib/format.js';
+import { sendCardOrText } from '../lib/card/send.js';
+import { sendHtml } from '../lib/messages.js';
+import { formatCigs, formatForecast, formatHaze, formatHazeCaption } from '../lib/format.js';
 import { getSnapshot } from '../lib/refresh.js';
 import { deleteSubscriber, getSubscriber, saveSubscriber } from '../lib/subscriptions.js';
 
 const HELP = [
   '<b>I’m going hazelnuts!</b>',
-  '/haze: current PSI, regions and advice',
+  '/haze: current PSI with a regional picture, plus advice',
   '/cigs [region] [% outdoors]: cigarette equivalent, e.g. <code>/cigs east 30</code>',
   '/forecast: PSI for the next 24 hours (model, not official)',
   '/subscribe: alerts when the haze band changes',
@@ -38,7 +39,12 @@ export default async function (message) {
       return reply(message, HELP, dashboardButton(message.chat.id));
     case 'haze': {
       const snap = await getSnapshot();
-      return reply(message, formatHaze(snap, await getCurrentForecast(snap)), dashboardButton(message.chat.id));
+      const forecast = await getCurrentForecast(snap);
+      return sendCardOrText(message.chat.id, snap, {
+        caption: formatHazeCaption(snap, forecast),
+        text: formatHaze(snap, forecast),
+        reply_markup: dashboardButton(message.chat.id),
+      });
     }
     case 'forecast': {
       const forecast = await getCurrentForecast(await getSnapshot());
@@ -85,11 +91,5 @@ export function parseCigsArgs(args) {
 }
 
 function reply(message, text, reply_markup) {
-  return api.sendMessage({
-    chat_id: message.chat.id,
-    text,
-    parse_mode: 'HTML',
-    link_preview_options: { is_disabled: true },
-    ...(reply_markup && { reply_markup }),
-  });
+  return sendHtml(message.chat.id, text, reply_markup);
 }
