@@ -73,11 +73,11 @@
   $effect(() => {
     tab;
     untrack(() => {
-      if (!tabsAnchor || !tabbar || window.scrollY === 0) return;
-      // The bar sticks below the inset (notch and Telegram's buttons in full screen), not at 0.
-      const stuckAt = parseFloat(getComputedStyle(tabbar).top) || 0;
-      const y = tabsAnchor.getBoundingClientRect().top + window.scrollY - stuckAt;
-      if (window.scrollY > y) window.scrollTo({ top: y, behavior: 'instant' });
+      if (!tabsAnchor || !tabbar) return;
+      // The anchor sits right above the bar, so it's only higher than the bar once the bar is stuck.
+      if (tabsAnchor.getBoundingClientRect().top < tabbar.getBoundingClientRect().top) {
+        tabsAnchor.scrollIntoView({ block: 'start', behavior: 'instant' });
+      }
     });
   });
 
@@ -105,9 +105,6 @@
   });
 </script>
 
-<!-- Full screen, the page scrolls under the status bar and Telegram's buttons; this covers it. -->
-<div class="inset-scrim" aria-hidden="true"></div>
-
 <main>
   <BrandHeader snapshot={data?.snapshot ?? null} onsecret={() => (ninja = true)} />
 
@@ -128,7 +125,7 @@
         NEA hasn’t published a new reading recently, so these numbers may be out of date.
       </div>
     {/if}
-    <div bind:this={tabsAnchor}></div>
+    <div class="tabs-anchor" bind:this={tabsAnchor}></div>
     <div class="tabbar" bind:this={tabbar}>
       <Segmented
         kind="tab"
@@ -179,16 +176,11 @@
   main {
     max-width: 720px;
     margin: 0 auto;
-    padding: calc(12px + var(--inset-top)) calc(var(--gutter) + var(--inset-right))
-      calc(24px + var(--inset-bottom)) calc(var(--gutter) + var(--inset-left));
+    padding: calc(12px + var(--inset-top)) var(--pad-right) calc(24px + var(--inset-bottom)) var(--pad-left);
   }
-  .inset-scrim {
-    position: fixed;
-    inset: 0 0 auto;
-    z-index: 3;
-    height: var(--inset-top);
-    background: var(--page);
-    pointer-events: none;
+  /* Scrolled to, the tab lands just below the stuck bar, which sits below the inset. */
+  .tabs-anchor {
+    scroll-margin-top: var(--inset-top);
   }
   .sections,
   .skeleton {

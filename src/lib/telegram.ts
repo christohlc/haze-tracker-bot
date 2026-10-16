@@ -6,6 +6,8 @@ export const tg: any = (window as any).Telegram?.WebApp;
 /** True only when opened inside Telegram (init data present). */
 export const inTelegram = Boolean(tg?.initData);
 
+const MOBILE = new Set(['ios', 'android', 'android_x']);
+
 export function initTelegram() {
   applyScheme();
   // Outside Telegram the SDK still reports colorScheme 'light', so follow the OS there.
@@ -23,8 +25,6 @@ export function initTelegram() {
     // older clients
   }
 }
-
-const MOBILE = new Set(['ios', 'android', 'android_x']);
 
 const darkQuery = matchMedia('(prefers-color-scheme: dark)');
 

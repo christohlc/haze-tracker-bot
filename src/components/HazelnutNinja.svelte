@@ -159,8 +159,7 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
-    padding: calc(12px + var(--inset-top)) calc(var(--gutter) + var(--inset-right))
-      calc(16px + var(--inset-bottom)) calc(var(--gutter) + var(--inset-left));
+    padding: calc(12px + var(--inset-top)) var(--pad-right) calc(16px + var(--inset-bottom)) var(--pad-left);
     background: var(--page);
     /* Nothing in here scrolls, and iOS ignores overflow: hidden on <html> for touch. */
     touch-action: none;

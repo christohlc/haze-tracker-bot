@@ -68,7 +68,7 @@ or, outside Telegram, from the OS. A new colour token needs both a light and a d
 - On phones the app asks Telegram for full screen when it opens (`requestFullscreen`, Bot API
   8.0+), whichever button opened it. Telegram’s close and menu buttons then float over the top
   of the page, which `--inset-top` leaves room for, and a strip in the page colour covers that
-  band so cards don't scroll visibly behind them. Landscape adds `--inset-left` / `--inset-right`.
+  band so cards don't scroll visibly behind them. Side padding (`--pad-left` / `--pad-right`) adds the notch in landscape.
   Desktop clients keep their window.
 - Each section is a `.card` with a `.section-title`, an optional `.note` and its content.
 - Under the header, a sticky tab bar (`Segmented` with `kind="tab"`) splits the cards into three
