@@ -1,8 +1,12 @@
 // @ts-check
 // Button presses on the /alerts settings message.
 
-import { api, BotApiError } from 'sdk';
+import { api } from 'sdk';
 import { applyAlertAction, isActive, renderAlertSettings } from '../lib/alert-settings.js';
+import { isBadRequest } from '../lib/bot-errors.js';
+import { ADMINS_ONLY, topicOf } from '../lib/chat-rules.js';
+import { canManageAlerts } from '../lib/groups.js';
+import { editHtml } from '../lib/messages.js';
 import { deleteSubscriber, getSubscriber, saveSubscriber } from '../lib/subscriptions.js';
 
 export default async function (query) {
@@ -12,22 +16,26 @@ export default async function (query) {
     return;
   }
   const chatId = msg.chat.id;
-  const current = await getSubscriber(chatId);
+  const [allowed, current] = await Promise.all([canManageAlerts({ chat: msg.chat, from: query.from }), getSubscriber(chatId)]);
+  if (!allowed) {
+    await api.answerCallbackQuery({ callback_query_id: query.id, text: ADMINS_ONLY, show_alert: true });
+    return;
+  }
   const next = applyAlertAction(current ?? null, query.data);
 
   let saved = null;
   if (isActive(next)) {
-    saved = (await saveSubscriber(chatId, next)).sub;
+    // A new subscription's alerts go to the topic these buttons are in.
+    saved = (await saveSubscriber(chatId, current ? next : { ...next, threadId: topicOf(msg) })).sub;
   } else {
     await deleteSubscriber(chatId);
   }
 
-  const view = renderAlertSettings(saved ?? null);
   try {
-    await api.editMessageText({ chat_id: chatId, message_id: msg.message_id, parse_mode: 'HTML', ...view });
+    await editHtml(msg, query.from, renderAlertSettings(saved ?? null));
   } catch (e) {
     // "message is not modified" when the same button is tapped twice
-    if (!(e instanceof BotApiError && e.code === 400)) throw e;
+    if (!isBadRequest(e)) throw e;
   }
   await api.answerCallbackQuery({
     callback_query_id: query.id,

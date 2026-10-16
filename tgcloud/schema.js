@@ -37,6 +37,7 @@ export const subscribers = table('subscribers', {
   dailyHour: integer('daily_hour'), // SGT hour 0–23; null = no daily update
   breakingAlerts: boolean('breaking_alerts').notNull().default(true),
   lastBand: text('last_band'),
+  threadId: integer('thread_id'), // forum topic in a group where alerts go; null = General / not a forum
   createdAt: integer('created_at').notNull(),
 });
 

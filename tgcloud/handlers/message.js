@@ -5,51 +5,62 @@ import { getAhead } from '../lib/ahead.js';
 import { cigarettes } from '../lib/cigs.js';
 import { renderAlertSettings } from '../lib/alert-settings.js';
 import { dashboardButton } from '../lib/buttons.js';
+import { ADMINS_ONLY, COMMANDS, isGroupChat, parseCommand, topicOf } from '../lib/chat-rules.js';
 import { REGIONS } from '../lib/config.js';
 import { sendCardOrText } from '../lib/card/send.js';
-import { sendHtml } from '../lib/messages.js';
+import { botInfo, canManageAlerts } from '../lib/groups.js';
+import { answer, sendHtml } from '../lib/messages.js';
 import { formatCigs, formatForecast, formatHaze, formatHazeCaption } from '../lib/format.js';
 import { getSnapshot } from '../lib/refresh.js';
-import { deleteSubscriber, getSubscriber, saveSubscriber } from '../lib/subscriptions.js';
+import { deleteSubscriber, getSubscriber, moveSubscriber, saveSubscriber } from '../lib/subscriptions.js';
 
-const HELP = [
-  '<b>I’m going hazelnuts!</b>',
-  '/haze: current PSI with a regional picture, plus advice',
-  '/cigs [region] [% outdoors]: cigarette equivalent, e.g. <code>/cigs east 30</code>',
-  '/forecast: NEA’s 24-hr PSI forecast during haze episodes, and the next few hours',
-  '/subscribe: alerts when the haze band changes, and breaking haze news',
-  '/alerts: change alerts, breaking news or a daily update',
-  '/unsubscribe: stop all alerts',
-  '',
-  '<i>Privacy: if you subscribe, the bot keeps your chat ID and alert settings, nothing else. /stop deletes them.</i>',
-].join('\n');
+/** Copy that depends on whether the chat is a group. */
+const PRIVATE = { will: 'You’ll', whose: 'your', note: 'if you subscribe, the bot keeps your chat ID and alert settings, nothing else.' };
+const GROUP = {
+  will: 'This group will',
+  whose: 'this group’s',
+  note: 'only admins can change a group’s alerts, which go to the topic /subscribe was sent in. The bot keeps the group’s chat ID and alert settings, nothing else.',
+};
+
+/** @param {typeof PRIVATE} copy */
+const help = (copy) =>
+  [
+    '<b>I’m going hazelnuts!</b>',
+    ...COMMANDS.filter((c) => c.help).map((c) => `/${c.command}${c.usage ? ` ${c.usage}` : ''}: ${c.help}`),
+    '',
+    `<i>Privacy: ${copy.note} /stop deletes them.</i>`,
+  ].join('\n');
 
 export default async function (message) {
+  // The group became a supergroup; this service message arrives in the old one.
+  if (message.migrate_to_chat_id) return moveSubscriber(message.chat.id, message.migrate_to_chat_id);
+
   const text = message.text ?? '';
-  if (!text.startsWith('/')) {
-    if (message.chat.type === 'private') await reply(message, HELP);
+  const group = isGroupChat(message.chat.id);
+  const copy = group ? GROUP : PRIVATE;
+  // Only a command addressed to a bot by name needs to know the bot's name.
+  const bot = /^\/\S*@/.test(text) ? await botInfo() : null;
+  const command = parseCommand(text, bot?.username ?? null);
+  if (!command) {
+    if (!group && !text.startsWith('/')) await reply(message, help(copy));
     return;
   }
-  const [rawCmd, ...args] = text.trim().split(/\s+/);
-  const cmd = rawCmd.slice(1).split('@')[0].toLowerCase();
+  const { cmd, args } = command;
 
   switch (cmd) {
     case 'start':
     case 'help':
-      return reply(message, HELP, dashboardButton(message.chat.id));
+      return reply(message, help(copy), await dashboardButton(message.chat.id));
     case 'haze': {
       const refreshed = getSnapshot();
-      const [snap, ahead] = await Promise.all([refreshed, getAhead(refreshed)]);
-      return sendCardOrText(message.chat.id, snap, {
-        caption: formatHazeCaption(snap, ahead),
-        text: formatHaze(snap, ahead),
-        reply_markup: dashboardButton(message.chat.id),
-      });
+      const [snap, ahead, reply_markup] = await Promise.all([refreshed, getAhead(refreshed), dashboardButton(message.chat.id)]);
+      const caption = formatHazeCaption(snap, ahead);
+      return answer(message, (to) => sendCardOrText(to, snap, { caption, text: formatHaze(snap, ahead), reply_markup }));
     }
     case 'forecast': {
       const ahead = await getAhead(getSnapshot());
       if (!ahead.outlook && !ahead.range) return reply(message, 'Nothing to show yet. NEA issues a 24-hr PSI forecast only during haze episodes, and our range for the next few hours needs three days of recent readings.');
-      return reply(message, formatForecast(ahead), dashboardButton(message.chat.id));
+      return reply(message, formatForecast(ahead), await dashboardButton(message.chat.id));
     }
     case 'cigs': {
       const { regionId, outdoorPct } = parseCigsArgs(args);
@@ -59,22 +70,26 @@ export default async function (message) {
       const c = cigarettes(pm, outdoorPct / 100);
       return reply(message, formatCigs(c, { place: region?.name ?? 'Island-wide average', outdoorPct }));
     }
-    case 'subscribe': {
-      const existing = await getSubscriber(message.chat.id);
-      const { sub } = await saveSubscriber(message.chat.id, { bandAlerts: true, dailyHour: existing?.dailyHour ?? null });
-      const view = renderAlertSettings(sub);
-      return reply(message, `✅ You’ll get a message when the haze band changes${sub.breakingAlerts ? ', and breaking haze news' : ''}.\n\n${view.text}`, view.reply_markup);
-    }
     case 'alerts': {
-      const view = renderAlertSettings((await getSubscriber(message.chat.id)) ?? null);
-      return reply(message, view.text, view.reply_markup);
+      const [allowed, sub] = await Promise.all([canManageAlerts(message), getSubscriber(message.chat.id)]);
+      const view = renderAlertSettings(sub ?? null);
+      return allowed ? reply(message, view.text, view.reply_markup) : reply(message, `${view.text}\n\n<i>${ADMINS_ONLY}</i>`);
     }
+    case 'subscribe':
     case 'unsubscribe':
-    case 'stop':
-      await deleteSubscriber(message.chat.id);
-      return reply(message, '🔕 Alerts are off, and your chat ID and alert settings are deleted. Send /subscribe to turn them back on.');
+    case 'stop': {
+      if (!(await canManageAlerts(message))) return answer(message, (to) => sendHtml(to, ADMINS_ONLY), true);
+      if (cmd !== 'subscribe') {
+        await deleteSubscriber(message.chat.id);
+        return reply(message, `🔕 Alerts are off, and ${copy.whose} chat ID and alert settings are deleted. Send /subscribe to turn them back on.`);
+      }
+      const existing = await getSubscriber(message.chat.id);
+      const { sub } = await saveSubscriber(message.chat.id, { bandAlerts: true, dailyHour: existing?.dailyHour ?? null, threadId: topicOf(message) });
+      const view = renderAlertSettings(sub);
+      return reply(message, `✅ ${copy.will} get a message when the haze band changes${sub.breakingAlerts ? ', and breaking haze news' : ''}.\n\n${view.text}`, view.reply_markup);
+    }
     default:
-      if (message.chat.type === 'private') return reply(message, HELP);
+      if (!group) return reply(message, help(copy));
   }
 }
 
@@ -90,6 +105,7 @@ export function parseCigsArgs(args) {
   return { regionId, outdoorPct };
 }
 
+/** Answer where the message came from: its topic, and privately if the command was ephemeral. */
 function reply(message, text, reply_markup) {
-  return sendHtml(message.chat.id, text, reply_markup);
+  return answer(message, (to) => sendHtml(to, text, reply_markup));
 }

@@ -17,7 +17,7 @@ export async function getSubscriber(chatId) {
  * Create or update. A new subscriber starts at the current alert band, so subscribing never
  * triggers an immediate "band changed" alert.
  * @param {number} chatId
- * @param {{ bandAlerts?: boolean, dailyHour?: number | null, breakingAlerts?: boolean }} patch
+ * @param {{ bandAlerts?: boolean, dailyHour?: number | null, breakingAlerts?: boolean, threadId?: number | null }} patch
  */
 export async function saveSubscriber(chatId, patch) {
   const existing = await getSubscriber(chatId);
@@ -37,6 +37,20 @@ export async function deleteSubscriber(chatId) {
     db.delete(subscribers).where(eq(subscribers.chatId, chatId)).run(),
     db.delete(alertsSent).where(eq(alertsSent.chatId, chatId)).run(),
   ]);
+}
+
+/**
+ * A group became a supergroup and got a new id: its subscription moves with it. Its sent-alert
+ * records stay under the old id and are pruned. @param {number} from @param {number} to
+ */
+export async function moveSubscriber(from, to) {
+  if (await getSubscriber(to)) return deleteSubscriber(from);
+  await db.update(subscribers).set({ chatId: to, threadId: null }).where(eq(subscribers.chatId, from)).run();
+}
+
+/** Alerts go to the group's General topic from now on (theirs was deleted). @param {number} chatId */
+export async function clearThread(chatId) {
+  await db.update(subscribers).set({ threadId: null }).where(eq(subscribers.chatId, chatId)).run();
 }
 
 export async function bandSubscribers() {

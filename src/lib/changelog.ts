@@ -9,6 +9,12 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-16-groups',
+    date: '2026-10-16',
+    title: 'Get haze alerts in your group',
+    body: 'Add the bot to a group chat and an admin can turn on alerts for everyone. Check the haze from the command menu and only you see the answer.',
+  },
+  {
     id: '2026-10-16-fullscreen',
     date: '2026-10-16',
     title: 'See more without scrolling',
