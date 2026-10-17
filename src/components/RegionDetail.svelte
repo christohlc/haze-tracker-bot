@@ -3,7 +3,7 @@
   import { psiBand } from '../../tgcloud/lib/psi.js';
   import type { HourRow, RegionId, Snapshot } from '../lib/api';
   import { fmt } from '../lib/format';
-  import { PERIODS, psiKey, type Period } from '../lib/period';
+  import { PERIOD_ORDER, PERIODS, psiKey } from '../lib/period';
   import BandPill from './BandPill.svelte';
   import HistoryChart from './HistoryChart.svelte';
 
@@ -18,7 +18,6 @@
 
   const r = $derived(snapshot.regions.find((x) => x.id === region));
   const v = $derived(snapshotVerdict(snapshot, group, region));
-  const PERIOD_ORDER = Object.keys(PERIODS) as Period[];
 
   // Opening moves focus to the region's name, so a screen reader starts here.
   let title = $state<HTMLElement>();

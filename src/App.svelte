@@ -175,13 +175,13 @@
         options={TABS.map((t) => (t.value === 'more' && unseen ? { ...t, dot: 'new updates' } : t))}
       />
     </div>
-    {#if detail && tab === 'now'}
+    {#if detail}
       <div class="sections" role="region" aria-labelledby="region-title">
         <RegionDetail snapshot={data.snapshot} history={data.history} region={detail} {group} onback={closeRegion} />
       </div>
     {/if}
     {#if visited.now}
-      <div id="panel-now" class="sections" class:off={tab !== 'now' || detail} role="tabpanel" aria-labelledby="tab-now">
+      <div id="panel-now" class="sections" class:off={tab !== 'now' || detail != null} role="tabpanel" aria-labelledby="tab-now">
         <Hero snapshot={data.snapshot} bind:period mask={outside?.mask} range={data.ahead?.range ?? null} onahead={() => (tab = 'outlook')} />
         <RegionTable snapshot={data.snapshot} {period} onselect={openRegion} />
         <Advice snapshot={data.snapshot} v={outside} {group} onpick={pickGroup} />

@@ -14,6 +14,11 @@
     openDays = 1,
   }: { snapshot: Snapshot; history: HourRow[]; region?: RegionId | null; openDays?: 1 | 7 } = $props();
   let days = $state(untrack(() => openDays));
+  const week = $derived(days === 7);
+  // Two charts can be on the page (Outlook and a region), so ids are per instance.
+  const uid = $props.id();
+  // The table is built only while it's open: a week is 168 rows.
+  let tableOpen = $state(false);
 
   let scale = $state<Scale>('pm25');
   let win = $state<Window>(1);
@@ -54,16 +59,16 @@
   const xTicks = $derived(
     (series[0]?.points ?? [])
       .map((p, i) => ({ i, t: p.t, h: Number(p.t.slice(11, 13)) }))
-      .filter(({ h }) => (days === 7 ? h === 0 : h % (width < 420 ? 6 : 4) === 0))
-      .map((tk) => ({ ...tk, label: days === 7 ? day(tk.t) : sgtHour(tk.t) })),
+      .filter(({ h }) => (week ? h === 0 : h % (width < 420 ? 6 : 4) === 0))
+      .map((tk) => ({ ...tk, label: week ? day(tk.t) : sgtHour(tk.t) })),
   );
   /** “Thu” for an SGT time. */
   const day = (t: string) => sgtWeekday(t).slice(0, 3);
   /** “Thu 3 pm” in a week, “3 pm” in a day. */
-  const when = (t: string) => (days === 7 ? `${day(t)} ${sgtHour(t)}` : sgtHour(t));
+  const when = (t: string) => (week ? `${day(t)} ${sgtHour(t)}` : sgtHour(t));
   // Only as many days as there are readings (a fresh start, or before a backfill).
   const shownDays = $derived(Math.max(1, Math.round(n / 24)));
-  const spanLabel = $derived(days === 7 && shownDays > 1 ? `past ${shownDays} days` : 'past 24 hours');
+  const span = $derived(week && shownDays > 1 ? `${shownDays} days` : '24 hours');
 
   // Band edges: NEA PSI bands, and the matching PM2.5 1-hour bands.
   const BANDS = {
@@ -104,8 +109,8 @@
   const winLabel = $derived(win === 1 ? '1-hour' : win === 3 ? '3-hour' : '24-hour');
 </script>
 
-<section class="card" aria-labelledby="hist-title">
-  <h2 id="hist-title" class="section-title">{spanLabel[0].toUpperCase()}{spanLabel.slice(1)}</h2>
+<section class="card" aria-labelledby="{uid}-title">
+  <h2 id="{uid}-title" class="section-title">Past {span}</h2>
   <p class="note">
     Rolling {winLabel} averages ending at each hour. The PSI view converts PM2.5 with NEA’s breakpoints, so its
     24-hour line can differ slightly from the official PSI.
@@ -153,7 +158,7 @@
   </div>
 
   {#if !series.some((s) => s.points.some((p) => p.v != null))}
-    <p class="empty">No readings in the {spanLabel} yet.</p>
+    <p class="empty">No readings in the past {span} yet.</p>
   {:else}
   <div class="plot" bind:clientWidth={width}>
     <svg
@@ -161,7 +166,7 @@
       width="100%"
       height={H}
       role="img"
-      aria-label="{winLabel} {unit} {region ? `in ${regions[0]?.name}` : 'by region'} over the {spanLabel}"
+      aria-label="{winLabel} {unit} {region ? `in ${regions[0]?.name}` : 'by region'} over the past {span}"
       onpointermove={onMove}
       onpointerdown={onMove}
       onpointerleave={() => (hover = null)}
@@ -201,8 +206,9 @@
 
   {/if}
 
-  <details>
+  <details bind:open={tableOpen}>
     <summary>Show as table</summary>
+    {#if tableOpen}
     <div class="table-wrap">
       <table>
         <thead>
@@ -222,6 +228,7 @@
         </tbody>
       </table>
     </div>
+    {/if}
   </details>
 </section>
 

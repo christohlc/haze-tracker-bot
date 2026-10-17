@@ -8,7 +8,7 @@
   import { bandStops } from '../lib/bands';
   import { area, canLocate, locateArea, pickArea } from '../lib/area.svelte';
   import { reducedMotion } from '../lib/motion';
-  import { PERIODS, psiKey, type Period } from '../lib/period';
+  import { PERIOD_ORDER, PERIODS, psiKey, type Period } from '../lib/period';
   import Segmented from './Segmented.svelte';
 
   // `mask` is the short form of What to do's verdict (24-hr PSI and PM2.5, whichever is stricter),
@@ -124,7 +124,7 @@
     <Segmented
       label="PSI period"
       bind:value={period}
-      options={(Object.keys(PERIODS) as Period[]).map((p) => ({ value: p, label: PERIODS[p].short }))}
+      options={PERIOD_ORDER.map((p) => ({ value: p, label: PERIODS[p].short }))}
     />
     <p class="caption">{PERIODS[period].caption}</p>
   </div>
