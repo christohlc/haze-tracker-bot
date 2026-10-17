@@ -104,7 +104,8 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   `emil-design-eng` (polish, motion) and `mobile-native` (touch, safe areas), plus
   `break-ui` for components that show data. Keep the result consistent with docs/design.md.
 - Checks: `npm test` and `npm run check`. Deploy: `npm run deploy` (+ `npx tgcloud
-  migrate` after schema changes).
+  migrate` after schema changes; + `npx wrangler@4 deploy --config cron/wrangler.jsonc` after
+  changing `cron/`, which `npm run deploy` doesn't touch).
 
 ## Layout
 
@@ -118,6 +119,7 @@ project root is yours (a mini-app front-end, config, docs).
 | `tgcloud/handlers/`   | Update handlers, **one level only**. Names match Telegram Bot API update types (`message`, `callback_query`, …). |
 | `tgcloud/endpoints/`  | Functions the Mini App calls (`POST /api/<name>`), **one level only**. |
 | `tgcloud.jsonc`       | Project config. Its `"static"` block names the build folder hosted as the Mini App. |
+| `cron/`               | Cloudflare Worker that starts the tick workflow. Not part of the bot; deployed with wrangler. |
 | `docs/`               | Reference docs (this project's, for you). Not deployed.           |
 | `.tgcloud/`           | CLI state (credentials, snapshot, cached layout). **Never edit or read from here** — it's gitignored machine state. |
 
