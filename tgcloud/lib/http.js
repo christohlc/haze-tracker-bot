@@ -14,17 +14,17 @@ export const errorText = (e) => (e instanceof Error ? e.message : String(e));
  * unless the response is ok.
  * @param {string} url
  * @param {string} [what] prefix for the HTTP error
- * @param {number} [retryUntil] see retryOnce()
+ * @param {number} [deadline] see retryOnce()
  */
-async function get(url, what = 'HTTP', retryUntil) {
-  const res = await retryOnce(() => fetch(url, { headers: { 'user-agent': USER_AGENT } }), retryUntil);
+async function get(url, what = 'HTTP', deadline) {
+  const res = await retryOnce(() => fetch(url, { headers: { 'user-agent': USER_AGENT } }), deadline);
   if (!res.ok) throw new Error(`${what} ${res.status}`);
   return res;
 }
 
-/** @param {string} url @param {string} [what] @param {number} [retryUntil] see get() */
-export async function getJson(url, what, retryUntil) {
-  return (await get(url, what, retryUntil)).json();
+/** @param {string} url @param {string} [what] @param {number} [deadline] see get() */
+export async function getJson(url, what, deadline) {
+  return (await get(url, what, deadline)).json();
 }
 
 /** @param {string} url @param {string} [what] see get() */
