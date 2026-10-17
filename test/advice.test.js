@@ -83,3 +83,16 @@ test('PM2.5 trend compares the latest hour with three hours earlier, by time', a
   assert.equal(pm25Trend(rows([[9, 100], [12, 108]]), 'west'), 'steady');
   assert.equal(pm25Trend(rows([[10, 100], [11, 100], [12, 200]]), 'west'), null); // 9 am missing
 });
+
+test('the snapshot verdict follows the picked area', async () => {
+  const { snapshotVerdict } = await import('../tgcloud/lib/advice.js');
+  const snap = {
+    regions: [
+      { id: 'east', name: 'East', psi24h: 51, pm25: 12 },
+      { id: 'south', name: 'South', psi24h: 999, pm25: 1000 },
+    ],
+    worst: { psi24h: { region: 'south', name: 'South', value: 999 }, pm25: { region: 'south', name: 'South', value: 1000 } },
+  };
+  assert.equal(snapshotVerdict(snap, 'general')?.rank, 4);
+  assert.equal(snapshotVerdict(snap, 'general', 'east')?.rank, 0);
+});

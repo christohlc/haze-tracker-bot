@@ -6,6 +6,7 @@ import { escapeHtml } from './html.js';
 import { PUBLISHERS } from './news-parse.js';
 import { bandById, PSI_BANDS, psiBand } from './psi.js';
 import { RANGE_RECORD } from './range.js';
+import { readingsFor } from './snapshot.js';
 import { sgtDayMonth, sgtDayName, sgtHour } from './time.js';
 
 /** "2026-10-16T13:00:00+08:00" → "1:00 pm" (the timestamp is already in SGT). @param {string} iso */
@@ -25,18 +26,32 @@ function regionTable(snap) {
 }
 
 /**
- * The /haze and daily-update text. With `table: false` it's the caption under the summary card,
- * which already shows each region's readings (photo captions are capped at 1,024 characters).
- * @param {any} snap @param {import('./ahead.js').Ahead | null} [ahead] @param {{ table?: boolean }} [opts]
+ * The readings a chat's messages lead with, and the 3-hour PSI's caption.
+ * @param {any} snap @param {string | null | undefined} region
  */
-export function formatHaze(snap, ahead, { table = true } = {}) {
-  const head = snap.worst.psi3h;
-  const band = psiBand(head?.value);
-  const { mask, outside } = snapshotLines(snap);
+function focus(snap, region) {
+  const r = readingsFor(snap, region);
+  const top = snap.worst.psi3h;
+  const where = !r.area
+    ? `worst region (${top?.name ?? '–'})`
+    : `${r.area.name}${top && top.region !== r.area.id ? `; highest ${top.name} ${n(top.value)}` : ''}`;
+  return { psi3h: r.psi3h?.value ?? null, psi24h: r.psi24h?.value ?? null, pm25: r.pm25?.value ?? null, where };
+}
+
+/**
+ * The /haze and daily-update text, leading with `region`'s readings when the chat follows one.
+ * With `table: false` it's the caption under the summary card, which already shows each region's
+ * readings (photo captions are capped at 1,024 characters).
+ * @param {any} snap @param {import('./ahead.js').Ahead | null} [ahead] @param {{ table?: boolean, region?: string | null }} [opts]
+ */
+export function formatHaze(snap, ahead, { table = true, region = null } = {}) {
+  const f = focus(snap, region);
+  const band = psiBand(f.psi3h);
+  const { mask, outside } = adviceLines(f.psi24h, f.pm25);
 
   const lines = [
-    `${band?.emoji ?? '⚪️'} <b>PSI ${n(head?.value)}</b> · ${band?.label ?? 'No data'}`,
-    `<i>3-hour PSI, worst region (${head?.name ?? '–'}) · ${sgtTime(snap.asOf)} SGT</i>`,
+    `${band?.emoji ?? '⚪️'} <b>PSI ${n(f.psi3h)}</b> · ${band?.label ?? 'No data'}`,
+    `<i>3-hour PSI, ${f.where} · ${sgtTime(snap.asOf)} SGT</i>`,
     ...(snap.stale ? ['⚠️ <i>NEA hasn’t updated recently, so this may be out of date.</i>'] : []),
     ...(outside ? [outside] : []),
     '',
@@ -70,11 +85,8 @@ function adviceLines(psi24h, pm25Now) {
   };
 }
 
-/** @param {any} snap */
-const snapshotLines = (snap) => adviceLines(snap.worst.psi24h?.value ?? null, snap.worst.pm25?.value ?? null);
-
-/** Caption for the summary card. @param {any} snap @param {import('./ahead.js').Ahead | null} [ahead] */
-export const formatHazeCaption = (snap, ahead) => formatHaze(snap, ahead, { table: false });
+/** Caption for the summary card. @param {any} snap @param {import('./ahead.js').Ahead | null} [ahead] @param {string | null} [region] */
+export const formatHazeCaption = (snap, ahead, region = null) => formatHaze(snap, ahead, { table: false, region });
 
 /** Short caption for a card shared from the Mini App into another chat. @param {any} snap */
 export function formatShareCaption(snap) {
@@ -96,20 +108,21 @@ export function formatCigs(c, { place, outdoorPct }) {
 }
 
 /**
- * Short alert when the headline band changes.
+ * Short alert when the band the chat follows changes: its region's, or the highest region's.
  * @param {any} snap
  * @param {string} fromId previous band id
  * @param {string} toId new band id
+ * @param {string | null} [region]
  */
-export function formatBandAlert(snap, fromId, toId) {
+export function formatBandAlert(snap, fromId, toId, region = null) {
   const to = bandById(toId);
   const from = bandById(fromId);
-  const head = snap.worst.psi3h;
+  const f = focus(snap, region);
   const worse = PSI_BANDS.indexOf(/** @type {any} */ (to)) > PSI_BANDS.indexOf(/** @type {any} */ (from));
-  const { mask, outside } = snapshotLines(snap);
+  const { mask, outside } = adviceLines(f.psi24h, f.pm25);
   const lines = [
     `${to?.emoji ?? '⚪️'} <b>Haze ${worse ? 'up' : 'down'} to ${to?.label ?? toId}</b> (was ${from?.label ?? fromId})`,
-    `3-hour PSI <b>${n(head?.value)}</b>, worst in ${head?.name ?? '–'} · ${sgtTime(snap.asOf)} SGT`,
+    `3-hour PSI <b>${n(f.psi3h)}</b>, ${f.where} · ${sgtTime(snap.asOf)} SGT`,
   ];
   if (mask) lines.push(mask);
   if (outside) lines.push(outside);

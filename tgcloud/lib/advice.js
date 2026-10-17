@@ -3,6 +3,7 @@
 // haze.gov.sg is official).
 
 import { psiBand, pm25Band } from './psi.js';
+import { readingsFor } from './snapshot.js';
 
 /** Who the advice is for. @typedef {'general' | 'vulnerable'} Group */
 
@@ -63,6 +64,9 @@ export function verdict(psi24h, pm25Now, group) {
   return { rank, ...VERDICT[rank] };
 }
 
-/** The verdict for a snapshot's worst readings: what the hero, What to do and bot messages show.
-    @param {{ worst: { psi24h?: { value: number } | null, pm25?: { value: number } | null } }} snap  @param {Group} group */
-export const snapshotVerdict = (snap, group) => verdict(snap.worst.psi24h?.value ?? null, snap.worst.pm25?.value ?? null, group);
+/** The verdict for an area's readings (null: the highest region's): what the hero, What to do and
+    bot messages show. @param {any} snap  @param {Group} group  @param {string | null} [region] */
+export function snapshotVerdict(snap, group, region = null) {
+  const r = readingsFor(snap, region);
+  return verdict(r.psi24h?.value ?? null, r.pm25?.value ?? null, group);
+}

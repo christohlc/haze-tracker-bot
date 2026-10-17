@@ -11,6 +11,8 @@ export interface Region {
   psi3h: number | null;
   psi24h: number | null;
   pm25Mean24h: number | null;
+  /** Our calculation: the latest hour's PM2.5 against three hours earlier. Missing in older snapshots. */
+  trend?: 'rising' | 'easing' | 'steady' | null;
 }
 
 export interface Worst {
@@ -25,8 +27,7 @@ export interface Snapshot {
   stale: boolean;
   regions: Region[];
   island: { now: number | null; mean24h: number | null };
-  /** `trend` (our calculation): the worst region's 1-hour PM2.5 against three hours earlier. */
-  worst: { psi1h: Worst | null; psi3h: Worst | null; psi24h: Worst | null; pm25: (Worst & { trend?: 'rising' | 'easing' | 'steady' | null }) | null };
+  worst: { psi1h: Worst | null; psi3h: Worst | null; psi24h: Worst | null; pm25: Worst | null };
 }
 
 export type HourRow = { t: string } & Partial<Record<RegionId, number>>;

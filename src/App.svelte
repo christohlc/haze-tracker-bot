@@ -20,6 +20,7 @@
   import type { Period } from './lib/period';
   import { getStored, inTelegram, setStored, showBackButton } from './lib/telegram';
   import { snapshotVerdict, type Group } from '../tgcloud/lib/advice.js';
+  import { area } from './lib/area.svelte';
   import { getSeen, markSeen } from './lib/whats-new';
 
   type Tab = 'now' | 'outlook' | 'more';
@@ -41,7 +42,7 @@
   // Who What to do advises; the hero's mask line is the same verdict's short form, so they agree.
   const GROUP_KEY = 'advice_group';
   let group = $state<Group>('general');
-  const outside = $derived(data ? snapshotVerdict(data.snapshot, group) : null);
+  const outside = $derived(data ? snapshotVerdict(data.snapshot, group, area.id) : null);
   getStored(GROUP_KEY).then((g) => g === 'vulnerable' && (group = g));
   function pickGroup(g: Group) {
     group = g;

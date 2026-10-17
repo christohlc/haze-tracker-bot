@@ -44,6 +44,7 @@ export function pm25Trend(rows, region) {
 export function buildSnapshot(pm25History, psi) {
   if (!pm25History.length) throw new Error('No PM2.5 readings');
   const history = pm25History.slice(-25);
+  const rows = history.map((h) => ({ t: h.timestamp, ...h.readings }));
 
   const regions = REGIONS.map(({ id, name }) => {
     const series = history.map((h) => h.readings?.[id] ?? null);
@@ -56,6 +57,7 @@ export function buildSnapshot(pm25History, psi) {
       psi3h: pm25ToPsi(meanOfLast(series, 3)),
       psi24h: psi.readings.psi_twenty_four_hourly?.[id] ?? null,
       pm25Mean24h: meanOfLast(series, 24),
+      trend: pm25Trend(rows, id),
     };
   });
 
@@ -70,9 +72,6 @@ export function buildSnapshot(pm25History, psi) {
       null,
     );
 
-  const rows = history.map((h) => ({ t: h.timestamp, ...h.readings }));
-  const worstPm25 = pick(worst('pm25'), 'pm25');
-
   return {
     asOf: history[history.length - 1].timestamp,
     psiAsOf: psi.timestamp,
@@ -82,7 +81,7 @@ export function buildSnapshot(pm25History, psi) {
       psi1h: pick(worst('psi1h'), 'psi1h'),
       psi3h: pick(worst('psi3h'), 'psi3h'),
       psi24h: pick(worst('psi24h'), 'psi24h'),
-      pm25: worstPm25 && { ...worstPm25, trend: pm25Trend(rows, worstPm25.region) },
+      pm25: pick(worst('pm25'), 'pm25'),
     },
     cigs: cigarettes(island),
     history: rows,
@@ -92,4 +91,18 @@ export function buildSnapshot(pm25History, psi) {
 /** @param {any} region @param {string} key */
 function pick(region, key) {
   return region ? { region: region.id, name: region.name, value: region[key] } : null;
+}
+
+/**
+ * The readings to lead with for an area: that region's, or for each reading the region where it's
+ * highest. `area` is the picked region (null for the highest); `trend` goes with the PM2.5 shown.
+ * @param {any} snap @param {string | null | undefined} region
+ */
+export function readingsFor(snap, region) {
+  const area = snap.regions?.find((/** @type {any} */ r) => r.id === region) ?? null;
+  /** @param {'psi1h' | 'psi3h' | 'psi24h' | 'pm25'} key */
+  const at = (key) => (area ? (area[key] == null ? null : { region: area.id, name: area.name, value: area[key] }) : snap.worst[key]);
+  const pm25 = at('pm25');
+  const trend = snap.regions?.find((/** @type {any} */ r) => r.id === pm25?.region)?.trend ?? null;
+  return { area, psi1h: at('psi1h'), psi3h: at('psi3h'), psi24h: at('psi24h'), pm25, trend };
 }
