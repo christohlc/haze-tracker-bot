@@ -31,8 +31,10 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   stops GitHub's 60-day pause of scheduled workflows.
   NEA is refetched by one rule (`neaRefetchEveryS` in `lib/snapshot.js`, via `refreshNeaIfDue`),
   whoever asks first (tick, /haze, Mini App), claimed once across isolates: every 2 min from :05 while
-  the current hour isn't in, then every 10 min, because NEA revises an hour's readings during it (so
-  every tick refetches). A refetch someone is waiting for gets one try. News about hourly (every run
+  the current hour isn't in for PM2.5 or the PSI, then for NEA's revisions every 10 min by the tick (so
+  every tick refetches) or 20 min by a user, should the tick be late. A refetch someone is waiting for
+  gets one try. Only new or revised hours are written, and yesterday's PM2.5 is fetched only before
+  3 am or while some of its hours are missing. News about hourly (every run
   while some PSI is above 100, for breaking news); the extra runs are for alerts a previous run
   didn't reach. `{"force":true}` refetches NEA and news regardless.
 - **Alerts go out in batches of 25/s within a ~20 s budget** (`runBatched` in `lib/alert-rules.js`).
@@ -125,7 +127,13 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   are on, picking an area saves it to the subscription. **Run `npx tgcloud migrate` before
   pushing** a build that reads `region`.
 - **Secrets live in the `settings` DB table**, set only via `endpoints/admin` from the
-  CLI. Never commit or echo a key.
+  CLI. Never commit or echo a key. `datagov_api_key` (optional, free from data.gov.sg) is sent
+  as `x-api-key` to NEA's v2 API only, for a higher rate limit (`lib/http.js`).
+- **Free tiers.** Users only touch the tgcloud platform; the Cloudflare Worker (free: 100k
+  requests/day, ~100 used) and GitHub Actions (free for a public repo, ~96 runs/day of ~25 s) only
+  start the tick, so their limits can pause alerts but never block /haze or the Mini App. The
+  limit that reaches users is data.gov.sg's (no key: a 429 came at 7 requests in 4 s): keep NEA
+  requests claimed once across isolates (`claimEvery`), and a failed one falls back to the stored copy.
 - **1-hour and 3-hour PSI and the next-hours range are our own calculations**, not NEA's.
   Copy must keep saying so; only the 24-hour PSI and NEA's forecast are official.
 - **Outside Telegram**, `npm run dev` serves fixture data (`src/dev/`), with a

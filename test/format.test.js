@@ -41,10 +41,13 @@ test('the 24-hour PM2.5 average is NEA’s when its PSI item is for the latest h
 
 test('NEA is refetched often while the current hour is awaited, then for revisions', () => {
   const at = (/** @type {string} */ s) => Date.parse(s);
-  const asOf = '2026-10-17T15:00:00+08:00';
-  assert.equal(neaRefetchEveryS(asOf, at('2026-10-17T15:40:00+08:00')), REVISED_EVERY_S, 'the hour is in');
-  assert.equal(neaRefetchEveryS(asOf, at('2026-10-17T16:03:00+08:00')), REVISED_EVERY_S, 'too early for NEA to have 16:00');
-  assert.equal(neaRefetchEveryS(asOf, at('2026-10-17T16:05:00+08:00')), AWAITED_EVERY_S, '16:00 is due');
-  assert.equal(neaRefetchEveryS(asOf, at('2026-10-17T18:30:00+08:00')), AWAITED_EVERY_S, 'NEA missed hours');
+  const snap = { asOf: '2026-10-17T15:00:00+08:00', psiAsOf: '2026-10-17T15:00:00+08:00' };
+  assert.equal(neaRefetchEveryS(snap, at('2026-10-17T15:40:00+08:00')), REVISED_EVERY_S, 'the hour is in');
+  assert.equal(neaRefetchEveryS(snap, at('2026-10-17T15:40:00+08:00'), 1200), 1200, 'a user waits longer for revisions');
+  assert.equal(neaRefetchEveryS(snap, at('2026-10-17T16:03:00+08:00')), REVISED_EVERY_S, 'too early for NEA to have 16:00');
+  assert.equal(neaRefetchEveryS(snap, at('2026-10-17T16:05:00+08:00')), AWAITED_EVERY_S, '16:00 is due');
+  assert.equal(neaRefetchEveryS(snap, at('2026-10-17T18:30:00+08:00')), AWAITED_EVERY_S, 'NEA missed hours');
+  const psiBehind = { asOf: '2026-10-17T16:00:00+08:00', psiAsOf: '2026-10-17T15:00:00+08:00' };
+  assert.equal(neaRefetchEveryS(psiBehind, at('2026-10-17T16:20:00+08:00')), AWAITED_EVERY_S, 'PM2.5 in, PSI not yet');
   assert.ok(REVISED_EVERY_S < 15 * 60, 'every 15-minute tick refetches');
 });

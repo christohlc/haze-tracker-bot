@@ -21,10 +21,12 @@ export default async function (input, ctx) {
   const started = Date.now();
   const force = Boolean(input?.force);
   const stored = await storedSnapshot();
-  const [snap, firstNews] = await Promise.all([
-    force ? refreshNea() : refreshNeaIfDue(started),
+  let [snap, firstNews] = await Promise.all([
+    force ? refreshNea() : refreshNeaIfDue({ now: started }),
     force ? refreshNews() : refreshNewsIfDue(stored),
   ]);
+  // If this run's NEA claim lost to a Mini App mid-fetch, alert on what that fetch stored by now.
+  if (!force) snap = (await storedSnapshot()) ?? snap;
   const news = 'skipped' in firstNews ? await refreshNewsIfDue(snap) : firstNews;
   const breaking = await updateBreaking(snap, news.fresh, started);
   const alerts = await runAlerts(snap, started, breaking.toSend);

@@ -39,18 +39,23 @@ export function pm25Trend(rows, region) {
 
 /** NEA can't have published an hour's readings before this many ms past it. */
 const NEA_EARLIEST_MS = 5 * 60_000;
-/** While the current hour is awaited, refetch this often; once it's in, this often, for NEA's revisions. */
+/** While the current hour is awaited, refetch this often (whoever asks first). */
 export const AWAITED_EVERY_S = 2 * 60;
-export const REVISED_EVERY_S = 10 * 60; // under the tick's 15 min, so every tick refetches
+/** Once it's in, the tick refetches this often for NEA's revisions (under its 15 min, so every tick)... */
+export const REVISED_EVERY_S = 10 * 60;
+/** ...and a user only after this long, should the tick be late, so few users wait on a refetch. */
+export const USER_REVISED_EVERY_S = 20 * 60;
 
 /**
- * How often to refetch NEA (seconds), given the latest reading we have: often while NEA's current
- * hour is due and not in yet, less often once it is, as NEA revises an hour's readings during it.
- * @param {string} asOf the stored snapshot's latest hour @param {number} nowMs
+ * How often to refetch NEA (seconds), given the stored snapshot: often while NEA's current hour is
+ * due and not in yet for PM2.5 or for the PSI (NEA can publish them minutes apart), `revisedEveryS`
+ * once both are, as NEA revises an hour's readings during it.
+ * @param {{ asOf: string, psiAsOf?: string }} snap @param {number} nowMs @param {number} [revisedEveryS]
  */
-export function neaRefetchEveryS(asOf, nowMs) {
-  const awaited = unixHour(asOf) < Math.floor(nowMs / 3_600_000) && nowMs % 3_600_000 >= NEA_EARLIEST_MS;
-  return awaited ? AWAITED_EVERY_S : REVISED_EVERY_S;
+export function neaRefetchEveryS(snap, nowMs, revisedEveryS = REVISED_EVERY_S) {
+  const latest = Math.min(unixHour(snap.asOf), unixHour(snap.psiAsOf ?? snap.asOf));
+  const awaited = latest < Math.floor(nowMs / 3_600_000) && nowMs % 3_600_000 >= NEA_EARLIEST_MS;
+  return awaited ? AWAITED_EVERY_S : revisedEveryS;
 }
 
 /**
@@ -63,7 +68,7 @@ export function buildSnapshot(pm25History, psi) {
   const rows = history.map((h) => ({ t: h.timestamp, ...h.readings }));
   // NEA's own 24-hour PM2.5 averages when its PSI item is for the same hour as the latest reading;
   // otherwise ours, from the hourly readings.
-  const nea24h = psi.timestamp === history.at(-1)?.timestamp ? psi.readings.pm25_twenty_four_hourly : null;
+  const nea24h = unixHour(psi.timestamp) === unixHour(history[history.length - 1].timestamp) ? psi.readings.pm25_twenty_four_hourly : null;
 
   const regions = REGIONS.map(({ id, name }) => {
     const series = history.map((h) => h.readings?.[id] ?? null);

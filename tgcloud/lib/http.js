@@ -2,7 +2,9 @@
 // Shared bits for modules that fetch outside feeds.
 
 import { fetch } from 'sdk';
+import { NEA_API } from './config.js';
 import { retryOnce } from './fetch-retry.js';
+import { getSetting } from './store.js';
 
 export const USER_AGENT = 'Mozilla/5.0 (compatible; HazeTrackerBot)';
 
@@ -17,9 +19,22 @@ export const errorText = (e) => (e instanceof Error ? e.message : String(e));
  * @param {number} [deadline] see retryOnce()
  */
 async function get(url, what = 'HTTP', deadline) {
-  const res = await retryOnce(() => fetch(url, { headers: { 'user-agent': USER_AGENT } }), deadline);
+  const key = url.startsWith(NEA_API) ? await datagovKey() : null;
+  const headers = { 'user-agent': USER_AGENT, ...(key && { 'x-api-key': key }) };
+  const res = await retryOnce(() => fetch(url, { headers }), deadline);
   if (!res.ok) throw new Error(`${what} ${res.status}`);
   return res;
+}
+
+/** @type {Promise<string | null> | null} */
+let keyRead = null;
+/**
+ * data.gov.sg's API key, if one is set (admin `datagov_api_key`): it raises the rate limit that
+ * NEA's readings sit behind. Read once per isolate; a new key reaches isolates as they recycle.
+ */
+function datagovKey() {
+  keyRead ??= getSetting('datagov_api_key').catch(() => null);
+  return keyRead;
 }
 
 /** @param {string} url @param {string} [what] @param {number} [deadline] see get() */

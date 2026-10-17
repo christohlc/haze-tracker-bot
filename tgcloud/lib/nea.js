@@ -25,14 +25,14 @@ export async function getPm25Day(date, deadline) {
 }
 
 /**
- * Hourly PM2.5 for today and yesterday (SGT), so there are always ≥24 hours.
- * @param {number} [deadline] see retryOnce() in fetch-retry.js
+ * Hourly PM2.5 for today, and yesterday (SGT) when `withYesterday`, so there are ≥24 hours.
+ * @param {number} [deadline] see retryOnce() in fetch-retry.js @param {boolean} [withYesterday]
  * @returns {Promise<Pm25Item[]>} oldest first
  */
-export async function getPm25History(deadline) {
+export async function getPm25History(deadline, withYesterday = true) {
   const [today, yesterday] = await Promise.all([
     getItems('pm25', sgtDateOf(Date.now()), deadline),
-    getItems('pm25', sgtDateOf(Date.now() - 86_400_000), deadline),
+    withYesterday ? getItems('pm25', sgtDateOf(Date.now() - 86_400_000), deadline) : [],
   ]);
   return byTime([...yesterday, ...today]);
 }

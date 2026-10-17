@@ -24,7 +24,8 @@ import { breakingClaimedChats, countSubscribers, setAllLastBand } from '../lib/s
 import { sgtDatesBack, sgtDayStart } from '../lib/time.js';
 import { allSourceStatus, countReadings, countReadingsBetween, deleteSetting, getAlertBands, getSetting, getState, setAlertBands, setSetting, setState, toSgtIso, upsertReadings } from '../lib/store.js';
 
-const SECRET_KEYS = ['firms_map_key'];
+// datagov_api_key: data.gov.sg's (free, data.gov.sg sign-in), sent only to its v2 API for a higher rate limit.
+const SECRET_KEYS = ['firms_map_key', 'datagov_api_key'];
 
 // Backfill: one NEA request per SGT day, spaced out for data.gov.sg's rate limit, and stopped
 // before the (undocumented) run limit; days already complete are skipped, so a rerun resumes.

@@ -4,24 +4,36 @@
 // publishing it, whoever asks first (the tick only runs every 15 min, and can be late).
 
 import { getLatestPsi, getPm25History } from './nea.js';
-import { buildSnapshot, neaRefetchEveryS } from './snapshot.js';
+import { buildSnapshot, neaRefetchEveryS, REVISED_EVERY_S, USER_REVISED_EVERY_S } from './snapshot.js';
 import { HISTORY_HOURS, latestRange } from './range.js';
 import { claimEvery, getState, getStates, lastHours, recentReadings, recordSource, setState, upsertReadings } from './store.js';
+import { sgtDateOf, sgtDayStart, unixHour } from './time.js';
 
 const STALE_MS = 80 * 60_000; // NEA publishes ~15 min past the hour
-/** A refetch someone is waiting for gets one try (the platform's fetch gives up after ~5 s): no retry. */
-const ONE_TRY_MS = 5_000;
+/** A refetch someone is waiting for gets one try (the platform's fetch gives up after ~5 s): a
+ *  deadline already past means retryOnce() never retries. */
+const NO_RETRY = 0;
+/** NEA may still revise yesterday's last hours until this SGT hour; after it, yesterday is fetched
+ *  only if some of its hours aren't stored (one request fewer per refetch: data.gov.sg rate-limits). */
+const YESTERDAY_UNTIL_H = 3;
 
 /**
  * Fetch NEA, store readings and the new snapshot. Feed errors are recorded, not thrown, if cached data exists.
- * @param {number} [deadline] see retryOnce() in fetch-retry.js
+ * @param {{ deadline?: number, claimed?: boolean }} [opts] `deadline`: see retryOnce() in fetch-retry.js;
+ *   `claimed`: the caller already claimed last_fetch_attempt
  */
-export async function refreshNea(deadline) {
-  await claimEvery('last_fetch_attempt', 0); // always granted: Mini Apps don't refetch right after
-  const [pm25, psi] = await Promise.allSettled([getPm25History(deadline), getLatestPsi(deadline)]);
+export async function refreshNea({ deadline, claimed = false } = {}) {
+  if (!claimed) await claimEvery('last_fetch_attempt', 0); // always granted: Mini Apps don't refetch right after
+  const before = await recentReadings(HISTORY_HOURS);
+  const yesterday = sgtDayStart(sgtDateOf(Date.now() - 86_400_000));
+  const storedYesterday = before.filter((r) => Date.parse(r.timestamp) / 1000 >= yesterday && Date.parse(r.timestamp) / 1000 < yesterday + 86_400).length;
+  const withYesterday = new Date(Date.now() + 8 * 3_600_000).getUTCHours() < YESTERDAY_UNTIL_H || storedYesterday < 24;
+  const [pm25, psi] = await Promise.allSettled([getPm25History(deadline, withYesterday), getLatestPsi(deadline)]);
 
   if (pm25.status === 'fulfilled') {
-    await upsertReadings(pm25.value);
+    // Only hours that are new or that NEA revised: a refetch usually writes one row, not 48.
+    const known = new Map(before.map((r) => [unixHour(r.timestamp), JSON.stringify(r.readings)]));
+    await upsertReadings(pm25.value.filter((i) => known.get(unixHour(i.timestamp)) !== JSON.stringify(i.readings)));
     await recordSource('nea_pm25', { ok: true, detail: `latest ${pm25.value.at(-1)?.timestamp}` });
   } else {
     await recordSource('nea_pm25', { ok: false, error: pm25.reason?.message ?? pm25.reason });
@@ -36,8 +48,7 @@ export async function refreshNea(deadline) {
   }
 
   // One read for the snapshot (the last 25 hours) and the range (two weeks).
-  const [rows, states] = await Promise.all([recentReadings(HISTORY_HOURS), getStates(['psi'])]);
-  const psiState = states.get('psi')?.value;
+  const [rows, psiState] = await Promise.all([recentReadings(HISTORY_HOURS), getState('psi').then((s) => s?.value)]);
   const history = lastHours(rows, 25);
   if (!history.length || !psiState) throw new Error('No NEA data yet (fetch failed and nothing cached)');
   const snap = buildSnapshot(history, psiState);
@@ -48,29 +59,30 @@ export async function refreshNea(deadline) {
 
 /** The stored snapshot as it is, or undefined before the first fetch. */
 export async function storedSnapshot() {
-  return (await getStates(['snapshot'])).get('snapshot')?.value;
+  return (await getState('snapshot'))?.value;
 }
 
 /**
  * The snapshot, refetched from NEA if it's due (neaRefetchEveryS: every 2 min while NEA's current
- * hour is awaited, every 10 min after for revisions). One caller at a time refetches, across every
- * isolate (claimEvery); the rest get the stored one. Throws only if NEA fails with nothing stored.
- * @param {number} [now] @param {number} [deadline] see retryOnce() in fetch-retry.js
+ * hour is awaited, then every `revisedEveryS` for revisions). One caller at a time refetches,
+ * across every isolate (claimEvery); the rest get the stored one. Throws only if NEA fails with
+ * nothing stored. `deadline`: see retryOnce() in fetch-retry.js.
+ * @param {{ now?: number, deadline?: number, revisedEveryS?: number }} [opts]
  */
-export async function refreshNeaIfDue(now = Date.now(), deadline) {
+export async function refreshNeaIfDue({ now = Date.now(), deadline, revisedEveryS = REVISED_EVERY_S } = {}) {
   // One read for both rows: a snapshot that isn't due costs a single query.
   const rows = await getStates(['snapshot', 'last_fetch_attempt']);
   const stored = rows.get('snapshot')?.value;
-  if (!stored) return refreshNea(deadline);
-  const every = neaRefetchEveryS(stored.asOf, now);
+  if (!stored) return refreshNea({ deadline });
+  const every = neaRefetchEveryS(stored, now, revisedEveryS);
   const tried = now / 1000 - (rows.get('last_fetch_attempt')?.updatedAt ?? 0) < every;
   if (tried || !(await claimEvery('last_fetch_attempt', every))) return stored;
-  return refreshNea(deadline).catch(() => stored);
+  return refreshNea({ deadline, claimed: true }).catch(() => stored);
 }
 
-/** Latest snapshot, refetched if due (one try). `stale: true` means NEA couldn't be reached for a while. */
+/** Latest snapshot, refetched if due (one try). `stale: true` means NEA's latest reading is over 80 min old. */
 export async function getSnapshot() {
-  const snap = await refreshNeaIfDue(Date.now(), Date.now() + ONE_TRY_MS);
+  const snap = await refreshNeaIfDue({ deadline: NO_RETRY, revisedEveryS: USER_REVISED_EVERY_S });
   return { ...snap, stale: Date.now() - Date.parse(snap.asOf) >= STALE_MS };
 }
 

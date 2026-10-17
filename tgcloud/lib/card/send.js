@@ -99,8 +99,9 @@ function cardKind(stateKey, filename) {
 const summaryCard = cardKind('card', 'haze.png');
 const forecastCard = cardKind('forecast_card', 'forecast.png');
 
-/** One card per NEA hour, PSI hour and staleness (the stale banner is drawn in). @param {any} snap */
-const cardKey = (snap) => `${snap.asOf}|${snap.psiAsOf}|${snap.stale ? 'stale' : ''}`;
+/** One card per NEA hour, PSI hour, staleness (the stale banner is drawn in) and readings, which NEA
+ *  may revise during the hour. @param {any} snap */
+const cardKey = (snap) => `${snap.asOf}|${snap.psiAsOf}|${snap.stale ? 'stale' : ''}|${JSON.stringify(snap.regions)}`;
 /** Everything the forecast card draws: the sky and tick come from the snapshot. @param {any} snap @param {Ahead} ahead */
 const forecastKey = (snap, ahead) => JSON.stringify([cardKey(snap), snap.worst?.psi24h?.value ?? null, ahead.outlook, ahead.range]);
 
