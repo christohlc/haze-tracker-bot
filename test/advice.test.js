@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { verdict } from '../tgcloud/lib/advice.js';
+import { snapshotVerdict, verdict } from '../tgcloud/lib/advice.js';
 import { formatBandAlert, formatBreaking, formatHaze } from '../tgcloud/lib/format.js';
 
 const rank = (psi, pm, group = 'general') => verdict(psi, pm, group)?.rank;
@@ -38,22 +38,18 @@ const PSIS = [null, 0, 50, 51, 100, 101, 200, 201, 300, 301, 500];
 const PM25S = [null, 0, 55, 56, 150, 151, 250, 251, 400];
 const GROUPS = ['general', 'vulnerable'];
 
-test('the mask headline is the verdict’s short form: one per rank, never contradicting it', () => {
-  const titleOf = new Map();
+test('the hero and What to do read one verdict; each rank has its own short form', () => {
+  const titles = new Map();
   for (const psi of PSIS)
     for (const pm of PM25S)
       for (const group of GROUPS) {
-        const v = verdict(psi, pm, group);
-        if (!v) {
-          assert.ok(psi == null && pm == null);
-          continue;
-        }
-        if (titleOf.has(v.rank)) assert.deepEqual(v.mask, titleOf.get(v.rank), `rank ${v.rank} at PSI ${psi}, PM2.5 ${pm}`);
-        else titleOf.set(v.rank, v.mask);
+        const snap = { worst: { psi24h: psi == null ? null : { value: psi }, pm25: pm == null ? null : { value: pm }, psi3h: { value: 400 } } };
+        const v = snapshotVerdict(snap, group); // App.svelte passes v to What to do and v.mask to the hero
+        assert.deepEqual(v, verdict(psi, pm, group), `PSI ${psi}, PM2.5 ${pm}, ${group}`);
+        if (v) titles.set(v.rank, v.mask.title);
       }
-  assert.deepEqual([...titleOf.keys()].sort(), [0, 1, 2, 3, 4]);
-  assert.equal(new Set([...titleOf.values()].map((m) => m.title)).size, 5); // the title alone says which rank
-  assert.equal(titleOf.get(3).title, 'Mask up'); // docs/design.md, "Answer first"
+  assert.equal(new Set(titles.values()).size, 5); // the short form alone says which rank
+  assert.equal(titles.get(3), 'Mask up'); // docs/design.md, "Answer first"
 });
 
 test('bot messages give the same advice in the 😷 line and Outside now, whatever the 3-hour PSI', () => {

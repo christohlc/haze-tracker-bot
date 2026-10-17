@@ -4,6 +4,8 @@
 
 import { psiBand, pm25Band } from './psi.js';
 
+/** Who the advice is for. @typedef {'general' | 'vulnerable'} Group */
+
 // "Is it safe outside right now?" in one line. NEA's advice for the 24-hour PSI band and for the
 // 1-hour PM2.5 band, put on one scale of outdoor action, 0 (normal) to 4 (stay in); the stricter wins.
 
@@ -26,12 +28,12 @@ const VERDICT = [
   {
     headline: 'Go easy on long or hard exercise outdoors.',
     detail: 'Stop and rest if you feel unwell.',
-    mask: { title: 'Take it easy', text: 'Sensitive? Keep an N95 handy.' },
+    mask: { title: 'Take it easy', text: 'No mask needed for short trips.' },
   },
   {
     headline: 'Skip long or hard exercise outdoors.',
     detail: 'Move workouts indoors.',
-    mask: { title: 'Ease off', text: 'Keep an N95 handy for long spells out.' },
+    mask: { title: 'Slow down', text: 'Keep an N95 handy for long spells out.' },
   },
   {
     headline: 'Keep time outdoors short.',
@@ -48,7 +50,7 @@ const VERDICT = [
 /**
  * The stricter of NEA's 24-hour PSI and 1-hour PM2.5 advice, for the general public or vulnerable
  * people. Null without either reading.
- * @param {number | null} psi24h  @param {number | null} pm25Now  @param {'general' | 'vulnerable'} group
+ * @param {number | null} psi24h  @param {number | null} pm25Now  @param {Group} group
  * @returns {{ rank: number, headline: string, detail: string, mask: { title: string, text: string } } | null}
  */
 export function verdict(psi24h, pm25Now, group) {
@@ -60,3 +62,7 @@ export function verdict(psi24h, pm25Now, group) {
   const rank = Math.max(psiRank, pmRank);
   return { rank, ...VERDICT[rank] };
 }
+
+/** The verdict for a snapshot's worst readings: what the hero, What to do and bot messages show.
+    @param {{ worst: { psi24h?: { value: number } | null, pm25?: { value: number } | null } }} snap  @param {Group} group */
+export const snapshotVerdict = (snap, group) => verdict(snap.worst.psi24h?.value ?? null, snap.worst.pm25?.value ?? null, group);
