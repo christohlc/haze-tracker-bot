@@ -134,9 +134,8 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
 - Checks: `npm test` and `npm run check`. Deploy: `npm run deploy` (+ `npx tgcloud
   migrate` after schema changes; + `npx wrangler@4 deploy --config cron/wrangler.jsonc` after
   changing `cron/`, which `npm run deploy` doesn't touch). `npm run deploy` refuses
-  (`scripts/deploy-guard.mjs`) unless the checkout is on `main`, clean and level with `origin/main`:
-  `push` uploads whatever is on disk, and sessions switch branches in the linked folder.
-  `DEPLOY_FORCE=1 npm run deploy` overrides it in an emergency (not `-- --force`, which reaches `tgcloud push`).
+  (`scripts/deploy-guard.mjs`) unless on a clean `main` level with `origin/main`, since `push`
+  uploads whatever is on disk. Emergency override: `DEPLOY_FORCE=1` (not `-- --force`).
 
 ## Layout
 
