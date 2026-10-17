@@ -4,7 +4,7 @@
 // load it; lib/hazemap.js fetches it. None of this is a documented API (the homepage embeds the
 // KML links in a script), so nothing here may throw.
 
-import { decodeEntities } from './html.js';
+import { decodeEntities, resolveUrl } from './html.js';
 import { MONTHS, sgtDateOf, toSgtIso } from './time.js';
 
 export const HAZE_HOME = 'https://www.haze.gov.sg/';
@@ -214,13 +214,8 @@ export function parseWind(kml, url) {
   const edge = (side) => Number(kml.match(new RegExp(`<${side}>\\s*([-\\d.]+)\\s*</${side}>`, 'i'))?.[1]);
   const box = { west: edge('west'), east: edge('east'), south: edge('south'), north: edge('north') };
   if (!href || !Object.values(box).every(Number.isFinite) || box.west >= box.east || box.south >= box.north) return null;
-  let image;
-  try {
-    image = new URL(decodeEntities(href), url).href;
-  } catch {
-    return null;
-  }
-  if (!/^https:\/\//.test(image)) return null;
+  const image = resolveUrl(decodeEntities(href), url);
+  if (!image) return null;
   return { image, box, date: fileDate(image) ?? fileDate(url) };
 }
 
