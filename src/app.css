@@ -246,13 +246,48 @@ summary {
 }
 
 /* Loading, failed and retry states, shared by the dashboard, Live views and Wind and rain. */
+/* A soft light sweeps across: transform only, so it stays on the compositor. */
 .sk {
-  animation: pulse 1.2s ease-in-out infinite alternate;
+  position: relative;
+  overflow: hidden;
 }
-@keyframes pulse {
+.sk::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 20%, color-mix(in srgb, var(--ink) 9%, transparent) 50%, transparent 80%);
+  transform: translateX(-100%);
+  animation: shimmer 1.4s linear infinite;
+}
+@keyframes shimmer {
   to {
-    opacity: 0.55;
+    transform: translateX(100%);
   }
+}
+
+/* The hero's sky colours, registered so a band change fades instead of snapping. Not inherited,
+   so changing them restyles only the card, not everything in it. */
+@property --sky-top {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: transparent;
+}
+@property --sky-bottom {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: transparent;
+}
+@property --haze {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: transparent;
+}
+
+/* Looping (ambient) animations stop while their element is off screen or the app is in the
+   background: see ambient() in src/lib/motion.ts. */
+[data-paused],
+[data-paused] * {
+  animation-play-state: paused !important;
 }
 .state {
   display: grid;
@@ -269,7 +304,8 @@ summary {
   font-weight: 600;
 }
 @media (prefers-reduced-motion: reduce) {
-  .sk {
+  .sk::after {
     animation: none;
+    opacity: 0;
   }
 }

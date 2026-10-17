@@ -112,6 +112,15 @@ messages is the same short form, for the general public.
   shown; showing a tab fades it in (150ms). The hero number counts
   up once on first load (600ms, from the bottom of its band, so it never reads lower than the band shown) and moves quickly when the period changes (220ms). In Around the island, rows slide to their new places when the area changes (220ms). Buttons
   scale to 0.97 when pressed.
+- The hero sky is alive but calm: two haze banks drift on slow loops (28 s and 40 s), more
+  opaque as the band rises (`--haze-density`), and a clear day gets a breathing sun (never in
+  the dark theme). The banks are light haze behind dark ink and dark smoke behind light ink, so
+  they never lower the contrast above. A band change fades the sky (280ms; the colours are
+  `@property`-registered in `app.css`). Loading skeletons shimmer instead of pulsing.
+- Looping animations go on an element with `use:ambient` (`src/lib/motion.ts`), which pauses
+  them while it’s off screen, the page is hidden or Telegram has the app in the background.
+  Loops animate `transform` and `opacity` only. Loading skeletons are the exception: they're
+  gone within seconds, so their shimmer doesn't need pausing.
 - Use `--ease-out` for things entering and `--ease-in-out` for things moving on screen.
 - Every animation has a `prefers-reduced-motion` fallback, either a plain fade or nothing. In
   JS, check `reducedMotion()` from `src/lib/motion.ts`.
