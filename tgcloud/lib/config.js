@@ -1,5 +1,5 @@
 // @ts-check
-// Public, non-secret settings. Secrets (e.g. the FIRMS key) live in the DB `settings` table.
+// Public, non-secret settings. Secrets (e.g. the data.gov.sg key) live in the DB `settings` table.
 
 /** Mini App host printed by `tgcloud push` (the app id is public). */
 export const MINI_APP_URL = 'https://app8809761337.tgcloud.ai/';

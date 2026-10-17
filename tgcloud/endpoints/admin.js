@@ -3,7 +3,7 @@
 //   read -rs KEY && npx tgcloud run endpoints/admin "{ action: 'set', key: 'datagov_api_key', value: '$KEY' }" 2>&1 | grep -Ev "value: ?'"
 //     (the CLI and npm print a command's input, key and all: the grep drops those lines; paste the key, Enter)
 //   npx tgcloud run endpoints/admin "{ action: 'status' }"
-//   npx tgcloud run endpoints/admin "{ action: 'unset', key: 'firms_map_key' }"
+//   npx tgcloud run endpoints/admin "{ action: 'unset', key: 'datagov_api_key' }"
 //   npx tgcloud run endpoints/admin "{ action: 'rewind_band', band: 'unhealthy' }"  (test: next tick alerts the change)
 //   npx tgcloud run endpoints/admin "{ action: 'commands' }"  (the command menus; in groups most are ephemeral, chat-rules.js COMMANDS)
 //   npx tgcloud run endpoints/admin "{ action: 'backfill', days: 14 }"  (NEA's hourly PM2.5 for past days; rerun a minute later until remaining is empty)
@@ -26,7 +26,7 @@ import { sgtDatesBack, sgtDayStart } from '../lib/time.js';
 import { allSourceStatus, countReadings, countReadingsBetween, deleteSetting, getAlertBands, getSetting, getState, setAlertBands, setSetting, setState, toSgtIso, upsertReadings } from '../lib/store.js';
 
 // datagov_api_key: data.gov.sg's (free, data.gov.sg sign-in), sent only to its v2 API for a higher rate limit.
-const SECRET_KEYS = ['firms_map_key', 'datagov_api_key'];
+const SECRET_KEYS = ['datagov_api_key'];
 
 // Backfill: one NEA request per SGT day, spaced out for data.gov.sg's rate limit, and stopped
 // before the (undocumented) run limit; days already complete are skipped, so a rerun resumes.
