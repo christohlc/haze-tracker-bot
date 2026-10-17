@@ -39,6 +39,10 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   `tgcloud run` isn't documented; tune `BUDGET_MS` in `lib/alerts.js`. Pacing needs
   `setTimeout`: the tick's `alerts.paced` says whether the runtime has it (if not, batches run
   back to back and a 429 ends the run).
+  The budget counts from the tick's start, so it includes the NEA and news fetches (run side by
+  side): the platform's fetch gives up after about 5 s (“fetch: request failed”, often a CDN cache
+  miss) and `lib/http.js` retries once (`retryOnce`, in the pure `lib/fetch-retry.js`), so a feed
+  that times out twice costs ~10 s. Callers with their own budget (backfill) pass a `deadline`.
 - **Breaking news is sent automatically, with no one approving it.** `lib/breaking-rules.js`
   picks a story when its headline has a topic (schools closing / HBL, outdoor activities or sports
   called off, free masks, MOM advisories), mentions haze (headline or description), is under 6 h
@@ -98,6 +102,14 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   Telegram refuses an ephemeral send. web_app buttons don't work in groups, so the dashboard
   button there is a t.me link (main Mini App if set in BotFather; getMe is cached per isolate). **Run `npx tgcloud migrate` before pushing**
   a build that reads `thread_id`.
+- **Areas.** A chat can follow one NEA region (`subscribers.region`; null = the highest region,
+  as before). Band alerts keep an alert band per area (`ALERT_SCOPES` in `lib/alert-rules.js`) in
+  one `state('alert_bands')` row, which replaces `alert_band`; picking another region resets the
+  chat's `lastBand` to that region's band, so it doesn't fire at once. /haze, band alerts and daily
+  updates lead with the chat's region (`readingsFor` in `lib/snapshot.js`, shared with the Mini
+  App). In the Mini App the area is per user (`src/lib/area.svelte.ts`, CloudStorage); while alerts
+  are on, picking an area saves it to the subscription. **Run `npx tgcloud migrate` before
+  pushing** a build that reads `region`.
 - **Secrets live in the `settings` DB table**, set only via `endpoints/admin` from the
   CLI. Never commit or echo a key.
 - **1-hour and 3-hour PSI and the next-hours range are our own calculations**, not NEA's.

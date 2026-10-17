@@ -53,9 +53,11 @@ export default async function (message) {
       return reply(message, help(copy), await dashboardButton(message.chat.id));
     case 'haze': {
       const refreshed = getSnapshot();
-      const [snap, ahead, reply_markup] = await Promise.all([refreshed, getAhead(refreshed), dashboardButton(message.chat.id)]);
-      const caption = formatHazeCaption(snap, ahead);
-      return answer(message, (to) => sendCardOrText(to, snap, { caption, text: formatHaze(snap, ahead), reply_markup }));
+      const [snap, ahead, reply_markup, sub] = await Promise.all([refreshed, getAhead(refreshed), dashboardButton(message.chat.id), getSubscriber(message.chat.id)]);
+      // Leads with the region this chat's alerts follow, if it picked one.
+      const region = sub?.region ?? null;
+      const caption = formatHazeCaption(snap, ahead, region);
+      return answer(message, (to) => sendCardOrText(to, snap, { caption, text: formatHaze(snap, ahead, { region }), reply_markup }));
     }
     case 'forecast': {
       const ahead = await getAhead(getSnapshot());

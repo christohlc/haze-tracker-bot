@@ -22,6 +22,21 @@ export async function setState(key, value) {
     .run();
 }
 
+/**
+ * Every alert scope's current band (alert-rules.js ALERT_SCOPES), in one state row. Before regions
+ * there was only the highest region's, in 'alert_band'; it carries over until the first tick.
+ * @returns {Promise<Record<string, import('./alert-rules.js').AlertBand>>}
+ */
+export async function getAlertBands() {
+  const bands = (await getState('alert_bands'))?.value;
+  if (bands) return bands;
+  const legacy = (await getState('alert_band'))?.value;
+  return legacy ? { highest: legacy } : {};
+}
+
+/** @param {Record<string, import('./alert-rules.js').AlertBand>} bands */
+export const setAlertBands = (bands) => setState('alert_bands', bands);
+
 export async function getSetting(key) {
   return (await db.select().from(settings).where(eq(settings.key, key)).get())?.value ?? null;
 }

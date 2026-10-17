@@ -1,10 +1,13 @@
 import { isActive } from '../../tgcloud/lib/alert-settings.js';
+import type { RegionId } from './api';
 import { callEndpoint, inTelegram, withWriteAccess } from './telegram';
 
 export interface AlertSettings {
   bandAlerts: boolean;
   dailyHour: number | null;
   breakingAlerts: boolean;
+  /** Band alerts follow this region; null follows the highest region. */
+  region: RegionId | null;
 }
 
 // Outside Telegram (dev preview) there's no endpoint: keep settings in memory.

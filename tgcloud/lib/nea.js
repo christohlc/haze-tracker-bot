@@ -5,9 +5,9 @@ import { NEA_API } from './config.js';
 import { getJson } from './http.js';
 import { sgtDateOf } from './time.js';
 
-async function getItems(path, date) {
+async function getItems(path, date, deadline) {
   const url = `${NEA_API}/${path}${date ? `?date=${date}` : ''}`;
-  const body = await getJson(url, `NEA ${path}`);
+  const body = await getJson(url, `NEA ${path}`, deadline);
   if (body.code !== 0) throw new Error(`NEA ${path}: ${body.errorMsg || body.code}`);
   return body.data?.items ?? [];
 }
@@ -17,10 +17,11 @@ async function getItems(path, date) {
 /**
  * Hourly PM2.5 for one SGT date ("2026-10-16"); NEA has up to 24 items a day.
  * @param {string} date
+ * @param {number} [deadline] see retryOnce() in fetch-retry.js
  * @returns {Promise<Pm25Item[]>} oldest first
  */
-export async function getPm25Day(date) {
-  return byTime(await getItems('pm25', date));
+export async function getPm25Day(date, deadline) {
+  return byTime(await getItems('pm25', date, deadline));
 }
 
 /**

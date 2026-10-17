@@ -11,6 +11,8 @@ export interface Region {
   psi3h: number | null;
   psi24h: number | null;
   pm25Mean24h: number | null;
+  /** Our calculation: the latest hour's PM2.5 against three hours earlier. Missing in older snapshots. */
+  trend?: 'rising' | 'easing' | 'steady' | null;
 }
 
 export interface Worst {

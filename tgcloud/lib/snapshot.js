@@ -5,6 +5,7 @@
 import { REGIONS } from './config.js';
 import { meanOfLast, pm25ToPsi } from './psi.js';
 import { cigarettes } from './cigs.js';
+import { unixHour } from './time.js';
 
 /**
  * Mean PM2.5 over the regions that reported; null if none did. The island-wide figure, and
@@ -18,12 +19,32 @@ export function islandMean(readings) {
 }
 
 /**
+ * Which way a region's 1-hour PM2.5 is heading: the latest hour against three hours earlier (found
+ * by time, so a missing hour can't stretch the gap). Moves under 10 µg/m³ or 15% are steady; null
+ * when either hour is missing. Our calculation, not NEA's.
+ * @param {Array<{ t: string } & Record<string, any>>} rows oldest first  @param {string} region
+ * @returns {'rising' | 'easing' | 'steady' | null}
+ */
+export function pm25Trend(rows, region) {
+  const last = rows.at(-1);
+  if (!last) return null;
+  const h0 = unixHour(last.t);
+  const now = last[region];
+  const before = rows.find((r) => unixHour(r.t) === h0 - 3)?.[region];
+  if (now == null || before == null) return null;
+  const d = now - before;
+  if (Math.abs(d) < 10 || Math.abs(d) < before * 0.15) return 'steady';
+  return d > 0 ? 'rising' : 'easing';
+}
+
+/**
  * @param {Array<{ timestamp: string, readings: Record<string, number> }>} pm25History oldest first
  * @param {{ timestamp: string, readings: Record<string, Record<string, number>> }} psi
  */
 export function buildSnapshot(pm25History, psi) {
   if (!pm25History.length) throw new Error('No PM2.5 readings');
   const history = pm25History.slice(-25);
+  const rows = history.map((h) => ({ t: h.timestamp, ...h.readings }));
 
   const regions = REGIONS.map(({ id, name }) => {
     const series = history.map((h) => h.readings?.[id] ?? null);
@@ -36,6 +57,7 @@ export function buildSnapshot(pm25History, psi) {
       psi3h: pm25ToPsi(meanOfLast(series, 3)),
       psi24h: psi.readings.psi_twenty_four_hourly?.[id] ?? null,
       pm25Mean24h: meanOfLast(series, 24),
+      trend: pm25Trend(rows, id),
     };
   });
 
@@ -62,11 +84,25 @@ export function buildSnapshot(pm25History, psi) {
       pm25: pick(worst('pm25'), 'pm25'),
     },
     cigs: cigarettes(island),
-    history: history.map((h) => ({ t: h.timestamp, ...h.readings })),
+    history: rows,
   };
 }
 
 /** @param {any} region @param {string} key */
 function pick(region, key) {
   return region ? { region: region.id, name: region.name, value: region[key] } : null;
+}
+
+/**
+ * The readings to lead with for an area: that region's, or for each reading the region where it's
+ * highest. `area` is the picked region (null for the highest); `trend` goes with the PM2.5 shown.
+ * @param {any} snap @param {string | null | undefined} region
+ */
+export function readingsFor(snap, region) {
+  const area = snap.regions?.find((/** @type {any} */ r) => r.id === region) ?? null;
+  /** @param {'psi1h' | 'psi3h' | 'psi24h' | 'pm25'} key */
+  const at = (key) => (area ? (area[key] == null ? null : { region: area.id, name: area.name, value: area[key] }) : snap.worst[key]);
+  const pm25 = at('pm25');
+  const trend = snap.regions?.find((/** @type {any} */ r) => r.id === pm25?.region)?.trend ?? null;
+  return { area, psi1h: at('psi1h'), psi3h: at('psi3h'), psi24h: at('psi24h'), pm25, trend };
 }

@@ -75,7 +75,8 @@ or, outside Telegram, from the OS. A new colour token needs both a light and a d
 - Under the header, a sticky tab bar (`Segmented` with `kind="tab"`) splits the cards into three
   tabs. It sits at the top, not the bottom, because Telegram’s MainButton (“Get haze alerts”)
   owns the bottom edge.
-  - **Now:** hero, regions, advice, alerts, share.
+  - **Now:** hero, regions, advice, alerts, share. The hero's area pill (a native select over a
+    pill) picks the region the hero, advice and alerts follow; until someone picks, it's the highest.
   - **Outlook:** what’s ahead, wind and rain, where it’s coming from (NEA’s regional haze map), history.
   - **More:** live views, news, cigarettes, what’s new, sources (collapsed).
 - A tab mounts the first time it’s opened and then stays mounted, hidden (laid out at zero
@@ -97,6 +98,12 @@ amber, smoky orange, and dusky purple for hazardous. Each band has its own dark-
 text colours are fixed per sky rather than taken from the Telegram theme, so they always
 contrast with the gradient. `--ink-2` has to stay at 4.5:1 or better against the top and bottom
 of the sky and the haze. Check that again whenever a sky colour changes.
+
+The number, band and sky follow the period picked (1, 3 or 24 hours). The verdict line under
+them (“Mask up.”) doesn’t: it’s the short form of What to do’s answer (`verdict()` in
+`tgcloud/lib/advice.js`, the stricter of NEA’s 24-hour PSI and 1-hour PM2.5 advice, for the group
+picked there), so the app never gives two different answers on what to do. The 😷 line in bot
+messages is the same short form, for the general public.
 
 ## Motion
 

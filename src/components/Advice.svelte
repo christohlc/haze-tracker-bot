@@ -1,35 +1,69 @@
 <script lang="ts">
-  import { advice } from '../../tgcloud/lib/advice.js';
+  import type { Group, verdict } from '../../tgcloud/lib/advice.js';
+  import { readingsFor } from '../../tgcloud/lib/snapshot.js';
   import type { Snapshot } from '../lib/api';
+  import { area } from '../lib/area.svelte';
+  import { reducedMotion } from '../lib/motion';
   import BandPill from './BandPill.svelte';
+  import Segmented from './Segmented.svelte';
 
-  let { snapshot }: { snapshot: Snapshot } = $props();
-  const psi24 = $derived(snapshot.worst.psi24h);
-  const pm = $derived(snapshot.worst.pm25);
-  const a = $derived(advice(psi24?.value ?? null, pm?.value ?? null));
+  const GROUPS: { value: Group; label: string }[] = [
+    { value: 'general', label: 'General public' },
+    { value: 'vulnerable', label: 'Vulnerable people' },
+  ];
+  const TREND = { rising: { arrow: '↑', word: 'Rising' }, easing: { arrow: '↓', word: 'Easing' }, steady: { arrow: '→', word: 'Steady' } };
+
+  // The verdict and group live in App, which shares them with the hero and remembers the group.
+  let {
+    snapshot,
+    v,
+    group,
+    onpick,
+  }: { snapshot: Snapshot; v: ReturnType<typeof verdict>; group: Group; onpick: (g: Group) => void } = $props();
+  // The user's area if they picked one, else the highest region for each reading.
+  const readings = $derived(readingsFor(snapshot, area.id));
+  const mine = $derived(readings.area);
+  const psi24 = $derived(readings.psi24h);
+  const pm = $derived(readings.pm25);
+  const trend = $derived(readings.trend as keyof typeof TREND | null);
+
+  // Picked by the user: App remembers it; fade the answer back in so the change registers.
+  let answer = $state<HTMLElement>();
+  function pickGroup(g: Group) {
+    onpick(g);
+    if (!reducedMotion()) answer?.animate([{ opacity: 0.35 }, { opacity: 1 }], { duration: 150, easing: 'ease-out' });
+  }
 </script>
 
 <section class="card" aria-labelledby="advice-title">
   <h2 id="advice-title" class="section-title">What to do</h2>
-  <p class="note">
-    Following NEA: use the 1-hour PM2.5 for what you do right now, and the 24-hour PSI
-    {#if psi24}(currently <BandPill value={psi24.value} />){/if} to plan ahead.
-  </p>
 
-  {#if a.rightNow}
-    <div class="now">
-      <p class="now-head">Right now · Band {a.rightNow.band} ({a.rightNow.label})</p>
-      <p>{a.rightNow.text}</p>
-      {#if pm}<p class="note">Highest region: {pm.name}, {pm.value} µg/m³</p>{/if}
+  {#if v}
+    <div class="verdict">
+      <div class="verdict-head">
+        <p class="eyebrow">Outside, right now</p>
+        {#if trend && pm}
+          <p class="trend trend-{trend}"><span aria-hidden="true">{TREND[trend].arrow}</span> {TREND[trend].word} in {pm.name}</p>
+        {/if}
+      </div>
+      <div bind:this={answer}>
+        <p class="headline">{v.headline}</p>
+        {#if v.detail}<p class="detail">{v.detail}</p>{/if}
+      </div>
+      <Segmented label="Advice for" options={GROUPS} bind:value={() => group, pickGroup} />
+      {#if group === 'vulnerable'}
+        <p class="note">The elderly, pregnant women, children, and people with chronic lung or heart disease.</p>
+      {/if}
+      <p class="note">
+        The stricter of NEA’s advice for the last hour’s PM2.5{#if pm}&nbsp;({pm.value} µg/m³ in {pm.name}{mine ? '' : ', the highest'}){/if}
+        and the official 24-hour PSI{#if psi24}&nbsp;<BandPill value={psi24.value} />{/if}, simplified; haze.gov.sg is
+        official.{#if trend}&nbsp;Rising or easing compares the last hour with three hours before: our calculation.{/if}
+      </p>
     </div>
-  {/if}
-
-  {#if a.groups}
-    <dl>
-      <div><dt>Healthy adults</dt><dd>{a.groups.healthy}</dd></div>
-      <div><dt>Elderly, pregnant women, children</dt><dd>{a.groups.vulnerable}</dd></div>
-      <div><dt>Chronic lung or heart disease</dt><dd>{a.groups.chronic}</dd></div>
-    </dl>
+  {:else}
+    <p class="note empty">
+      {mine ? `No readings for ${mine.name} right now, so no advice from us. Pick another area at the top, or check haze.gov.sg.` : 'No readings from NEA right now, so no advice from us. Check haze.gov.sg.'}
+    </p>
   {/if}
 
   <ul>
@@ -41,37 +75,51 @@
 </section>
 
 <style>
-  .now {
-    margin: 14px 0;
-    padding: 12px;
-    border-radius: 12px;
-    background: var(--control);
-  }
-  .now p {
-    margin: 0;
-  }
-  .now-head {
-    font-weight: 650;
-    margin-bottom: 2px !important;
-  }
-  dl {
+  .verdict {
+    margin: 10px 0 16px;
     display: grid;
-    gap: 0;
+    gap: 10px;
+  }
+  .verdict-head p,
+  .headline {
     margin: 0;
   }
-  dl div {
-    padding: 10px 0;
-    border-top: 1px solid var(--hairline);
+  .verdict-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
   }
-  dl div:first-child {
-    border-top: 0;
-  }
-  dt {
+  .eyebrow,
+  .trend {
+    font-size: 0.8125rem;
     font-weight: 600;
-  }
-  dd {
-    margin: 2px 0 0;
     color: var(--ink-2);
+  }
+  .trend {
+    white-space: nowrap;
+  }
+  .trend-rising {
+    color: var(--status-critical);
+  }
+  .headline {
+    font-family: var(--font-display);
+    font-size: 1.375rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+    text-wrap: balance;
+  }
+  .detail {
+    margin: 4px 0 0;
+    color: var(--ink-2);
+  }
+  .verdict .note {
+    margin: 0;
+  }
+  .empty {
+    margin: 8px 0 0;
   }
   ul {
     margin: 12px 0 0;

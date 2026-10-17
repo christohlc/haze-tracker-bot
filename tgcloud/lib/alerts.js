@@ -5,15 +5,14 @@
 // made) and the subscriber's lastBand stays behind, so the next tick catches them up.
 
 import { BotApiError } from 'sdk';
-import { dailyDue, nextAlertBand, runBatched, SEND_INTERVAL_MS, sgtHourOf } from './alert-rules.js';
+import { ALERT_SCOPES, advanceBands, bandAlertsFor, dailyDue, runBatched, SEND_INTERVAL_MS, sgtHourOf } from './alert-rules.js';
 import { dashboardButton } from './buttons.js';
 import { isRateLimited, isTopicGone, isUnreachable, movedTo } from './bot-errors.js';
 import { subscriberTarget } from './chat-rules.js';
 import { cachedCardId, sendCardOrText } from './card/send.js';
 import { sendBreaking } from './breaking.js';
 import { formatBandAlert, formatHaze, formatHazeCaption } from './format.js';
-import { psiBand } from './psi.js';
-import { getState, setState } from './store.js';
+import { getAlertBands, setAlertBands } from './store.js';
 import { sgtDateOf } from './time.js';
 import {
   bandSubscribers,
@@ -27,7 +26,6 @@ import {
   moveSubscriber,
   pruneAlerts,
   releaseAlert,
-  seedLastBand,
   setLastBand,
 } from './subscriptions.js';
 
@@ -96,24 +94,26 @@ export async function runAlerts(snap, now = Date.now(), breaking = []) {
   );
   const breakingStopped = tally(breakingRes, 'breaking');
 
-  const raw = psiBand(snap.worst.psi3h?.value)?.id ?? null;
-  const prev = (await getState('alert_band'))?.value ?? null;
-  const band = nextAlertBand(prev, raw, now);
+  // Each area's alert band moves with its own 3-hour PSI (rises at once, drops after a hold);
+  // subscribers without a region follow the highest region's.
+  const prev = await getAlertBands();
+  const bands = advanceBands(prev, snap, now);
+  if (ALERT_SCOPES.some((s) => bands[s] !== prev[s])) await setAlertBands(bands);
   // Until the summary card is uploaded, send to one chat first so the rest reuse its file id.
   const firstAlone = async () => !(await cachedCardId(snap));
-  if (band && band !== prev) await setState('alert_band', band);
-  out.band = band?.id ?? null;
+  out.band = bands.highest?.id ?? null;
 
   // Still 'limited' if breaking news hit a 429 and band alerts couldn't wait it out.
   let bandStopped = breakingStopped === 'limited' ? 'limited' : null;
-  if (band && (await canGoOn(breakingStopped, now + BAND_BUDGET_MS))) {
-    await seedLastBand(band.id);
-    const subs = (await bandSubscribers()).filter((s) => s.lastBand && s.lastBand !== band.id);
+  if (Object.keys(bands).length && (await canGoOn(breakingStopped, now + BAND_BUDGET_MS))) {
+    const { due, unseeded } = bandAlertsFor(await bandSubscribers(), bands);
+    // Never told a band (rare: subscribing seeds it): start them at it, without an alert.
+    await Promise.all(unseeded.map(({ sub, band }) => setLastBand(sub.chatId, band.id)));
     const res = await runBatched(
-      subs,
-      async (sub) => {
-        const text = formatBandAlert(snap, sub.lastBand, band.id);
-        const r = await sendNoting429(sub.chatId, `band:${sub.chatId}:${band.id}:${band.at}`, card(sub, { caption: text, text }));
+      due,
+      async ({ sub, band, scope }) => {
+        const text = formatBandAlert(snap, /** @type {string} */ (sub.lastBand), band.id, sub.region);
+        const r = await sendNoting429(sub.chatId, `band:${sub.chatId}:${scope}:${band.id}:${band.at}`, card(sub, { caption: text, text }));
         if (r === 'sent' || r === 'duplicate') await setLastBand(sub.chatId, band.id);
         return r;
       },
@@ -130,10 +130,16 @@ export async function runAlerts(snap, now = Date.now(), breaking = []) {
     const hour = sgtHourOf(now);
     const [subs, claimed] = await Promise.all([dailySubscribers(), dailyClaimedChats(date)]);
     const due = subs.filter((s) => dailyDue(s.dailyHour, hour) && !claimed.has(s.chatId));
-    const daily = { caption: `${DAILY_HEADER}${formatHazeCaption(snap)}`, text: `${DAILY_HEADER}${formatHaze(snap)}` };
+    /** @type {Map<string | null, { caption: string, text: string }>} */
+    const daily = new Map();
+    /** @param {string | null} region */
+    const dailyFor = (region) => {
+      if (!daily.has(region)) daily.set(region, { caption: `${DAILY_HEADER}${formatHazeCaption(snap, null, region)}`, text: `${DAILY_HEADER}${formatHaze(snap, null, { region })}` });
+      return /** @type {{ caption: string, text: string }} */ (daily.get(region));
+    };
     const res = await runBatched(
       due,
-      (sub) => sendNoting429(sub.chatId, `daily:${sub.chatId}:${date}`, card(sub, daily)),
+      (sub) => sendNoting429(sub.chatId, `daily:${sub.chatId}:${date}`, card(sub, dailyFor(sub.region ?? null))),
       { deadline, sleep, firstAlone: await firstAlone() },
     );
     tally(res, 'daily');

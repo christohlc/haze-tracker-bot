@@ -23,10 +23,10 @@ export function worstCase(): Dashboard {
       stale: true,
       regions: [
         { id: 'north', name: 'North', pm25: null, psi1h: null, psi3h: null, psi24h: null, pm25Mean24h: null },
-        { id: 'west', name: 'West', pm25: 650, psi1h: 600, psi3h: 600, psi24h: 512, pm25Mean24h: 650 },
+        { id: 'west', name: 'West', pm25: 650, psi1h: 600, psi3h: 600, psi24h: 512, pm25Mean24h: 650, trend: 'rising' },
         { id: 'central', name: 'Central', pm25: 499, psi1h: 500, psi3h: 433, psi24h: 1000, pm25Mean24h: 260 },
         { id: 'east', name: 'East', pm25: 12, psi1h: 50, psi3h: 50, psi24h: 51, pm25Mean24h: 12 },
-        { id: 'south', name: 'South', pm25: 1000, psi1h: 833, psi3h: 833, psi24h: 999, pm25Mean24h: 1000 },
+        { id: 'south', name: 'South', pm25: 1000, psi1h: 833, psi3h: 833, psi24h: 999, pm25Mean24h: 1000, trend: 'easing' },
       ],
       island: { now: 540.25, mean24h: 480.4 },
       worst: {

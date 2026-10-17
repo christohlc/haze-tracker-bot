@@ -10,7 +10,8 @@
         "psi1h": 184,
         "psi3h": 184,
         "psi24h": 155,
-        "pm25Mean24h": 107.33333333333333
+        "pm25Mean24h": 107.33333333333333,
+        "trend": "steady"
       },
       {
         "id": "west",
@@ -19,7 +20,8 @@
         "psi1h": 212,
         "psi3h": 209,
         "psi24h": 203,
-        "pm25Mean24h": 152.125
+        "pm25Mean24h": 152.125,
+        "trend": "easing"
       },
       {
         "id": "central",
@@ -28,7 +30,8 @@
         "psi1h": 219,
         "psi3h": 221,
         "psi24h": 226,
-        "pm25Mean24h": 176.25
+        "pm25Mean24h": 176.25,
+        "trend": "rising"
       },
       {
         "id": "east",
@@ -37,7 +40,8 @@
         "psi1h": 212,
         "psi3h": 209,
         "psi24h": 205,
-        "pm25Mean24h": 154.83333333333334
+        "pm25Mean24h": 154.83333333333334,
+        "trend": "steady"
       },
       {
         "id": "south",
@@ -46,7 +50,8 @@
         "psi1h": 210,
         "psi3h": 212,
         "psi24h": 185,
-        "pm25Mean24h": 136.25
+        "pm25Mean24h": 136.25,
+        "trend": "rising"
       }
     ],
     "island": {
