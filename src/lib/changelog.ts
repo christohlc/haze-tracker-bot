@@ -9,6 +9,12 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-17-one-alert',
+    date: '2026-10-17',
+    title: 'Clearer haze alerts',
+    body: 'Alerts now name your area and give NEA’s 24-hour PSI next to ours, so they match the picture. When the official reading jumps at the same time, you get one message instead of two.',
+  },
+  {
     id: '2026-10-17-area-first',
     date: '2026-10-17',
     title: 'Your area at the top',

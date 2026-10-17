@@ -82,14 +82,31 @@ export async function runAlerts(snap, now = Date.now(), breaking = []) {
     return true;
   };
 
+  // Each area's alert band moves with its own 3-hour PSI (rises at once, drops after a hold);
+  // subscribers without a region follow the highest region's.
+  const prev = await getAlertBands();
+  const bands = advanceBands(prev, snap, now);
+  if (ALERT_SCOPES.some((s) => bands[s] !== prev[s])) await setAlertBands(bands);
+  out.band = bands.highest?.id ?? null;
+  const { due: bandDue, unseeded } = Object.keys(bands).length ? bandAlertsFor(await bandSubscribers(), bands) : { due: [], unseeded: [] };
+  const bandDueChats = new Set(bandDue.map(({ sub }) => sub.chatId));
+
   // Breaking news: every event still to send × breaking subscribers who haven't had it and
-  // subscribed before it happened (so a new subscriber doesn't get an old story).
+  // subscribed before it happened (so a new subscriber doesn't get an old story). An official
+  // 24-hour PSI crossing for a chat that's also due a band alert leads that alert instead of
+  // going on its own (`folded`), so the chat gets one message, under the picture it describes.
   /** @type {Array<{ sub: any, event: any }>} */
   const pending = [];
+  /** @type {Map<number, any>} */
+  const folded = new Map();
   if (breaking.length) {
     const [subs, ...claimed] = await Promise.all([breakingSubscribers(), ...breaking.map((e) => breakingClaimedChats(e.id))]);
     breaking.forEach((event, i) => {
-      for (const s of subs) if (s.createdAt * 1000 <= event.at && !claimed[i].has(s.chatId)) pending.push({ sub: s, event });
+      for (const s of subs) {
+        if (s.createdAt * 1000 > event.at || claimed[i].has(s.chatId)) continue;
+        if (event.kind === 'psi24' && bandDueChats.has(s.chatId)) folded.set(s.chatId, event); // oldest first, so the latest wins
+        else pending.push({ sub: s, event });
+      }
     });
   }
   const breakingRes = await runBatched(
@@ -99,27 +116,23 @@ export async function runAlerts(snap, now = Date.now(), breaking = []) {
   );
   const breakingStopped = tally(breakingRes, 'breaking');
 
-  // Each area's alert band moves with its own 3-hour PSI (rises at once, drops after a hold);
-  // subscribers without a region follow the highest region's.
-  const prev = await getAlertBands();
-  const bands = advanceBands(prev, snap, now);
-  if (ALERT_SCOPES.some((s) => bands[s] !== prev[s])) await setAlertBands(bands);
   // Until the summary card is uploaded, send to one chat first so the rest reuse its file id.
   const firstAlone = async () => !(await cachedCardId(snap));
-  out.band = bands.highest?.id ?? null;
 
-  // Still 'limited' if breaking news hit a 429 and band alerts couldn't wait it out.
+  // Still 'limited' if breaking news hit a 429 and band alerts couldn't wait it out. A folded
+  // event left unsent stays unclaimed, so the next tick sends it (with the band alert, or alone).
   let bandStopped = breakingStopped === 'limited' ? 'limited' : null;
   if (Object.keys(bands).length && (await canGoOn(breakingStopped, now + BAND_BUDGET_MS))) {
-    const { due, unseeded } = bandAlertsFor(await bandSubscribers(), bands);
     // Never told a band (rare: subscribing seeds it): start them at it, without an alert.
     await Promise.all(unseeded.map(({ sub, band }) => setLastBand(sub.chatId, band.id)));
     const res = await runBatched(
-      due,
+      bandDue,
       async ({ sub, band, scope }) => {
-        const text = formatBandAlert(snap, /** @type {string} */ (sub.lastBand), band.id, sub.region);
+        const official = folded.get(sub.chatId) ?? null;
+        const text = formatBandAlert(snap, /** @type {string} */ (sub.lastBand), band.id, sub.region, official);
         const r = await sendNoting429(sub.chatId, `band:${sub.chatId}:${scope}:${band.id}:${band.at}`, card(sub, { caption: text, text }));
         if (r === 'sent' || r === 'duplicate') await setLastBand(sub.chatId, band.id);
+        if (r === 'sent' && official && (await claimAlert(`breaking:${official.id}:${sub.chatId}`, sub.chatId))) out.breaking++;
         return r;
       },
       { deadline: now + BAND_BUDGET_MS, sleep, firstAlone: await firstAlone() },
