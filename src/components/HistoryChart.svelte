@@ -1,10 +1,17 @@
 <script lang="ts">
   import type { HourRow, RegionId, Snapshot } from '../lib/api';
-  import { fmt, sgtHour } from '../lib/format';
+  import { fmt, sgtHour, sgtWeekday } from '../lib/format';
   import { niceTicks, rollingSeries, type Scale, type Window } from '../lib/series';
   import Segmented from './Segmented.svelte';
 
-  let { snapshot, history }: { snapshot: Snapshot; history: HourRow[] } = $props();
+  // `region`: one region's line only (the region detail view); otherwise every region.
+  // `days`: the span it opens on; the viewer can switch.
+  let {
+    snapshot,
+    history,
+    region = null,
+    days = $bindable(1),
+  }: { snapshot: Snapshot; history: HourRow[]; region?: RegionId | null; days?: 1 | 7 } = $props();
 
   let scale = $state<Scale>('pm25');
   let win = $state<Window>(1);
@@ -14,8 +21,10 @@
   const H = 220;
   const pad = { t: 12, r: 12, b: 24, l: 34 };
 
-  const regions = $derived(snapshot.regions.map((r) => ({ id: r.id as RegionId, name: r.name })));
-  const series = $derived(regions.map((r) => ({ ...r, points: rollingSeries(history, r.id, win, scale) })));
+  const regions = $derived(
+    snapshot.regions.filter((r) => !region || r.id === region).map((r) => ({ id: r.id as RegionId, name: r.name })),
+  );
+  const series = $derived(regions.map((r) => ({ ...r, points: rollingSeries(history, r.id, win, scale, days * 24) })));
   const n = $derived(series[0]?.points.length ?? 0);
   const yTicks = $derived(
     niceTicks(Math.max(scale === 'psi' ? 100 : 55, ...series.flatMap((s) => s.points.map((p) => p.v ?? 0)))),
@@ -39,11 +48,16 @@
     return d;
   }
 
+  // A day: every 4 or 6 hours. A week: each midnight, named by the day that starts.
   const xTicks = $derived(
     (series[0]?.points ?? [])
-      .map((p, i) => ({ i, t: p.t }))
-      .filter(({ t }) => Number(t.slice(11, 13)) % (width < 420 ? 6 : 4) === 0),
+      .map((p, i) => ({ i, t: p.t, h: Number(p.t.slice(11, 13)) }))
+      .filter(({ h }) => (days === 7 ? h === 0 : h % (width < 420 ? 6 : 4) === 0))
+      .map((tk) => ({ ...tk, label: days === 7 ? sgtWeekday(tk.t) : sgtHour(tk.t) })),
   );
+  /** “Thu 3 pm” in a week, “3 pm” in a day. */
+  const when = (t: string) => (days === 7 ? `${sgtWeekday(t)} ${sgtHour(t)}` : sgtHour(t));
+  const spanLabel = $derived(days === 7 ? 'past 7 days' : 'past 24 hours');
 
   // Band edges: NEA PSI bands, and the matching PM2.5 1-hour bands.
   const BANDS = {
@@ -85,13 +99,23 @@
 </script>
 
 <section class="card" aria-labelledby="hist-title">
-  <h2 id="hist-title" class="section-title">Past 24 hours</h2>
+  <h2 id="hist-title" class="section-title">{days === 7 ? 'Past 7 days' : 'Past 24 hours'}</h2>
   <p class="note">
     Rolling {winLabel} averages ending at each hour. The PSI view converts PM2.5 with NEA’s breakpoints, so its
     24-hour line can differ slightly from the official PSI.
   </p>
 
   <div class="controls">
+    <div class="span">
+      <Segmented
+        label="Time span"
+        bind:value={days}
+        options={[
+          { value: 1, label: '24 hours' },
+          { value: 7, label: '7 days' },
+        ]}
+      />
+    </div>
     <Segmented
       label="Scale"
       bind:value={scale}
@@ -113,7 +137,7 @@
 
   <!-- The legend doubles as the readout while scrubbing, so nothing covers the lines. -->
   <div class="readout">
-    <p class="readout-time">{tip ? `${sgtHour(tip.t)} · ${unit}` : `Latest hour · ${unit}`}</p>
+    <p class="readout-time">{tip ? `${when(tip.t)} · ${unit}` : `Latest hour · ${unit}`}</p>
     <ul class="legend" aria-label="Regions">
       {#each regions as r, k (r.id)}
         {@const v = series[k].points[hover ?? n - 1]?.v ?? null}
@@ -123,7 +147,7 @@
   </div>
 
   {#if !series.some((s) => s.points.some((p) => p.v != null))}
-    <p class="empty">No readings in the past 24 hours yet.</p>
+    <p class="empty">No readings in the {spanLabel} yet.</p>
   {:else}
   <div class="plot" bind:clientWidth={width}>
     <svg
@@ -131,7 +155,7 @@
       width="100%"
       height={H}
       role="img"
-      aria-label="{winLabel} {unit} by region over the past 24 hours"
+      aria-label="{winLabel} {unit} {region ? `in ${regions[0]?.name}` : 'by region'} over the {spanLabel}"
       onpointermove={onMove}
       onpointerdown={onMove}
       onpointerleave={() => (hover = null)}
@@ -144,7 +168,7 @@
         <line x1={pad.l} x2={width - pad.r} y1={y(b.v)} y2={y(b.v)} class="band" />
       {/each}
       {#each xTicks as tk (tk.t)}
-        <text x={x(tk.i)} y={H - 6} class="tick" text-anchor="middle">{sgtHour(tk.t)}</text>
+        <text x={x(tk.i)} y={H - 6} class="tick" text-anchor="middle">{tk.label}</text>
       {/each}
 
       {#each series as s (s.id)}
@@ -184,7 +208,7 @@
           {#each [...(series[0]?.points ?? [])].reverse() as p, k (p.t)}
             {@const i = n - 1 - k}
             <tr>
-              <th scope="row">{sgtHour(p.t)}</th>
+              <th scope="row">{when(p.t)}</th>
               {#each series as s (s.id)}<td class="r num">{fmt(s.points[i]?.v)}</td>{/each}
             </tr>
           {/each}
@@ -201,6 +225,9 @@
     grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
     gap: 8px;
     margin: 14px 0 10px;
+  }
+  .span {
+    grid-column: 1 / -1;
   }
   @media (max-width: 359px) {
     .controls {

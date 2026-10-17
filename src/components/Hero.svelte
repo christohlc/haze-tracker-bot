@@ -3,7 +3,9 @@
   import { cubicOut } from 'svelte/easing';
   import { bandFloor, psiBand } from '../../tgcloud/lib/psi.js';
   import { readingsFor } from '../../tgcloud/lib/snapshot.js';
-  import type { RegionId, Snapshot } from '../lib/api';
+  import { psiRangeText } from '../../tgcloud/lib/outlook-parse.js';
+  import type { Range, RegionId, Snapshot } from '../lib/api';
+  import { bandStops } from '../lib/bands';
   import { area, canLocate, locateArea, pickArea } from '../lib/area.svelte';
   import { reducedMotion } from '../lib/motion';
   import { PERIODS, psiKey, type Period } from '../lib/period';
@@ -11,11 +13,20 @@
 
   // `mask` is the short form of What to do's verdict (24-hr PSI and PM2.5, whichever is stricter),
   // not of the period shown, so the two never give different advice.
+  // `range`: our next-hours range (island-wide 1-hour PSI), shown as a strip; `onahead` opens Outlook.
   let {
     snapshot,
     period = $bindable('3h'),
     mask,
-  }: { snapshot: Snapshot; period?: Period; mask?: { title: string; text: string } | null } = $props();
+    range = null,
+    onahead,
+  }: {
+    snapshot: Snapshot;
+    period?: Period;
+    mask?: { title: string; text: string } | null;
+    range?: Range | null;
+    onahead?: () => void;
+  } = $props();
 
   const worst = $derived(snapshot.worst[psiKey(period)]);
   // The user's area if they picked one, else the highest region.
@@ -87,6 +98,22 @@
     <p class="missing">
       {mine ? `No reading for ${mine.name} for this period yet. Pick another area, or the highest.` : 'No reading from NEA for this period yet.'}
     </p>
+  {/if}
+
+  {#if range}
+    <!-- Tapping it opens What’s ahead, where the ranges are explained. -->
+    <button type="button" class="ahead" onclick={onahead}>
+      <span class="ahead-title">Next hours · island-wide 1-hr PSI, our estimate<span class="visually-hidden">. Opens What’s ahead.</span></span>
+      <span class="ahead-steps">
+        {#each range.steps as s (s.h)}
+          <span class="step">
+            <span class="step-in">in {s.h} hr</span>
+            <span class="num step-range">{psiRangeText(s)}</span>
+            <span class="step-bar" style:background={bandStops(s.lo, s.hi)} aria-hidden="true"></span>
+          </span>
+        {/each}
+      </span>
+    </button>
   {/if}
 
   {#if mask}
@@ -262,6 +289,56 @@
   .missing {
     margin: 0;
     color: var(--ink-2);
+  }
+  /* Our next-hours range: three small steps, each a number over a band-coloured bar. */
+  .ahead {
+    display: grid;
+    gap: 6px;
+    width: 100%;
+    margin: 4px 0 10px;
+    padding: 10px 12px;
+    border: 0;
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--ink) 8%, transparent);
+    color: var(--ink);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: transform 120ms var(--ease-out);
+  }
+  .ahead:active {
+    transform: scale(0.98);
+  }
+  .ahead-title {
+    font-size: 0.75rem;
+    color: var(--ink-2);
+  }
+  .ahead-steps {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .step {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+  .step-in {
+    font-size: 0.75rem;
+    color: var(--ink-2);
+  }
+  .step-range {
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .step-bar {
+    height: 4px;
+    border-radius: 999px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ahead {
+      transition: none;
+    }
   }
   .verdict {
     margin: 2px 0 10px;
