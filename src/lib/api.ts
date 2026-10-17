@@ -132,6 +132,29 @@ export async function loadWeather(): Promise<WeatherResult> {
   throw new Error('Open this dashboard from the bot in Telegram.');
 }
 
+export type HazeMap = import('../../tgcloud/lib/hazemap-parse.js').HazeMap;
+
+export interface HazeMapResult {
+  /** Null until haze.gov.sg has answered once. */
+  map: HazeMap | null;
+  serverTime: number;
+}
+
+export async function loadHazeMap(): Promise<HazeMapResult> {
+  if (inTelegram) return callEndpoint<HazeMapResult>('getHazeMap');
+  if (import.meta.env.DEV) {
+    // ?demo=worst | empty, ?card=hazemap:error | loading | none (never fetched) | old (texts a week old)
+    const { demo, state } = await devQuery('hazemap', 'Couldn’t load NEA’s haze map.');
+    const dev = await import('../dev/hazemap');
+    if (state === 'none') return { map: null, serverTime: Date.now() };
+    if (state === 'old') return dev.oldHazeMap();
+    if (demo === 'worst') return dev.worstHazeMap();
+    if (demo === 'empty') return dev.emptyHazeMap();
+    return dev.demoHazeMap();
+  }
+  throw new Error('Open this dashboard from the bot in Telegram.');
+}
+
 export async function loadDashboard(): Promise<Dashboard> {
   if (inTelegram) return callEndpoint<Dashboard>('getDashboard');
   if (import.meta.env.DEV) {
