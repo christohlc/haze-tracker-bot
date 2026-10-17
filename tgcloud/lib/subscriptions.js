@@ -5,6 +5,7 @@ import { db } from 'sdk';
 import { eq, isNotNull, like, lt } from 'sdk/db';
 import { alertsSent, subscribers } from '../schema.js';
 import { scopeOf } from './alert-rules.js';
+import { settingsOf } from './alert-settings.js';
 import { getAlertBands } from './store.js';
 
 const nowSec = () => Math.floor(Date.now() / 1000);
@@ -32,7 +33,7 @@ export async function saveSubscriber(chatId, patch) {
     return { sub: { ...existing, ...set }, created: false };
   }
   const lastBand = await currentBand(patch.region);
-  const sub = { chatId, bandAlerts: true, dailyHour: null, breakingAlerts: true, region: null, minBand: null, quietNights: false, ...patch, lastBand, createdAt: nowSec() };
+  const sub = { chatId, ...settingsOf(null), bandAlerts: true, breakingAlerts: true, ...patch, lastBand, createdAt: nowSec() };
   await db.insert(subscribers).values(sub).run();
   return { sub, created: true };
 }

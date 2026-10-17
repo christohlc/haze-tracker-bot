@@ -8,7 +8,7 @@
 
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { areaLabel, DAILY_HOURS, hourLabel, isActive, LEVEL_CHOICES, levelLabel } from '../../tgcloud/lib/alert-settings.js';
+  import { areaLabel, DAILY_HOURS, hourLabel, isActive, LEVEL_CHOICES, levelLabel, QUIET_HOURS, settingsOf } from '../../tgcloud/lib/alert-settings.js';
   import type { Group } from '../../tgcloud/lib/advice.js';
   import type { RegionId } from '../lib/api';
   import { saveAlerts, type AlertSettings } from '../lib/alerts';
@@ -83,7 +83,7 @@
     if (!(await save({ ...settings, region: id })) && area.id === id) revertArea(was);
   }
 
-  const turnOn = () => save({ bandAlerts: true, dailyHour: null, breakingAlerts: true, region: area.id, minBand: null, quietNights: false });
+  const turnOn = () => save({ ...(settingsOf(null) as AlertSettings), bandAlerts: true, breakingAlerts: true, region: area.id });
 
   // Alerts off: the Telegram MainButton is the call to action. Not after a failed load: we
   // don't know the current settings, and turning on would reset an existing daily update.
@@ -109,7 +109,7 @@
     confirming = true;
     const ok = await confirmAction('Stop all haze alerts? You can turn them on again any time.');
     confirming = false;
-    if (ok) save({ bandAlerts: false, dailyHour: null, breakingAlerts: false, region: null, minBand: null, quietNights: false });
+    if (ok) save(settingsOf(null) as AlertSettings);
   }
 </script>
 
@@ -179,7 +179,7 @@
           <span class="note" id="level-note">
             {#if settings.minBand}Changes below {levelLabel(settings.minBand)} are skipped. You’ll still hear when it drops back below.
             {:else}Every band change, from Good up.{/if}
-            {#if group === 'vulnerable' && settings.minBand}<strong class="hint">For vulnerable people, Any band is safer.</strong>{/if}
+            {#if group === 'vulnerable' && settings.minBand}<strong class="hint">For vulnerable people, ‘Any band’ is safer.</strong>{/if}
           </span>
         </div>
       {/if}
@@ -201,7 +201,7 @@
           {/each}
         </div>
       </div>
-      {@render toggle('quietNights', 'Quiet at night', '11 pm–7 am SGT: alerts arrive without sound')}
+      {@render toggle('quietNights', 'Quiet at night', `${QUIET_HOURS}: alerts arrive without sound`)}
     </div>
 
     <button type="button" class="stop" onclick={stopAll}>

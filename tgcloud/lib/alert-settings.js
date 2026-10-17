@@ -9,6 +9,12 @@ export const DAILY_HOURS = [7, 8, 12, 18];
 /** @param {number} h */
 export const hourLabel = (h) => `${h % 12 === 0 ? 12 : h % 12} ${h < 12 ? 'am' : 'pm'}`;
 
+/** Quiet nights: alerts sent from 11 pm to 7 am SGT arrive without sound. */
+export const QUIET_FROM = 23;
+export const QUIET_UNTIL = 7;
+/** "11 pm–7 am SGT" */
+export const QUIET_HOURS = `${hourLabel(QUIET_FROM)}–${hourLabel(QUIET_UNTIL)} SGT`;
+
 /** The lowest band a chat can ask band alerts to start from; null is every band. */
 export const ALERT_LEVELS = ['unhealthy', 'very_unhealthy'];
 
@@ -53,10 +59,11 @@ export function renderAlertSettings(sub) {
   }
   const text = [
     '<b>Haze alerts</b>',
-    `Band changes: <b>${sub.bandAlerts ? 'on' : 'off'}</b>. A message when the 3-hour PSI in <b>${areaLabel(sub.region)}</b> moves into another band (rises straight away, drops after 3 hours)${sub.minBand ? `, from <b>${levelLabel(sub.minBand)}</b> up, and when it drops back below` : ''}.`,
+    `Band changes: <b>${sub.bandAlerts ? 'on' : 'off'}</b>. A message when the 3-hour PSI in <b>${areaLabel(sub.region)}</b> moves into another band (rises straight away, drops after 3 hours).`,
+    ...(sub.bandAlerts ? [`Alert me from: <b>${levelLabel(sub.minBand)}</b>${levelOrNull(sub.minBand) ? ', and when it drops back below' : ''}`] : []),
     `Breaking news: <b>${sub.breakingAlerts ? 'on' : 'off'}</b>. School closures, halted outdoor activities, and the official 24-hour PSI turning Very unhealthy or Hazardous.`,
     `Daily update: <b>${sub.dailyHour == null ? 'off' : `${hourLabel(sub.dailyHour)} SGT`}</b>`,
-    `Quiet at night: <b>${sub.quietNights ? 'on' : 'off'}</b>. Alerts from 11 pm to 7 am SGT arrive without sound.`,
+    `Quiet at night: <b>${sub.quietNights ? 'on' : 'off'}</b>. Alerts ${QUIET_HOURS} arrive without sound.`,
   ].join('\n');
   /** @param {boolean} on @param {string} label */
   const mark = (on, label) => `${on ? '● ' : ''}${label}`;

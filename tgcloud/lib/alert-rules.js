@@ -1,7 +1,7 @@
 // @ts-check
 // When to alert. Pure, so it can be unit-tested.
 
-import { levelOrNull } from './alert-settings.js';
+import { levelOrNull, QUIET_FROM, QUIET_UNTIL } from './alert-settings.js';
 import { subscriberTarget } from './chat-rules.js';
 import { REGIONS } from './config.js';
 import { PSI_BANDS, psiBand } from './psi.js';
@@ -40,10 +40,6 @@ export function dailyDue(dailyHour, sgtHourNow) {
 
 /** Current hour in Singapore. @param {number} now ms */
 export const sgtHourOf = (now) => new Date(now + 8 * 3600_000).getUTCHours();
-
-/** Quiet nights: alerts sent from 11 pm to 7 am SGT arrive without sound. */
-export const QUIET_FROM = 23;
-export const QUIET_UNTIL = 7;
 
 /** @param {number} now ms */
 export const isQuietHour = (now) => {
