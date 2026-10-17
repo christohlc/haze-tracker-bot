@@ -19,7 +19,10 @@ export default async function () {
   const [{ history: _recent, ...snapshot }, ahead, history, sources, news] = await Promise.all([
     refreshed,
     aheadFrom(readings),
-    readings.then((rows) => rows.filter((r) => Date.parse(r.timestamp) >= Date.now() - CHART_MS).slice(-48)),
+    readings.then((rows) => {
+      const since = Date.now() - CHART_MS;
+      return rows.filter((r) => Date.parse(r.timestamp) >= since).slice(-48);
+    }),
     allSourceStatus(),
     getNews(),
   ]);

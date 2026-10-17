@@ -20,8 +20,10 @@ export function getAhead(refreshed, deadline) {
 
 /**
  * The same from readings already being read (the last HISTORY_HOURS, oldest first), for a caller
- * that needs them too. @param {Promise<Array<{ timestamp: string, readings: Record<string, number> }>>} readings
- * @param {number} [deadline] passed to getOutlook @returns {Promise<Ahead>}
+ * that needs them too.
+ * @param {Promise<Array<{ timestamp: string, readings: Record<string, number> }>>} readings
+ * @param {number} [deadline] passed to getOutlook
+ * @returns {Promise<Ahead>}
  */
 export async function aheadFrom(readings, deadline) {
   const [rows, outlook] = await Promise.all([readings, getOutlook(deadline)]);

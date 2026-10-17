@@ -13,7 +13,7 @@ const RETRY_MS = 5 * 60_000; // don't hammer NEA when it's down
 
 /** Fetch NEA, store readings and the new snapshot. Feed errors are recorded, not thrown, if cached data exists. */
 export async function refreshNea() {
-  await setState('last_fetch_attempt', Date.now());
+  await setState('last_fetch_attempt', Date.now()); // its updated_at is the claim getSnapshot checks
   const [pm25, psi] = await Promise.allSettled([getPm25History(), getLatestPsi()]);
 
   if (pm25.status === 'fulfilled') {
