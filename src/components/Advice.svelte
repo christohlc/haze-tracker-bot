@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Group, verdict } from '../../tgcloud/lib/advice.js';
+  import { N95_FROM_RANK, type Group, type verdict } from '../../tgcloud/lib/advice.js';
   import { readingsFor } from '../../tgcloud/lib/snapshot.js';
   import type { Snapshot } from '../lib/api';
   import { area } from '../lib/area.svelte';
@@ -56,8 +56,8 @@
       {/if}
       <p class="note">
         The stricter of NEA’s advice for the last hour’s PM2.5{#if pm}&nbsp;({pm.value} µg/m³ in {pm.name}{mine ? '' : ', the highest'}){/if}
-        and the official 24-hour PSI{#if psi24}&nbsp;<BandPill value={psi24.value} />{/if}, simplified; haze.gov.sg is
-        official.{#if trend}&nbsp;Rising or easing compares the last hour with three hours before: our calculation.{/if}
+        and the official 24-hour PSI{#if psi24}&nbsp;<BandPill value={psi24.value} />{/if}. Simplified; haze.gov.sg is
+        official.{#if trend}&nbsp;Trend: last hour vs 3 hours before (ours).{/if}
       </p>
     </div>
   {:else}
@@ -67,9 +67,12 @@
   {/if}
 
   <ul>
-    <li>If you must be outside for long, wear a well-fitted N95. Surgical masks don’t filter fine particles.</li>
-    <li>Keep windows closed; run air-con on recirculate or a HEPA air purifier.</li>
-    <li>See a doctor if you get breathing difficulty or chest pain.</li>
+    <!-- Haze tips only from the rank where the 😷 line first mentions an N95; below it they'd contradict "No mask needed". -->
+    {#if v && v.rank >= N95_FROM_RANK}
+      <li>If you must be outside for long, wear a well-fitted N95. Surgical masks don’t filter fine particles.</li>
+      <li>Keep windows closed; run air-con on recirculate or a HEPA air purifier.</li>
+      <li>See a doctor if you get breathing difficulty or chest pain.</li>
+    {/if}
     <li>Check <a href="https://www.haze.gov.sg" target="_blank" rel="noopener">haze.gov.sg</a> for official advisories.</li>
   </ul>
 </section>

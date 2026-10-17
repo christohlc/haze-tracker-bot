@@ -81,7 +81,7 @@
     try {
       result = await loadHazeMap();
     } catch {
-      error = 'Couldn’t load NEA’s haze map. Check your connection and try again.';
+      error = 'Couldn’t load NEA’s haze map. Check your connection.';
     }
   }
 

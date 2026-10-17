@@ -167,7 +167,7 @@ export async function loadDashboard(): Promise<Dashboard> {
     const demo = new URLSearchParams(location.search).get('demo');
     if (demo === 'worst') return { ...(await import('../dev/worst')).worstCase(), ahead: (await import('../dev/ahead')).worstAhead() };
     if (demo === 'empty') return (await import('../dev/worst')).emptyCase();
-    if (demo === 'error') throw new Error('Couldn’t reach the haze service. Check your connection and try again.');
+    if (demo === 'error') throw new Error('Couldn’t reach the haze service. Check your connection.');
     if (demo === 'loading') return new Promise(() => {});
     const data = (await import('../dev/fixture.json')).default as Dashboard;
     // ?card=ahead:range (no NEA forecast, as outside a haze episode) | outlook (no range yet)

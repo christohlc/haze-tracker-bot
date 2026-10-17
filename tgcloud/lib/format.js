@@ -7,11 +7,8 @@ import { PUBLISHERS } from './news-parse.js';
 import { outlookLabel, psiRangeText } from './outlook-parse.js';
 import { bandById, PSI_BANDS, psiBand } from './psi.js';
 import { RANGE_RECORD } from './range.js';
-import { readingsFor } from './snapshot.js';
+import { readingsFor, STALE_NOTE } from './snapshot.js';
 import { sgtDayMonth, sgtDayName, sgtHour } from './time.js';
-
-/** "2026-10-16T13:00:00+08:00" → "1:00 pm" (the timestamp is already in SGT). @param {string} iso */
-export const sgtTime = (iso) => sgtHour(iso, true);
 
 /** @param {number | null | undefined} v @param {number} [digits] */
 const n = (v, digits = 0) => (v == null ? '–' : v.toFixed(digits));
@@ -33,14 +30,14 @@ function highestElsewhere(snap, area, key) {
 }
 
 /**
- * Where a reading is from: the chat's area, and the highest region if that's elsewhere, or for a
- * chat without one, the worst region.
+ * Where a reading is from: "in East (highest: West 245)", or for a chat without an area
+ * "in Central, the highest".
  * @param {any} snap @param {any} area @param {'psi3h' | 'psi24h'} key
  */
 function whereOf(snap, area, key) {
-  if (!area) return `worst region (${snap.worst[key]?.name ?? '–'})`;
+  if (!area) return `in ${snap.worst[key]?.name ?? '–'}, the highest`;
   const top = highestElsewhere(snap, area, key);
-  return `${area.name}${top ? `; highest ${top.name} ${n(top.value)}` : ''}`;
+  return `in ${area.name}${top ? ` (highest: ${top.name} ${n(top.value)})` : ''}`;
 }
 
 /** The readings a chat's messages lead with. @param {any} snap @param {string | null | undefined} region */
@@ -65,21 +62,19 @@ export function formatHaze(snap, ahead, { table = true, region = null } = {}) {
 
   const lines = [
     `${band?.emoji ?? '⚪️'} <b>${band?.label ?? 'No data'}</b> · 3-hr PSI ${n(f.psi3h)}${place}`,
-    `<i>Our calculation from PM2.5 · ${sgtTime(snap.asOf)} SGT${top ? ` · ${top.name} highest at ${n(top.value)}` : ''}</i>`,
-    ...(snap.stale ? ['⚠️ <i>NEA hasn’t updated recently, so this may be out of date.</i>'] : []),
+    `<i>Our calculation from PM2.5 · ${sgtHour(snap.asOf)} SGT${top ? ` · ${top.name} highest at ${n(top.value)}` : ''}</i>`,
+    ...(snap.stale ? [`⚠️ <i>${STALE_NOTE}</i>`] : []),
     '',
     ...adviceLines(f.psi24h, f.pm25),
   ];
   const soon = ahead?.range?.steps.find((s) => s.h === 3);
   if (ahead?.outlook) lines.push(`📅 ${outlookLine(ahead.outlook, true)} · /forecast`);
   else if (soon) lines.push(`📈 Island-wide 1-hr PSI in 3 hours: likely <b>${soon.lo}–${soon.hi}</b>, our calculation · /forecast`);
-  lines.push(`🚬 <b>${n(snap.cigs.past24h, 1)}</b> cigarettes’ worth in 24h, island-wide, outdoors all day`, '');
+  lines.push(`🚬 <b>${n(snap.cigs.past24h, 1)}</b> cigarettes’ worth over 24 hrs outdoors, island-wide`, '');
   if (table)
     lines.push(
       `<pre>${regionTable(snap)}</pre>`,
-      '<i>PM2.5 in µg/m³. 1h/3h PSI computed from PM2.5; 24h PSI is NEA’s.</i>',
-      '',
-      '<i>Not official. Check haze.gov.sg for NEA advisories.</i>',
+      '<i>PM2.5 in µg/m³. 1h/3h PSI: ours. 24h: NEA’s. Advisories: haze.gov.sg.</i>',
     );
   else lines.push('<i>The picture is NEA’s official 24-hr PSI. Advisories: haze.gov.sg.</i>');
   return lines.join('\n');
@@ -109,7 +104,7 @@ export const formatHazeCaption = (snap, ahead, region = null) => formatHaze(snap
 export function formatShareCaption(snap) {
   const worst = snap.worst.psi24h;
   const band = psiBand(worst?.value);
-  return `${band?.emoji ?? '⚪️'} <b>Singapore haze</b> · ${sgtTime(snap.asOf)} SGT\n24-hour PSI up to <b>${n(worst?.value)}</b> (${band?.label ?? 'no reading'}), NEA’s reading.`;
+  return `${band?.emoji ?? '⚪️'} <b>Singapore haze</b> · ${sgtHour(snap.asOf)} SGT\n24-hr PSI up to <b>${n(worst?.value)}</b> (${band?.label ?? 'no reading'}), NEA’s reading.`;
 }
 
 /**
@@ -120,7 +115,7 @@ export function formatCigs(c, { place, outdoorPct }) {
   return [
     `🚬 <b>${n(c.past24h, 1)}</b> cigarettes over the past 24 hours`,
     `<b>${n(c.lastHour, 2)}</b> in the last hour · <b>${n(c.perDayAtCurrent, 1)}</b>/day if this hour’s level continued`,
-    `<i>${place}, ${outdoorPct}% of the time outdoors. Rule of thumb: 22 µg/m³ of PM2.5 over 24h ≈ 1 cigarette (Berkeley Earth). Indoors assumed 40% of outdoor.</i>`,
+    `<i>${place}, ${outdoorPct}% outdoors. 22 µg/m³ of PM2.5 for 24 hrs ≈ 1 cigarette (Berkeley Earth).</i>`,
   ].join('\n');
 }
 
@@ -143,11 +138,11 @@ export function formatBandAlert(snap, fromId, toId, region = null, official = nu
   const lines = [
     ...(official ? [...officialLines(official, snap), ''] : []),
     `${to?.emoji ?? '⚪️'} <b>Haze${f.area ? ` in ${f.area.name}` : ''} ${worse ? 'up' : 'down'} to ${to?.label ?? toId}</b> (was ${from?.label ?? fromId})`,
-    `Our 3-hour PSI <b>${n(f.psi3h)}</b>, ${whereOf(snap, f.area, 'psi3h')}${official ? '' : ` · ${sgtTime(snap.asOf)} SGT`}`,
+    `Our 3-hr PSI <b>${n(f.psi3h)}</b> ${whereOf(snap, f.area, 'psi3h')}${official ? '' : ` · ${sgtHour(snap.asOf)} SGT`}`,
   ];
   // The worst region's 24-hour PSI is already the official lines' number.
-  if (f.area || !official) lines.push(`NEA’s 24-hour PSI <b>${n(f.psi24h)}</b>, ${whereOf(snap, f.area, 'psi24h')}`);
-  lines.push(...adviceLines(f.psi24h, f.pm25), '', '<i>/alerts to change or stop these.</i>');
+  if (f.area || !official) lines.push(`Official 24-hr PSI <b>${n(f.psi24h)}</b> ${whereOf(snap, f.area, 'psi24h')}`);
+  lines.push('', ...adviceLines(f.psi24h, f.pm25), '', '<i>/alerts to change or stop these.</i>');
   return lines.join('\n');
 }
 
@@ -155,8 +150,8 @@ export function formatBandAlert(snap, fromId, toId, region = null, official = nu
 function officialLines(event, snap) {
   const band = bandById(event.band);
   return [
-    `${band?.emoji ?? '⚪️'} <b>Official 24-hour PSI now ${band?.label ?? event.band}</b>`,
-    `NEA’s 24-hour PSI is <b>${n(event.value)}</b>, worst in ${snap.worst.psi24h?.name ?? '–'} · ${sgtTime(snap.asOf)} SGT`,
+    `${band?.emoji ?? '⚪️'} <b>Official 24-hr PSI now ${band?.label ?? event.band}</b>`,
+    `<b>${n(event.value)}</b> ${whereOf(snap, null, 'psi24h')} · ${sgtHour(snap.asOf)} SGT`,
   ];
 }
 
@@ -183,8 +178,8 @@ export function formatBreaking(event, snap) {
     `🚨 <b>Breaking: ${escapeHtml(event.title)}</b>`,
     `${escapeHtml(publisher)} · <a href="${escapeHtml(event.link)}">Read the story</a>`,
     '',
-    `Official 24-hour PSI <b>${n(psi?.value)}</b>, worst in ${psi?.name ?? '–'} · ${sgtTime(snap.asOf)} SGT`,
-    '<i>Picked from the news automatically by this bot.</i>',
+    `Official 24-hr PSI <b>${n(psi?.value)}</b> ${whereOf(snap, null, 'psi24h')} · ${sgtHour(snap.asOf)} SGT`,
+    '<i>Picked automatically by the bot.</i>',
     ...footer,
   ].join('\n');
 }
@@ -200,15 +195,15 @@ export const forecastMessage = (ahead) => ({ caption: formatForecast(ahead, { ta
  */
 export function formatForecast({ outlook, range }, { table = true } = {}) {
   const lines = ['📈 <b>What’s ahead</b>', ''];
-  if (outlook) lines.push(`📅 ${outlookLine(outlook)}`, `<i>Issued by NEA ${sgtDayMonth(outlook.issuedAt)}, ${sgtTime(outlook.issuedAt)} SGT.</i>`, '');
-  else lines.push('<i>NEA hasn’t issued a 24-hr PSI forecast. It does daily during haze episodes, at haze.gov.sg.</i>', '');
+  if (outlook) lines.push(`📅 ${outlookLine(outlook)}`, `<i>Issued by NEA ${sgtDayMonth(outlook.issuedAt)}, ${sgtHour(outlook.issuedAt)} SGT.</i>`, '');
+  else lines.push('<i>No NEA forecast out. It issues one daily during haze episodes.</i>', '');
   if (range) {
-    const rows = range.steps.map((s) => `${`+${s.h}h`.padEnd(5)}${sgtTime(s.t).padStart(9)}  ${`${s.lo}–${s.hi}`}`);
+    const rows = range.steps.map((s) => `${`+${s.h}h`.padEnd(5)}${sgtHour(s.t).padStart(9)}  ${`${s.lo}–${s.hi}`}`);
     const likely = range.steps.map((s) => `${s.h} h <b>${s.lo === s.hi ? s.lo : `${s.lo}–${s.hi}`}</b>`).join(' · ');
     lines.push(
-      `<b>Next few hours</b> · island-wide 1-hour PSI, now ${range.now}`,
+      `<b>Next few hours</b> · island-wide 1-hr PSI, now ${range.now}`,
       table ? `<pre>${[`${'In'.padEnd(5)}${'SGT'.padStart(9)}  Likely`, ...rows].join('\n')}</pre>` : `Likely in ${likely}`,
-      `<i>Our calculation, not official: how much the reading moved over the same hours in the past two weeks. ${RANGE_RECORD}</i>`,
+      `<i>Our calculation, not official. ${RANGE_RECORD}</i>`,
     );
   }
   return lines.join('\n');

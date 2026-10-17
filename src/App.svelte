@@ -23,6 +23,7 @@
   import type { Period } from './lib/period';
   import { getStored, inTelegram, setStored, showBackButton } from './lib/telegram';
   import { snapshotVerdict, type Group } from '../tgcloud/lib/advice.js';
+  import { STALE_NOTE } from '../tgcloud/lib/snapshot.js';
   import { area } from './lib/area.svelte';
   import { getSeen, markSeen } from './lib/whats-new';
 
@@ -186,7 +187,7 @@
       </div>
     {:else if data.snapshot.stale}
       <div class="card stale" role="status">
-        NEA hasn’t published a new reading recently, so these numbers may be out of date.
+        {STALE_NOTE}
       </div>
     {/if}
     <div class="tabs-anchor" bind:this={tabsAnchor}></div>

@@ -87,7 +87,7 @@
     </button>
     <div class="body">
       <h2 id="share-title" class="section-title">Share the haze picture</h2>
-      <p class="note">Every region on one image, the same one the bot sends. Both numbers are NEA’s.</p>
+      <p class="note">Every region’s NEA readings on one picture, as the bot sends it.</p>
       {#if empty}
         <p class="note">You can share it once NEA publishes a reading.</p>
       {:else}

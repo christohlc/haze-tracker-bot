@@ -15,6 +15,12 @@ export const CHANGELOG: ChangelogEntry[] = [
     body: 'The reading up top now sits in a sky with haze slowly drifting across it. It thickens as the PSI rises, and on a clear day the sun comes out.',
   },
   {
+    id: '2026-10-18-shorter-copy',
+    date: '2026-10-18',
+    title: 'Read alerts at a glance',
+    body: 'Alerts say each number once, with times like 1 pm, and /alerts settings fit on one screen. What to do shows mask and window tips only once they apply.',
+  },
+  {
     id: '2026-10-18-haze-message',
     date: '2026-10-18',
     title: 'A shorter /haze message',
@@ -186,7 +192,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     id: '2026-10-16-forecast',
     date: '2026-10-16',
     title: 'See the next 24 hours',
-    body: 'A PSI forecast from the next hour to the next day, with a likely range and what’s pushing it up or down (also in the chat with /forecast). It’s our model, not an official forecast.',
+    body: 'A PSI forecast from the next hour to the next day, with a likely range and what’s pushing it up or down (also in the chat with /forecast). It’s our estimate, not an official forecast.',
   },
   {
     id: '2026-10-16-app-alerts',
