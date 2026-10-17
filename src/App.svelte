@@ -18,8 +18,7 @@
   import { loadDashboard, loadWeather, type Dashboard, type WeatherResult } from './lib/api';
   import { cachedDashboard, saveDashboard } from './lib/cache';
   import { LATEST_ID } from './lib/changelog';
-  import { sgtDayMonth, sgtHour } from './lib/format';
-  import { sgtDateOf } from '../tgcloud/lib/time.js';
+  import { readingTime } from './lib/format';
   import type { Period } from './lib/period';
   import { getStored, inTelegram, setStored, showBackButton } from './lib/telegram';
   import { snapshotVerdict, type Group } from '../tgcloud/lib/advice.js';
@@ -99,25 +98,21 @@
 
   // A load that fails keeps what's on screen, or the last readings saved on this device, and
   // says so (`showingSaved`); the error screen is only for a first load with nothing saved.
-  let showingSaved = $state(false);
-  /** “3 pm SGT”, or “3 pm SGT, 16 Oct” when it's not from today. */
-  const readingTime = (iso: string) => `${sgtHour(iso)} SGT${iso.slice(0, 10) === sgtDateOf(Date.now()) ? '' : `, ${sgtDayMonth(iso)}`}`;
-  let retrying = $state(false);
+  const showingSaved = $derived(error != null && data != null);
+  let loading = $state(false);
   async function load() {
-    if (retrying) return;
-    retrying = true;
+    if (loading) return;
+    loading = true;
     try {
       data = await loadDashboard();
       error = null;
-      showingSaved = false;
       loadedAt = Date.now();
       saveDashboard(data);
     } catch (e) {
       error = e instanceof Error ? e.message : 'Couldn’t load the latest readings.';
       data ??= cachedDashboard();
-      showingSaved = data != null;
     } finally {
-      retrying = false;
+      loading = false;
     }
   }
 
@@ -163,7 +158,7 @@
         <span>
           {navigator.onLine ? 'Couldn’t refresh.' : 'You’re offline.'} Showing NEA’s readings from {readingTime(data.snapshot.asOf)}.
         </span>
-        <button type="button" onclick={load} disabled={retrying}>{retrying ? 'Trying…' : 'Try again'}</button>
+        <button type="button" onclick={load} disabled={loading}>{loading ? 'Trying…' : 'Try again'}</button>
       </div>
     {:else if data.snapshot.stale}
       <div class="card stale" role="status">

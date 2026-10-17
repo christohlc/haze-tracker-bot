@@ -12,14 +12,13 @@ import { storedSnapshot } from '../lib/refresh.js';
 export default async function (query) {
   // The stored snapshot, not a refetch: an inline answer has to be quick, and the tick keeps it fresh.
   const snap = await storedSnapshot();
-  if (!snap) return api.answerInlineQuery({ inline_query_id: query.id, results: [], cache_time: 60 });
   // No picture uploaded for this hour yet: the text alone (an inline answer can't upload one).
-  const [fileId, reply_markup] = await Promise.all([cachedCardId(snap).catch(() => null), linkDashboardButton()]);
+  const [fileId, reply_markup] = snap ? await Promise.all([cachedCardId(snap).catch(() => null), linkDashboardButton()]) : [];
   try {
     await api.answerInlineQuery({
       inline_query_id: query.id,
-      results: inlineResults(snap, { fileId, region: regionFromQuery(query.query), reply_markup }),
-      cache_time: INLINE_CACHE_S,
+      results: snap ? inlineResults(snap, { fileId: fileId ?? null, region: regionFromQuery(query.query), reply_markup }) : [],
+      cache_time: snap ? INLINE_CACHE_S : 60,
     });
   } catch (e) {
     // The query expired (about 10 s) or the user typed on: nobody is waiting for this answer.
