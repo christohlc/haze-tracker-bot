@@ -6,7 +6,7 @@
 
 import { BotApiError } from 'sdk';
 import { getAhead } from './ahead.js';
-import { ALERT_SCOPES, advanceBands, bandAlertsFor, dailyDue, runBatched, SEND_BATCH, SEND_INTERVAL_MS, sgtHourOf } from './alert-rules.js';
+import { ALERT_SCOPES, advanceBands, bandAlertsFor, dailyDue, dailyForecastDue, runBatched, SEND_BATCH, SEND_INTERVAL_MS, sgtHourOf } from './alert-rules.js';
 import { dashboardButton } from './buttons.js';
 import { isRateLimited, isTopicGone, isUnreachable, movedTo } from './bot-errors.js';
 import { subscriberTarget } from './chat-rules.js';
@@ -39,7 +39,8 @@ const BUDGET_MS = 20_000;
 const BREAKING_BUDGET_MS = 6_000;
 const BAND_BUDGET_MS = 12_000;
 
-/** How long the daily update waits for What's ahead (NEA's forecast may need fetching). */
+/** Budget for fetching NEA's forecast for the daily update: one try (the platform gives up on a
+ *  fetch after ~5 s), no retry past it. */
 const AHEAD_WAIT_MS = 4_000;
 
 const DAILY_HEADER = '☀️ <b>Daily haze update</b>\n\n';
@@ -52,7 +53,7 @@ const sleep = typeof setTimeout === 'function' ? (/** @type {number} */ ms) => n
  */
 export async function runAlerts(snap, now = Date.now(), breaking = []) {
   const end = now + BUDGET_MS;
-  const out = { breaking: 0, band: null, sent: 0, daily: 0, removed: 0, deferred: false, paced: Boolean(sleep) };
+  const out = { breaking: 0, band: null, sent: 0, daily: 0, dailyForecast: false, removed: 0, deferred: false, paced: Boolean(sleep) };
   let retryAfter = SEND_INTERVAL_MS;
   /** @param {{ results: string[], stopped: string | null }} res @param {'breaking' | 'sent' | 'daily'} field */
   const tally = ({ results, stopped }, field) => {
@@ -141,24 +142,27 @@ export async function runAlerts(snap, now = Date.now(), breaking = []) {
       if (!daily.has(region)) daily.set(region, { caption: `${DAILY_HEADER}${formatHazeCaption(snap, null, region)}`, text: `${DAILY_HEADER}${formatHaze(snap, null, { region })}` });
       return /** @type {{ caption: string, text: string }} */ (daily.get(region));
     };
-    // What's ahead follows as a second picture, while there's something to show.
-    // Fetching NEA's forecast can be slow on a cold cache: past AHEAD_WAIT_MS, the daily goes without.
-    const ahead = due.length
-      ? await Promise.race([getAhead(Promise.resolve(snap)).catch(() => null), ...(sleep ? [sleep(AHEAD_WAIT_MS).then(() => null)] : [])])
-      : null;
-    const forecast = ahead && (ahead.outlook || ahead.range) ? { caption: formatForecast(ahead, { table: false }), text: formatForecast(ahead) } : null;
+    // What's ahead follows as a second picture (dailyForecastDue).
+    const ahead = due.length ? await getAhead(Promise.resolve(snap), Date.now() + AHEAD_WAIT_MS).catch(() => null) : null;
+    const forecast =
+      ahead && dailyForecastDue(ahead)
+        ? { ahead, message: { caption: formatForecast(ahead, { table: false }), text: formatForecast(ahead) } }
+        : null;
+    // After a 429 on a forecast, the rest of this run's dailies go without one.
+    let forecastLimited = false;
     /** @param {any} sub */
     const deliver = (sub) => async () => {
       await card(sub, dailyFor(sub.region ?? null))();
-      if (!forecast) return;
-      // The haze card went out, so the daily is sent: a forecast that fails (even on a 429) isn't
-      // retried, or the next tick would send the haze card twice.
-      await sendForecastCardOrText(subscriberTarget(sub), snap, /** @type {any} */ (ahead), forecast).catch((e) =>
-        console.error('daily forecast failed', e instanceof BotApiError ? `${e.code} ${e.description}` : String(e)),
-      );
+      if (!forecast || forecastLimited) return;
+      // The haze card went out, so the daily is sent: a forecast that fails isn't retried, or the
+      // next tick would send the haze card twice.
+      await sendForecastCardOrText(subscriberTarget(sub), snap, forecast.ahead, forecast.message).catch((e) => {
+        if (isRateLimited(e)) forecastLimited = true;
+        console.error('daily forecast failed', e instanceof BotApiError ? `${e.code} ${e.description}` : String(e));
+      });
     };
     // Until both cards are uploaded, one chat goes first so the rest reuse the file ids.
-    const alone = (await firstAlone()) || Boolean(forecast && !(await cachedForecastCardId(snap, /** @type {any} */ (ahead))));
+    const alone = (await firstAlone()) || Boolean(forecast && !(await cachedForecastCardId(snap, forecast.ahead)));
     const res = await runBatched(due, (sub) => sendNoting429(sub.chatId, `daily:${sub.chatId}:${date}`, deliver(sub)), {
       deadline,
       sleep,
@@ -166,6 +170,7 @@ export async function runAlerts(snap, now = Date.now(), breaking = []) {
       size: forecast ? Math.floor(SEND_BATCH / 2) : SEND_BATCH,
       firstAlone: alone,
     });
+    out.dailyForecast = Boolean(forecast) && !forecastLimited;
     tally(res, 'daily');
   }
 

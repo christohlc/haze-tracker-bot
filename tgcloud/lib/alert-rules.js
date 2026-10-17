@@ -40,6 +40,13 @@ export function dailyDue(dailyHour, sgtHourNow) {
 export const sgtHourOf = (now) => new Date(now + 8 * 3600_000).getUTCHours();
 
 /** Telegram allows about 30 messages/s across chats; stay under it. */
+/**
+ * Whether the daily update brings the forecast picture: while there's haze to talk about, i.e.
+ * NEA's forecast, or a next-hours range reaching past Moderate. Not on clear days.
+ * @param {import('./ahead.js').Ahead | null} ahead
+ */
+export const dailyForecastDue = (ahead) => Boolean(ahead && (ahead.outlook || ahead.range?.steps.some((s) => s.hi > 100)));
+
 export const SEND_BATCH = 25;
 export const SEND_INTERVAL_MS = 1000;
 

@@ -78,8 +78,8 @@ function cardKind(stateKey, filename) {
   return { cachedId: async (/** @type {string} */ key) => (await load(key)).fileId ?? null, send, sendOrText };
 }
 
-const summary = cardKind('card', 'haze.png');
-const forecast = cardKind('forecast_card', 'forecast.png');
+const summaryCard = cardKind('card', 'haze.png');
+const forecastCard = cardKind('forecast_card', 'forecast.png');
 
 /** One card per NEA hour, PSI hour and staleness (the stale banner is drawn in). @param {any} snap */
 const cardKey = (snap) => `${snap.asOf}|${snap.psiAsOf}|${snap.stale ? 'stale' : ''}`;
@@ -87,16 +87,16 @@ const cardKey = (snap) => `${snap.asOf}|${snap.psiAsOf}|${snap.stale ? 'stale' :
 const forecastKey = (snap, ahead) => JSON.stringify([cardKey(snap), snap.worst?.psi24h?.value ?? null, ahead.outlook, ahead.range]);
 
 /** The uploaded summary card for this snapshot, or null. @param {any} snap @returns {Promise<string | null>} */
-export const cachedCardId = (snap) => summary.cachedId(cardKey(snap));
+export const cachedCardId = (snap) => summaryCard.cachedId(cardKey(snap));
 
 /** The uploaded forecast card for this snapshot and forecast, or null. @param {any} snap @param {Ahead} ahead */
-export const cachedForecastCardId = (snap, ahead) => forecast.cachedId(forecastKey(snap, ahead));
+export const cachedForecastCardId = (snap, ahead) => forecastCard.cachedId(forecastKey(snap, ahead));
 
 /**
  * Send the summary card with an HTML caption. Throws like api.sendPhoto, or if it can't be drawn.
  * @param {Target} to @param {any} snap @param {string} caption @param {any} [reply_markup]
  */
-export const sendCard = (to, snap, caption, reply_markup) => summary.send(to, cardKey(snap), () => summaryCardPng(snap), caption, reply_markup);
+export const sendCard = (to, snap, caption, reply_markup) => summaryCard.send(to, cardKey(snap), () => summaryCardPng(snap), caption, reply_markup);
 
 /**
  * The summary card with `caption`, or `text` as a plain message if the card fails for any reason
@@ -104,14 +104,14 @@ export const sendCard = (to, snap, caption, reply_markup) => summary.send(to, ca
  * for the caller.
  * @param {Target} to @param {any} snap @param {CardMessage} message
  */
-export const sendCardOrText = (to, snap, message) => summary.sendOrText(to, cardKey(snap), () => summaryCardPng(snap), message);
+export const sendCardOrText = (to, snap, message) => summaryCard.sendOrText(to, cardKey(snap), () => summaryCardPng(snap), message);
 
 /**
  * The forecast card with `caption`, or `text`, as sendCardOrText.
  * @param {Target} to @param {any} snap @param {Ahead} ahead @param {CardMessage} message
  */
 export const sendForecastCardOrText = (to, snap, ahead, message) =>
-  forecast.sendOrText(to, forecastKey(snap, ahead), () => forecastCardPng(snap, ahead), message);
+  forecastCard.sendOrText(to, forecastKey(snap, ahead), () => forecastCardPng(snap, ahead), message);
 
 /**
  * `send()`, or `text` as a plain message if it fails for any reason other than the chat or a rate

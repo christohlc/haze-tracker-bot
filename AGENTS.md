@@ -95,8 +95,9 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   snapshot and reuses Telegram's file id (state `card`); if the photo fails, the text goes instead.
   `/forecast` and the daily update send a second picture, `card/forecast.js`, cached the same way
   (state `forecast_card`, keyed by everything drawn on it). The daily update sends it as a second
-  message after the haze card, while NEA's forecast or our range exists, in half-size batches; if
-  it fails the daily still counts as sent.
+  message after the haze card, while there's haze to talk about (`dailyForecastDue`), in
+  half-size batches. NEA's forecast is fetched with a deadline (`AHEAD_WAIT_MS`, one try). If it
+  fails the daily still counts as sent; after a 429 the rest of that run's dailies go without it.
   Check a layout change with `node scripts/card/preview.mjs <dir>`.
 - **The bot works in groups** (`lib/chat-rules.js`, `lib/groups.js`). A group subscribes as one
   chat; only its admins (`getChatMember`) may change alerts. Alerts go to the forum topic `/subscribe`
