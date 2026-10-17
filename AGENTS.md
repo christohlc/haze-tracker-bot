@@ -22,7 +22,10 @@ Singapore haze bot + Mini App. User-facing overview in [README.md](README.md); v
 and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious from the code:
 
 - **The 15-minute job is `endpoints/tick`**, run by `.github/workflows/tick.yml` (the
-  platform has no scheduler). It refreshes NEA, then the news, then sends alerts.
+  platform has no scheduler). A Cloudflare Worker cron (`cron/`, deployed separately with wrangler,
+  README#the-15-minute-tick) starts it through the workflow_dispatch API, because GitHub's
+  `schedule` drops most runs; the `schedule` stays as a backstop. Keep the crons in
+  `cron/wrangler.jsonc` and `tick.yml` in step. It refreshes NEA, then the news, then sends alerts.
   `tick` and `admin` call `requireCli(ctx)`: they're CLI-only, never Mini App endpoints.
   The repo is public (free Actions minutes); a weekly `keepalive` job in the same workflow
   stops GitHub's 60-day pause of scheduled workflows.

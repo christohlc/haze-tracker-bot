@@ -4,16 +4,22 @@
 # Needs the secret TGCLOUD_TOKEN (the CLI access token from @BotFather) in the `production`
 # environment, which only main may deploy from, so a workflow on another branch can't read it.
 #
+# What starts it: a Cloudflare Worker cron (cron/) calls the workflow_dispatch API at :12, :27,
+# :42 and :57; setup in README.md#the-15-minute-tick. GitHub's own `schedule` is best effort and
+# drops most runs: on 16 Oct 2026 it fired 1 of 31 slots. It stays below as a backstop for when
+# the external cron is down. A dispatch and a scheduled run in the same slot just queue (the
+# concurrency group), and the second one finds NEA and news cached.
+#
 # Every 15 min so alerts left over from a run (time budget, rate limit) go out soon after.
 # NEA and news are fetched about once an hour, so the extra runs are cheap.
 # Cost note: the repo is public, so Actions minutes are free. If it ever goes private again,
-# this is ~2,900 billed min/month (over the 2,000 free); use '12,42 * * * *' instead.
-# GitHub may delay scheduled runs at busy times; /haze and the Mini App refetch on their own
-# when the snapshot is stale.
+# this is ~2,900 billed min/month (over the 2,000 free); dispatch at :12 and :42 only instead.
 #
-# GitHub pauses scheduled workflows in a public repo after 60 days without repo activity.
-# The weekly keepalive job re-enables this workflow through the API, which counts as activity
-# (the approach of the keepalive-workflow action, without the third-party dependency).
+# GitHub pauses scheduled workflows in a public repo after 60 days without repo activity, and a
+# paused workflow can't be dispatched either. The weekly keepalive job re-enables this workflow
+# through the API, which counts as activity (the approach of the keepalive-workflow action,
+# without the third-party dependency). It runs on a dispatch with keepalive=true too, which the
+# Worker sends weekly in case GitHub drops the scheduled one.
 name: tick
 
 on:
@@ -21,17 +27,22 @@ on:
     - cron: '12,27,42,57 * * * *' # NEA publishes ~15 min past the hour; off the congested :00 slot
     - cron: '33 3 * * 1' # keepalive, Mondays 11:33 SGT
   workflow_dispatch:
+    inputs:
+      keepalive:
+        description: Re-enable the workflow instead of ticking
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
 concurrency:
-  group: tick-${{ github.event.schedule == '33 3 * * 1' && 'keepalive' || 'run' }}
+  group: tick-${{ (github.event.schedule == '33 3 * * 1' || inputs.keepalive) && 'keepalive' || 'run' }}
   cancel-in-progress: false
 
 jobs:
   tick:
-    if: github.event.schedule != '33 3 * * 1'
+    if: github.event.schedule != '33 3 * * 1' && !inputs.keepalive
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 5
@@ -47,7 +58,7 @@ jobs:
           TGCLOUD_TOKEN: ${{ secrets.TGCLOUD_TOKEN }}
 
   keepalive:
-    if: github.event.schedule == '33 3 * * 1'
+    if: github.event.schedule == '33 3 * * 1' || inputs.keepalive
     runs-on: ubuntu-latest
     timeout-minutes: 2
     permissions:
