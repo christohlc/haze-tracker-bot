@@ -1,6 +1,6 @@
 // @ts-check
 // NEA's regional haze map, as haze.gov.sg draws it: fire hotspots, dense and moderate haze areas,
-// the 2,500 ft wind picture, and its two daily texts. Pure (no sdk) so tests and the Mini App can
+// the wind picture at 2,500 ft (~760 m), and its two daily texts. Pure (no sdk) so tests and the Mini App can
 // load it; lib/hazemap.js fetches it. None of this is a documented API (the homepage embeds the
 // KML links in a script), so nothing here may throw.
 

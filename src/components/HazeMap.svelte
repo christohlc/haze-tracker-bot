@@ -149,7 +149,7 @@
     {#if map.wind}
       <label class="row">
         <span>
-          <span class="row-title">Wind at 2,500 ft</span>
+          <span class="row-title">Wind about 760 m up</span>
           <span class="note">
             {#if windBroken}NEA’s wind picture didn’t load.
             {:else}The height smoke travels at. Arrows point where it blows; deeper blue is stronger.{/if}

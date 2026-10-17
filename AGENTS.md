@@ -59,7 +59,7 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   line (`smokeLine` in `lib/weather-parse.js`) is our reading, not NEA's.
 - **The Where it’s coming from map (`endpoints/getHazeMap`) is fetched the same way**: only when the
   Mini App asks, cached for 30 min in `state('hazemap')`. It's NEA's own layers from haze.gov.sg (hotspots,
-  dense/moderate haze areas, the 2,500 ft wind picture, and its situation and outlook texts), found by
+  dense/moderate haze areas, the 2,500 ft wind picture, shown to users as “about 760 m up”, and its situation and outlook texts), found by
   scraping the KML links out of the homepage: undocumented, so `lib/hazemap-parse.js` never throws and each
   layer can go missing on its own. data.gov.sg has no regional layers. Hotspots are binned to 0.25° inside
   `MAP_BOUNDS`; the land under them is `src/lib/coast.ts`, **generated** by `scripts/hazemap/coast.mjs`
