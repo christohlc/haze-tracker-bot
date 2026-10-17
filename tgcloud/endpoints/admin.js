@@ -2,6 +2,8 @@
 // endpoints/admin.js — operator tools, reachable only through the CLI:
 //   read -rs KEY && npx tgcloud run endpoints/admin "{ action: 'set', key: 'datagov_api_key', value: '$KEY' }" 2>&1 | grep -Ev "value: ?'"
 //     (the CLI and npm print a command's input, key and all: the grep drops those lines; paste the key, Enter)
+//   read -rs ID && npx tgcloud run endpoints/admin "{ action: 'set', key: 'ops_chat_id', value: '$ID' }" 2>&1 | grep -Ev "value: ?'"
+//     (the chat the tick DMs when a feed keeps failing, lib/ops.js; the Actions logs are public, so keep it off them too)
 //   npx tgcloud run endpoints/admin "{ action: 'status' }"
 //   npx tgcloud run endpoints/admin "{ action: 'unset', key: 'datagov_api_key' }"
 //   npx tgcloud run endpoints/admin "{ action: 'rewind_band', band: 'unhealthy' }"  (test: next tick alerts the change)
@@ -26,7 +28,13 @@ import { sgtDatesBack, sgtDayStart } from '../lib/time.js';
 import { allSourceStatus, countReadings, countReadingsBetween, deleteSetting, getAlertBands, getSetting, getState, setAlertBands, setSetting, setState, toSgtIso, upsertReadings } from '../lib/store.js';
 
 // datagov_api_key: data.gov.sg's (free, data.gov.sg sign-in), sent only to its v2 API for a higher rate limit.
-const SECRET_KEYS = ['datagov_api_key'];
+// ops_chat_id: the operator's chat (a user or group id, so maybe negative), for lib/ops.js.
+/** @type {Record<string, (value: string) => boolean>} each key's check of its value */
+const SETTING_CHECKS = {
+  datagov_api_key: (v) => v.length >= 8,
+  ops_chat_id: (v) => /^-?[1-9]\d{0,19}$/.test(v),
+};
+const SECRET_KEYS = Object.keys(SETTING_CHECKS);
 
 // Backfill: one NEA request per SGT day, spaced out for data.gov.sg's rate limit, and stopped
 // before the (undocumented) run limit; days already complete are skipped, so a rerun resumes.
@@ -89,7 +97,7 @@ export default async function (input, ctx) {
   switch (input.action) {
     case 'set': {
       if (!SECRET_KEYS.includes(input.key)) throw new EndpointError(`Unknown key; allowed: ${SECRET_KEYS.join(', ')}`);
-      if (typeof input.value !== 'string' || input.value.trim().length < 8) throw new EndpointError('value looks wrong');
+      if (typeof input.value !== 'string' || !SETTING_CHECKS[input.key](input.value.trim())) throw new EndpointError('value looks wrong');
       await setSetting(input.key, input.value.trim());
       return { ok: true, key: input.key };
     }
@@ -102,6 +110,8 @@ export default async function (input, ctx) {
       const status = {};
       // Never echo secrets back; just whether they are set.
       for (const k of SECRET_KEYS) status[k] = (await getSetting(k)) ? 'set' : 'missing';
+      const heartbeat = (await getState('tick_heartbeat'))?.value?.at;
+      status.lastTick = heartbeat ? toSgtIso(Math.floor(heartbeat / 1000)) : 'never';
       const snap = await storedSnapshot();
       status.snapshot = snap ? { asOf: snap.asOf, psi3h: snap.worst.psi3h } : 'none';
       status.readings = await countReadings();

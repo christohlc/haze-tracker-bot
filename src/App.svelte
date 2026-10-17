@@ -185,7 +185,7 @@
         <Hero snapshot={data.snapshot} bind:period mask={outside?.mask} range={data.ahead?.range ?? null} onahead={() => (tab = 'outlook')} />
         <RegionTable snapshot={data.snapshot} {period} onselect={openRegion} />
         <Advice snapshot={data.snapshot} v={outside} {group} onpick={pickGroup} />
-        <AlertsCard />
+        <AlertsCard {group} />
         <ShareCard snapshot={data.snapshot} />
       </div>
     {/if}

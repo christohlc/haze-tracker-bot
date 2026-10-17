@@ -149,6 +149,35 @@ that runs are coming in with:
 gh run list --workflow tick.yml -L 12
 ```
 
+#### Ops alerts
+
+Two DMs tell you, and only you, when something is off:
+
+- **A feed keeps failing.** The tick DMs the chat in the `ops_chat_id` setting when NEA has had no
+  good fetch for 2 hours, a news feed for 6, or an on-demand feed (weather, cameras, the haze map,
+  the forecasts, NEA’s PSI forecast) failed its latest fetch, at most once per feed every 6 hours
+  (once per outage for an on-demand feed, which may not be asked for again for hours), and once
+  more when it works again. Set the chat (your user id, or a group's negative id; message the bot first so it
+  may write to you). It prompts for the id, which stays off screen and out of the public logs:
+
+  ```bash
+  read -rs ID && npx tgcloud run endpoints/admin "{ action: 'set', key: 'ops_chat_id', value: '$ID' }" 2>&1 | grep -Ev "value: ?'"
+  ```
+
+  `admin` `status` shows the last tick (`lastTick`) and each feed's last good fetch and error.
+- **The tick stopped.** The Worker checks the last successful tick run on the first cron of each
+  hour and DMs you if it's over 45 minutes old, or if the dispatch itself failed (an expired
+  token, say). It needs the bot's token and the chat id as two more Worker secrets; without them
+  it only starts the tick. Each prompts for its value (the token from BotFather):
+
+  ```bash
+  npx wrangler@4 secret put TELEGRAM_BOT_TOKEN --config cron/wrangler.jsonc
+  ```
+
+  ```bash
+  npx wrangler@4 secret put OPS_CHAT_ID --config cron/wrangler.jsonc
+  ```
+
 ### Groups
 
 Add the bot to a group and an admin sends `/subscribe` (in the topic the alerts should go to, if

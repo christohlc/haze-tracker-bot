@@ -1,4 +1,4 @@
-import { isActive } from '../../tgcloud/lib/alert-settings.js';
+import { ALERT_LEVELS, isActive } from '../../tgcloud/lib/alert-settings.js';
 import type { RegionId } from './api';
 import { callEndpoint, inTelegram, withWriteAccess } from './telegram';
 
@@ -8,6 +8,10 @@ export interface AlertSettings {
   breakingAlerts: boolean;
   /** Band alerts follow this region; null follows the highest region. */
   region: RegionId | null;
+  /** Band alerts only from this band up, and the drop back below it; null is every band. */
+  minBand: (typeof ALERT_LEVELS)[number] | null;
+  /** Alerts from 11 pm to 7 am SGT arrive without sound. */
+  quietNights: boolean;
 }
 
 // Outside Telegram (dev preview) there's no endpoint: keep settings in memory.

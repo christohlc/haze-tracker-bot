@@ -1,0 +1,47 @@
+// @ts-check
+// The tick's own health report: a heartbeat, and a DM to the operator (setting ops_chat_id, set with
+// admin) when a feed keeps failing, then one when it works again. Which feeds: ops-rules.js.
+
+import { api } from 'sdk';
+import { errorText } from './http.js';
+import { failingSources, isOnDemand, opsMessage, OPS_REPEAT_S, recoveredSources } from './ops-rules.js';
+import { allSourceStatus, getSetting, getState, setState } from './store.js';
+
+/**
+ * Called at the end of every tick. Never throws. The result goes into the tick's output, which the
+ * public Actions log shows, so it names sources but never the chat. Ticks run one at a time
+ * (tick.yml's concurrency group), so state('ops_notified') needs no claim, and is written only once
+ * the DM went: a send that fails (wrong chat, bot blocked) is retried by the next tick.
+ * @param {number} started ms
+ */
+export async function reportOps(started) {
+  try {
+    const [, chatId, statuses, toldRow] = await Promise.all([
+      setState('tick_heartbeat', { at: started }),
+      getSetting('ops_chat_id'),
+      allSourceStatus(),
+      getState('ops_notified'),
+    ]);
+    const now = Math.floor(started / 1000);
+    const failing = failingSources(statuses, now);
+    const names = failing.map((s) => s.source);
+    if (!chatId) return { failing: names, dm: 'no ops_chat_id' };
+    /** @type {Record<string, number>} source → when it was last DM'd as failing (unix s), until it works again or stops reporting */
+    const told = Object.fromEntries(
+      Object.entries(toldRow?.value ?? {}).filter(([source]) => statuses.some((s) => s.source === source)),
+    );
+    const recovered = recoveredSources(statuses, Object.keys(told));
+    // Again every 6 hours while it keeps failing; an on-demand feed's failure is news only once.
+    const toTell = failing.filter(
+      (s) => !(s.source in told) || (!isOnDemand(s.source) && now - told[s.source] >= OPS_REPEAT_S),
+    );
+    if (!toTell.length && !recovered.length) return { failing: names, dm: 'none' };
+    await api.sendMessage({ chat_id: chatId, text: opsMessage(toTell, recovered) });
+    for (const source of recovered) delete told[source];
+    for (const s of toTell) told[s.source] = now;
+    await setState('ops_notified', told);
+    return { failing: names, dm: 'sent' };
+  } catch (e) {
+    return { error: errorText(e) };
+  }
+}

@@ -8,11 +8,15 @@
 
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { areaLabel, DAILY_HOURS, hourLabel, isActive } from '../../tgcloud/lib/alert-settings.js';
+  import { areaLabel, DAILY_HOURS, hourLabel, isActive, LEVEL_CHOICES, levelLabel, QUIET_HOURS, settingsOf, TURNED_ON } from '../../tgcloud/lib/alert-settings.js';
+  import type { Group } from '../../tgcloud/lib/advice.js';
   import type { RegionId } from '../lib/api';
   import { saveAlerts, type AlertSettings } from '../lib/alerts';
   import { area, areaFromAlerts, onAreaPicked, pickedHere, revertArea } from '../lib/area.svelte';
   import { confirmAction, inTelegram, notifyHaptic, setMainButtonBusy, showMainButton } from '../lib/telegram';
+
+  // The advice group picked in the Advice card: vulnerable people get a nudge towards every band.
+  let { group = 'general' }: { group?: Group } = $props();
 
   let settings = $state<AlertSettings | null>(null);
   let status = $state<'loading' | 'failed' | 'ready'>('loading');
@@ -79,7 +83,7 @@
     if (!(await save({ ...settings, region: id })) && area.id === id) revertArea(was);
   }
 
-  const turnOn = () => save({ bandAlerts: true, dailyHour: null, breakingAlerts: true, region: area.id });
+  const turnOn = () => save({ ...TURNED_ON, region: area.id });
 
   // Alerts off: the Telegram MainButton is the call to action. Not after a failed load: we
   // don't know the current settings, and turning on would reset an existing daily update.
@@ -94,17 +98,22 @@
     save({ ...settings, dailyHour: h });
   }
 
+  function pickLevel(l: AlertSettings['minBand']) {
+    if (!settings || settings.minBand === l) return;
+    save({ ...settings, minBand: l });
+  }
+
   let confirming = false;
   async function stopAll() {
     if (busy || confirming) return;
     confirming = true;
     const ok = await confirmAction('Stop all haze alerts? You can turn them on again any time.');
     confirming = false;
-    if (ok) save({ bandAlerts: false, dailyHour: null, breakingAlerts: false, region: null });
+    if (ok) save({ ...settingsOf(null), region: null });
   }
 </script>
 
-{#snippet toggle(key: 'bandAlerts' | 'breakingAlerts', title: string, note: string)}
+{#snippet toggle(key: 'bandAlerts' | 'breakingAlerts' | 'quietNights', title: string, note: string)}
   <label class="row">
     <span>
       <span class="row-title">{title}</span>
@@ -151,9 +160,32 @@
     <!-- One guard for the whole list: while a save is in flight, taps don't change anything. -->
     <div class="rows" onclickcapture={(e) => busy && e.preventDefault()}>
       {@render toggle('bandAlerts', 'Band changes', `When the 3-hour PSI in ${areaLabel(settings.region)} moves into another band. Follows the area at the top.`)}
+      {#if settings.bandAlerts}
+        <div class="row stacked level">
+          <span class="row-title" id="level-label">Alert me from</span>
+          <div class="chips" role="radiogroup" aria-labelledby="level-label" aria-describedby="level-note">
+            {#each LEVEL_CHOICES as l (l)}
+              <button
+                type="button"
+                role="radio"
+                aria-checked={settings.minBand === l}
+                class:on={settings.minBand === l}
+                onclick={() => pickLevel(l)}
+              >
+                {levelLabel(l)}
+              </button>
+            {/each}
+          </div>
+          <span class="note" id="level-note">
+            {#if settings.minBand}Changes below {levelLabel(settings.minBand)} are skipped. You’ll still hear when it drops back below.
+            {:else}Every band change, from Good up.{/if}
+            {#if group === 'vulnerable' && settings.minBand}<strong class="hint">For vulnerable people, ‘Any band’ is safer.</strong>{/if}
+          </span>
+        </div>
+      {/if}
       {@render toggle('breakingAlerts', 'Breaking news', 'School closures, events called off, official 24-hour PSI over 200')}
 
-      <div class="row daily">
+      <div class="row stacked">
         <span class="row-title" id="daily-label">Daily update (SGT)</span>
         <div class="chips" role="radiogroup" aria-labelledby="daily-label">
           {#each [...DAILY_HOURS, null] as h (h)}
@@ -169,6 +201,7 @@
           {/each}
         </div>
       </div>
+      {@render toggle('quietNights', 'Quiet at night', `${QUIET_HOURS}: alerts arrive without sound`)}
     </div>
 
     <button type="button" class="stop" onclick={stopAll}>
@@ -239,10 +272,36 @@
   .row-title {
     font-weight: 600;
   }
-  .daily {
+  .stacked {
     flex-direction: column;
     align-items: stretch;
     gap: 8px;
+  }
+  /* Under a switch it qualifies: no rule between them. */
+  .level {
+    border-top: 0;
+    padding-top: 0;
+  }
+  .level .row-title {
+    color: var(--ink-2);
+    font-size: 0.875rem;
+  }
+  /* Labels of very different lengths: each chip takes its label's width, and large text wraps
+     inside the chip instead of spilling out of it. */
+  .level .chips {
+    display: flex;
+  }
+  .level .chips button {
+    flex: 1 1 auto;
+    padding: 4px 8px;
+    white-space: normal;
+    line-height: 1.15;
+  }
+  .hint {
+    display: block;
+    margin-top: 2px;
+    color: var(--ink);
+    font-weight: 600;
   }
   /* A drawn switch: a plain checkbox here reads as a tick box, not on/off. */
   input[type='checkbox'] {

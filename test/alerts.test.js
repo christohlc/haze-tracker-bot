@@ -42,8 +42,8 @@ test('sgtHourOf converts to Singapore time', () => {
 });
 
 test('settings actions', () => {
-  assert.deepEqual(applyAlertAction(null, 'a:band'), { bandAlerts: true, dailyHour: null, breakingAlerts: true, region: null }, 'turning on includes breaking news');
-  const sub = { bandAlerts: true, dailyHour: null, breakingAlerts: true, region: null };
+  assert.deepEqual(applyAlertAction(null, 'a:band'), { bandAlerts: true, dailyHour: null, breakingAlerts: true, region: null, minBand: null, quietNights: false }, 'turning on includes breaking news');
+  const sub = { bandAlerts: true, dailyHour: null, breakingAlerts: true, region: null, minBand: null, quietNights: false };
   assert.deepEqual(applyAlertAction(sub, 'a:band'), { ...sub, bandAlerts: false });
   assert.deepEqual(applyAlertAction(sub, 'a:breaking'), { ...sub, breakingAlerts: false });
   assert.deepEqual(applyAlertAction(sub, 'a:daily:8'), { ...sub, dailyHour: 8 });
@@ -53,6 +53,12 @@ test('settings actions', () => {
   assert.deepEqual(applyAlertAction(sub, 'a:region:west'), { ...sub, region: 'west' });
   assert.deepEqual(applyAlertAction({ ...sub, region: 'west' }, 'a:region:all'), sub);
   assert.deepEqual(applyAlertAction(sub, 'a:region:mars'), sub, 'unknown regions mean island-wide');
+  assert.deepEqual(applyAlertAction(sub, 'a:level:unhealthy'), { ...sub, minBand: 'unhealthy' });
+  assert.deepEqual(applyAlertAction({ ...sub, minBand: 'unhealthy' }, 'a:level:any'), sub);
+  assert.deepEqual(applyAlertAction(sub, 'a:level:good'), sub, 'only offered levels are accepted');
+  assert.deepEqual(applyAlertAction(sub, 'a:quiet'), { ...sub, quietNights: true });
+  assert.deepEqual(applyAlertAction({ ...sub, quietNights: true }, 'a:quiet'), sub);
+  assert.deepEqual(applyAlertAction({ bandAlerts: true, dailyHour: null, breakingAlerts: true }, 'a:breaking'), { ...sub, breakingAlerts: false }, 'a row from before the new columns');
 });
 
 test('breaking news alone keeps a chat subscribed', () => {
@@ -109,10 +115,10 @@ test('a chat following a region hears about that region, and where the highest i
 });
 
 test('Mini App alert settings are validated, and all-off means unsubscribe', () => {
-  assert.deepEqual(parseAlertInput({ bandAlerts: true }), { bandAlerts: true, dailyHour: null, breakingAlerts: true, region: null });
-  assert.deepEqual(parseAlertInput({ bandAlerts: false, dailyHour: 8 }), { bandAlerts: false, dailyHour: 8, breakingAlerts: true, region: null });
-  assert.deepEqual(parseAlertInput({ bandAlerts: true, dailyHour: null, breakingAlerts: false }), { bandAlerts: true, dailyHour: null, breakingAlerts: false, region: null });
-  assert.deepEqual(parseAlertInput({ bandAlerts: false, dailyHour: null, breakingAlerts: true }), { bandAlerts: false, dailyHour: null, breakingAlerts: true, region: null });
+  assert.deepEqual(parseAlertInput({ bandAlerts: true }), { bandAlerts: true, dailyHour: null, breakingAlerts: true, region: null, minBand: null, quietNights: false });
+  assert.deepEqual(parseAlertInput({ bandAlerts: false, dailyHour: 8 }), { bandAlerts: false, dailyHour: 8, breakingAlerts: true, region: null, minBand: null, quietNights: false });
+  assert.deepEqual(parseAlertInput({ bandAlerts: true, dailyHour: null, breakingAlerts: false }), { bandAlerts: true, dailyHour: null, breakingAlerts: false, region: null, minBand: null, quietNights: false });
+  assert.deepEqual(parseAlertInput({ bandAlerts: false, dailyHour: null, breakingAlerts: true }), { bandAlerts: false, dailyHour: null, breakingAlerts: true, region: null, minBand: null, quietNights: false });
   assert.equal(parseAlertInput({ bandAlerts: false, dailyHour: null, breakingAlerts: false }), null);
   assert.equal(parseAlertInput({ bandAlerts: false, dailyHour: null }), null, 'an older build’s Stop all alerts still stops everything');
   // An older build saving band or daily keeps breaking news as the chat set it.
@@ -127,6 +133,12 @@ test('Mini App alert settings are validated, and all-off means unsubscribe', () 
   assert.equal(parseAlertInput({ bandAlerts: true, region: null }, { breakingAlerts: true, region: 'east' })?.region, null);
   assert.throws(() => parseAlertInput({ bandAlerts: true, region: 'mars' }));
   assert.throws(() => parseAlertInput({ bandAlerts: true, region: 'toString' }), 'inherited names aren’t regions');
+  assert.equal(parseAlertInput({ bandAlerts: true, minBand: 'very_unhealthy' })?.minBand, 'very_unhealthy');
+  assert.equal(parseAlertInput({ bandAlerts: true }, { breakingAlerts: true, minBand: 'unhealthy', quietNights: true })?.minBand, 'unhealthy', 'an older build keeps the level');
+  assert.equal(parseAlertInput({ bandAlerts: true }, { breakingAlerts: true, quietNights: true })?.quietNights, true, 'an older build keeps quiet nights');
+  assert.equal(parseAlertInput({ bandAlerts: true, quietNights: false }, { breakingAlerts: true, quietNights: true })?.quietNights, false);
+  assert.throws(() => parseAlertInput({ bandAlerts: true, minBand: 'good' }));
+  assert.throws(() => parseAlertInput({ bandAlerts: true, quietNights: 'yes' }));
 });
 
 /** A fake clock: each task takes `costMs`, sleep advances time. */
@@ -221,13 +233,46 @@ test('each area keeps its own alert band, and chats hear about theirs', async ()
     { chatId: 4, region: 'north', lastBand: null },
     { chatId: 5, region: 'toString', lastBand: 'moderate' },
   ];
-  const { due, unseeded } = bandAlertsFor(subs, next);
+  const { due, silent } = bandAlertsFor(subs, next);
   assert.deepEqual(due.map((d) => [d.sub.chatId, d.scope, d.band.id]), [
     [1, 'north', 'unhealthy'],
     [5, 'highest', 'unhealthy'],
   ], 'an unknown region follows the highest');
-  assert.deepEqual(unseeded.map((d) => d.sub.chatId), [4]);
+  assert.deepEqual(silent.map((d) => d.sub.chatId), [4]);
   assert.equal(scopeOf('constructor'), 'highest');
+});
+
+test('an alert level skips changes below it, but not the drop back below it', async () => {
+  const { bandAlertsFor, wantsBandAlert } = await import('../tgcloud/lib/alert-rules.js');
+  assert.equal(wantsBandAlert('good', 'moderate', null), true, 'no level: every change');
+  assert.equal(wantsBandAlert('good', 'moderate', 'unhealthy'), false);
+  assert.equal(wantsBandAlert('moderate', 'good', 'unhealthy'), false);
+  assert.equal(wantsBandAlert('moderate', 'unhealthy', 'unhealthy'), true, 'rising into it');
+  assert.equal(wantsBandAlert('unhealthy', 'very_unhealthy', 'unhealthy'), true, 'rising above it');
+  assert.equal(wantsBandAlert('unhealthy', 'moderate', 'unhealthy'), true, 'the all clear');
+  assert.equal(wantsBandAlert('very_unhealthy', 'unhealthy', 'very_unhealthy'), true, 'the all clear');
+  assert.equal(wantsBandAlert('unhealthy', 'moderate', 'very_unhealthy'), false);
+  assert.equal(wantsBandAlert('good', 'moderate', 'hazardous'), true, 'an unknown level means every change');
+
+  const bands = { highest: { id: 'moderate', at: 0 } };
+  const subs = [
+    { chatId: 1, region: null, lastBand: 'good', minBand: null },
+    { chatId: 2, region: null, lastBand: 'good', minBand: 'unhealthy' },
+    { chatId: 3, region: null, lastBand: 'unhealthy', minBand: 'unhealthy' },
+  ];
+  const { due, silent } = bandAlertsFor(subs, bands);
+  assert.deepEqual(due.map((d) => d.sub.chatId), [1, 3]);
+  assert.deepEqual(silent.map((d) => [d.sub.chatId, d.band.id]), [[2, 'moderate']], 'moves to the band without an alert');
+});
+
+test('quiet nights send alerts without sound from 11 pm to 7 am SGT', async () => {
+  const { alertTarget, isQuietHour } = await import('../tgcloud/lib/alert-rules.js');
+  const sgt = (h) => Date.parse(`2026-10-16T${String(h).padStart(2, '0')}:30:00+08:00`);
+  assert.deepEqual([22, 23, 0, 6, 7].map((h) => isQuietHour(sgt(h))), [false, true, true, true, false]);
+  const sub = { chatId: 5, threadId: 9, quietNights: true };
+  assert.deepEqual(alertTarget(sub, sgt(2)), { chat_id: 5, message_thread_id: 9, disable_notification: true });
+  assert.deepEqual(alertTarget(sub, sgt(12)), { chat_id: 5, message_thread_id: 9 });
+  assert.deepEqual(alertTarget({ ...sub, quietNights: false }, sgt(2)), { chat_id: 5, message_thread_id: 9 });
 });
 
 test('readings for an area, or the highest for each reading', async () => {
