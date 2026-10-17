@@ -5,7 +5,8 @@
 // (news every run while there's haze); the extra runs are for alerts a previous run didn't reach.
 // News comes before alerts, so breaking news from it goes out in the same run (breaking news gets
 // its own slice of the alert budget, after the fetch). The budget counts from the start, so NEA and
-// news are fetched side by side; news not due by the stored snapshot is checked again by the new one.
+// news are fetched side by side. News not due by the stored snapshot is checked again by the new
+// one, in case this run's reading starts haze (news every run).
 
 import { runAlerts } from '../lib/alerts.js';
 import { updateBreaking } from '../lib/breaking.js';
@@ -18,11 +19,11 @@ export default async function (input, ctx) {
   const started = Date.now();
   const force = Boolean(input?.force);
   const stored = await storedSnapshot();
-  let [snap, news] = await Promise.all([
+  const [snap, firstNews] = await Promise.all([
     force ? refreshNea() : refreshNeaIfNewHour(stored, started),
     force ? refreshNews() : refreshNewsIfDue(stored),
   ]);
-  if ('skipped' in news) news = await refreshNewsIfDue(snap);
+  const news = 'skipped' in firstNews ? await refreshNewsIfDue(snap) : firstNews;
   const breaking = await updateBreaking(snap, news.fresh, started);
   const alerts = await runAlerts(snap, started, breaking.toSend);
   return {

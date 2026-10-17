@@ -37,3 +37,7 @@ test('no retry that could run past the caller’s deadline', async () => {
   assert.match(result.message, /request failed \(1\)/);
   assert.equal(calls, 1);
 });
+
+test('a retry that fits before the caller’s deadline still happens', async () => {
+  assert.deepEqual(await run(failFirst(1), Date.now() + 60_000), { result: 'feed', calls: 2 });
+});

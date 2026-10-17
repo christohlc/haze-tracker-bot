@@ -43,7 +43,11 @@ export async function storedSnapshot() {
   return (await getState('snapshot'))?.value;
 }
 
-/** For the tick (every 15 min): refetch only until NEA has published the current hour. @param {any} stored see storedSnapshot() */
+/**
+ * For the tick (every 15 min): refetch only until NEA has published the current hour.
+ * @param {any} stored from storedSnapshot(), which the tick reads once for news too
+ * @param {number} [now]
+ */
 export async function refreshNeaIfNewHour(stored, now = Date.now()) {
   if (stored && unixHour(stored.asOf) === Math.floor(now / 3_600_000)) return stored;
   return refreshNea();
