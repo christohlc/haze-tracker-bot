@@ -3,10 +3,31 @@
 // with origin/main. Emergency override: DEPLOY_FORCE=1 npm run deploy (not `-- --force`,
 // which npm hands to `tgcloud push`, where it skips the concurrency check).
 import { execFileSync } from 'node:child_process';
+import { realpathSync, statSync } from 'node:fs';
+import path from 'node:path';
 
 const git = (...args) => execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 
+// The folder tgcloud deploys: like its findProjectRoot, the nearest ancestor with a `.tgcloud/`.
+// A worktree without one deploys the parent checkout, whatever branch that is on.
+function tgcloudRoot(dir = process.cwd()) {
+  for (;;) {
+    try {
+      if (statSync(path.join(dir, '.tgcloud')).isDirectory()) return dir;
+    } catch {}
+    const parent = path.dirname(dir);
+    if (parent === dir) return null;
+    dir = parent;
+  }
+}
+
 function refusal() {
+  const root = tgcloudRoot();
+  if (!root) return 'no .tgcloud/ here or above (run npx tgcloud login here)';
+  const top = git('rev-parse', '--show-toplevel');
+  if (realpathSync(root) !== realpathSync(top)) {
+    return `tgcloud would deploy ${root}, not this checkout ${top} (mkdir .tgcloud, then npx tgcloud login here)`;
+  }
   const branch = git('rev-parse', '--abbrev-ref', 'HEAD');
   if (branch !== 'main') return `on ${branch === 'HEAD' ? 'a detached HEAD' : `branch '${branch}'`}, not main`;
   if (git('status', '--porcelain')) return 'uncommitted or untracked changes';

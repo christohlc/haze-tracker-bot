@@ -166,6 +166,8 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   changing `cron/`, which `npm run deploy` doesn't touch). `npm run deploy` refuses
   (`scripts/deploy-guard.mjs`) unless on a clean `main` level with `origin/main`, since `push`
   uploads whatever is on disk; never run `tgcloud push` directly. Emergency override: `DEPLOY_FORCE=1`.
+  tgcloud deploys the nearest folder with a `.tgcloud/`, so a worktree needs its own (`mkdir .tgcloud`,
+  then `npx tgcloud login` there) or it would deploy the main checkout; the guard refuses until it has one.
 
 ## Layout
 
