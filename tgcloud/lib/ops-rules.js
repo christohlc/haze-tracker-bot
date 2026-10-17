@@ -68,3 +68,18 @@ export function opsMessage(failing, recovered) {
   if (recovered.length) lines.push(`✅ Working again: ${recovered.join(', ')}`);
   return lines.join('\n\n');
 }
+
+/** The tick uploads the summary card to the ops chat only this early in its run, so it fits the budget. */
+export const CARD_UPLOAD_BY_MS = 15_000;
+
+/**
+ * Whether the tick should upload this snapshot's summary card to the ops chat (ops.js uploadCard),
+ * so inline mode has a file id every hour, or why not.
+ * @param {{ chatId: unknown, cached: boolean, elapsedMs: number }} p
+ * @returns {'upload' | 'no ops_chat_id' | 'cached' | 'no time'}
+ */
+export function cardUploadDue({ chatId, cached, elapsedMs }) {
+  if (!chatId) return 'no ops_chat_id';
+  if (cached) return 'cached';
+  return elapsedMs < CARD_UPLOAD_BY_MS ? 'upload' : 'no time';
+}
