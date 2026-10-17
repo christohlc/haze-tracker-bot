@@ -33,7 +33,7 @@ export function worstCase(): Dashboard {
         psi1h: { region: 'south', name: 'South', value: 833 },
         psi3h: { region: 'south', name: 'South', value: 833 },
         psi24h: { region: 'central', name: 'Central', value: 1000 },
-        pm25: { region: 'south', name: 'South', value: 1000 },
+        pm25: { region: 'south', name: 'South', value: 1000, trend: 'easing' },
       },
     },
     history,

@@ -72,7 +72,8 @@
       "pm25": {
         "region": "central",
         "name": "Central",
-        "value": 169
+        "value": 169,
+        "trend": "rising"
       }
     },
     "cigs": {

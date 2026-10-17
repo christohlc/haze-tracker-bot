@@ -5,6 +5,7 @@
 import { REGIONS } from './config.js';
 import { meanOfLast, pm25ToPsi } from './psi.js';
 import { cigarettes } from './cigs.js';
+import { unixHour } from './time.js';
 
 /**
  * Mean PM2.5 over the regions that reported; null if none did. The island-wide figure, and
@@ -15,6 +16,25 @@ import { cigarettes } from './cigs.js';
 export function islandMean(readings) {
   const xs = /** @type {number[]} */ (REGIONS.map((r) => readings?.[r.id]).filter((v) => v != null));
   return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null;
+}
+
+/**
+ * Which way a region's 1-hour PM2.5 is heading: the latest hour against three hours earlier (found
+ * by time, so a missing hour can't stretch the gap). Moves under 10 µg/m³ or 15% are steady; null
+ * when either hour is missing. Our calculation, not NEA's.
+ * @param {Array<{ t: string } & Record<string, any>>} rows oldest first  @param {string} region
+ * @returns {'rising' | 'easing' | 'steady' | null}
+ */
+export function pm25Trend(rows, region) {
+  const last = rows.at(-1);
+  if (!last) return null;
+  const h0 = unixHour(last.t);
+  const now = last[region];
+  const before = rows.find((r) => unixHour(r.t) === h0 - 3)?.[region];
+  if (now == null || before == null) return null;
+  const d = now - before;
+  if (Math.abs(d) < 10 || Math.abs(d) < before * 0.15) return 'steady';
+  return d > 0 ? 'rising' : 'easing';
 }
 
 /**
@@ -50,6 +70,9 @@ export function buildSnapshot(pm25History, psi) {
       null,
     );
 
+  const rows = history.map((h) => ({ t: h.timestamp, ...h.readings }));
+  const worstPm25 = pick(worst('pm25'), 'pm25');
+
   return {
     asOf: history[history.length - 1].timestamp,
     psiAsOf: psi.timestamp,
@@ -59,10 +82,10 @@ export function buildSnapshot(pm25History, psi) {
       psi1h: pick(worst('psi1h'), 'psi1h'),
       psi3h: pick(worst('psi3h'), 'psi3h'),
       psi24h: pick(worst('psi24h'), 'psi24h'),
-      pm25: pick(worst('pm25'), 'pm25'),
+      pm25: worstPm25 && { ...worstPm25, trend: pm25Trend(rows, worstPm25.region) },
     },
     cigs: cigarettes(island),
-    history: history.map((h) => ({ t: h.timestamp, ...h.readings })),
+    history: rows,
   };
 }
 
