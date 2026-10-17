@@ -4,19 +4,19 @@
 // Pure (the request is passed in) so node --test can load it.
 
 /** How long the platform's fetch waits before it throws "fetch: request failed". */
-export const FETCH_GIVES_UP_MS = 5_000;
+const FETCH_GIVES_UP_MS = 5_000;
 
 /**
  * @template T
  * @param {() => Promise<T>} request
- * @param {number} [retryUntil] no retry once Date.now() reaches this (a caller with a time budget)
+ * @param {number} [deadline] a caller's time budget: no retry that could run past it
  * @returns {Promise<T>}
  */
-export async function retryOnce(request, retryUntil = Infinity) {
+export async function retryOnce(request, deadline = Infinity) {
   try {
     return await request();
   } catch (e) {
-    if (Date.now() >= retryUntil) throw e;
+    if (Date.now() + FETCH_GIVES_UP_MS > deadline) throw e;
     return request();
   }
 }

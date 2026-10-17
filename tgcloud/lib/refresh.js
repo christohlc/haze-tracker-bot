@@ -38,16 +38,24 @@ export async function refreshNea() {
   return snap;
 }
 
-/** For the tick (every 15 min): refetch only until NEA has published the current hour. */
-export async function refreshNeaIfNewHour(now = Date.now()) {
-  const cached = (await getState('snapshot'))?.value;
-  if (cached && unixHour(cached.asOf) === Math.floor(now / 3_600_000)) return cached;
+/** The stored snapshot as it is, or undefined before the first fetch. */
+export async function storedSnapshot() {
+  return (await getState('snapshot'))?.value;
+}
+
+/**
+ * For the tick (every 15 min): refetch only until NEA has published the current hour.
+ * @param {any} stored from storedSnapshot(), which the tick reads once for news too
+ * @param {number} [now]
+ */
+export async function refreshNeaIfNewHour(stored, now = Date.now()) {
+  if (stored && unixHour(stored.asOf) === Math.floor(now / 3_600_000)) return stored;
   return refreshNea();
 }
 
 /** Latest snapshot, refetching when stale. `stale: true` means NEA couldn't be reached. */
 export async function getSnapshot() {
-  const cached = (await getState('snapshot'))?.value;
+  const cached = await storedSnapshot();
   const fresh = cached && Date.now() - Date.parse(cached.asOf) < STALE_MS;
   if (fresh) return { ...cached, stale: false };
 
