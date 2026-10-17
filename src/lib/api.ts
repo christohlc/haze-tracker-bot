@@ -172,7 +172,7 @@ export async function loadDashboard(): Promise<Dashboard> {
     const data = (await import('../dev/fixture.json')).default as Dashboard;
     // ?card=ahead:range (no NEA forecast, as outside a haze episode) | outlook (no range yet)
     const { state } = await devQuery('ahead', '');
-    return { ...data, ahead: (await import('../dev/ahead')).demoAhead(data, state) };
+    return { ...data, history: (await import('../dev/week')).withWeek(data.history), ahead: (await import('../dev/ahead')).demoAhead(data, state) };
   }
   throw new Error('Open this dashboard from the bot in Telegram.');
 }

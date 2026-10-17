@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, untrack } from 'svelte';
+  import { onMount, tick, untrack } from 'svelte';
   import Advice from './components/Advice.svelte';
   import AheadSection from './components/AheadSection.svelte';
   import AlertsCard from './components/AlertsCard.svelte';
@@ -9,13 +9,14 @@
   import HistoryChart from './components/HistoryChart.svelte';
   import LiveViews from './components/LiveViews.svelte';
   import NewsCard from './components/NewsCard.svelte';
+  import RegionDetail from './components/RegionDetail.svelte';
   import RegionTable from './components/RegionTable.svelte';
   import Segmented from './components/Segmented.svelte';
   import ShareCard from './components/ShareCard.svelte';
   import Sources from './components/Sources.svelte';
   import WhatsNew from './components/WhatsNew.svelte';
   import WindRain from './components/WindRain.svelte';
-  import { loadDashboard, loadWeather, type Dashboard, type WeatherResult } from './lib/api';
+  import { loadDashboard, loadWeather, type Dashboard, type RegionId, type WeatherResult } from './lib/api';
   import { LATEST_ID } from './lib/changelog';
   import type { Period } from './lib/period';
   import { getStored, inTelegram, setStored, showBackButton } from './lib/telegram';
@@ -74,11 +75,34 @@
     if (visited.more && behind) markSeen();
   });
 
-  // Away from Now, Telegram's back arrow returns to it, like a native screen. With the game
-  // open it closes the game instead. One effect, so the two never both hold the button.
+  // A region opened from Around the island, shown in place of the Now tab. Another tab closes it.
+  // Back lands where the list was.
+  let detail = $state<RegionId | null>(null);
+  let listY = 0;
+  async function openRegion(id: RegionId) {
+    listY = window.scrollY;
+    detail = id;
+    await tick(); // the region is shown and the list hidden, so the page is its height
+    tabsAnchor?.scrollIntoView({ block: 'start', behavior: 'instant' });
+  }
+  async function closeRegion() {
+    const was = detail;
+    detail = null;
+    await tick(); // the Now tab is laid out again
+    window.scrollTo({ top: listY, behavior: 'instant' });
+    // Focus goes back to the row that opened it.
+    document.querySelector<HTMLElement>(`[data-region="${was}"]`)?.focus({ preventScroll: true });
+  }
+  $effect(() => {
+    if (tab !== 'now') detail = null;
+  });
+
+  // Away from Now (or in a region), Telegram's back arrow returns to it, like a native screen.
+  // With the game open it closes the game instead. One effect, so they never all hold the button.
   const away = $derived(tab !== 'now');
   $effect(() => {
     if (ninja) return showBackButton(() => (ninja = false));
+    if (detail) return showBackButton(closeRegion);
     if (away) return showBackButton(() => (tab = 'now'));
   });
 
@@ -151,10 +175,15 @@
         options={TABS.map((t) => (t.value === 'more' && unseen ? { ...t, dot: 'new updates' } : t))}
       />
     </div>
+    {#if detail}
+      <div class="sections" role="region" aria-labelledby="region-title">
+        <RegionDetail snapshot={data.snapshot} history={data.history} region={detail} {group} onback={closeRegion} />
+      </div>
+    {/if}
     {#if visited.now}
-      <div id="panel-now" class="sections" class:off={tab !== 'now'} role="tabpanel" aria-labelledby="tab-now">
-        <Hero snapshot={data.snapshot} bind:period mask={outside?.mask} />
-        <RegionTable snapshot={data.snapshot} {period} />
+      <div id="panel-now" class="sections" class:off={tab !== 'now' || detail != null} role="tabpanel" aria-labelledby="tab-now">
+        <Hero snapshot={data.snapshot} bind:period mask={outside?.mask} range={data.ahead?.range ?? null} onahead={() => (tab = 'outlook')} />
+        <RegionTable snapshot={data.snapshot} {period} onselect={openRegion} />
         <Advice snapshot={data.snapshot} v={outside} {group} onpick={pickGroup} />
         <AlertsCard {group} />
         <ShareCard snapshot={data.snapshot} />

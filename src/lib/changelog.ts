@@ -9,6 +9,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-17-region-week',
+    date: '2026-10-17',
+    title: 'Look back over a week',
+    body: 'Tap a region in Around the island to see its readings and the past 7 days. The history chart on Outlook can show 7 days too.',
+  },
+  {
+    id: '2026-10-17-hero-ahead',
+    date: '2026-10-17',
+    title: 'The next few hours up top',
+    body: 'When we can estimate them, our ranges for the next few hours’ PSI now sit right under the reading. They’re our calculation, not NEA’s. Tap them for the details.',
+  },
+  {
     id: '2026-10-17-alert-level',
     date: '2026-10-17',
     title: 'Choose when alerts reach you',
