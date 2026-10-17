@@ -156,7 +156,7 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
 - **Inline mode** (`handlers/inline_query.js`, `lib/inline-rules.js`): `@bot` in any chat offers
   the summary card, by the file id `card/send` cached (none yet this hour: text only, since an
   inline answer can't upload), and a text summary (`@bot west` leads with West). It answers from
-  `storedSnapshot()`, never a refetch. Inline mode is switched on in BotFather (`/setinline`); after
+  `storedSnapshot()`, never a refetch. Inline mode is switched on in BotFather (`/setinline`, placeholder “PSI now”); after
   the first push with this handler, check `npx tgcloud webhook` lists `inline_query`.
 - **The Mini App keeps the last dashboard** in `localStorage` (`src/lib/cache.ts`, news left out). A
   failed load shows it with a “Couldn’t refresh / You’re offline” banner and retries on `online`;

@@ -9,8 +9,14 @@ import { botInfo } from './groups.js';
  * @param {number} chatId
  */
 export async function dashboardButton(chatId) {
-  const text = '📊 Open dashboard';
-  if (!isGroupChat(chatId)) return { inline_keyboard: [[{ text, web_app: { url: MINI_APP_URL } }]] };
+  if (!isGroupChat(chatId)) return { inline_keyboard: [[{ text: DASHBOARD, web_app: { url: MINI_APP_URL } }]] };
+  return linkDashboardButton();
+}
+
+const DASHBOARD = '📊 Open dashboard';
+
+/** The t.me "Open dashboard" link, for anywhere a web_app button isn't allowed (groups, inline results). */
+export async function linkDashboardButton() {
   const bot = await botInfo();
-  return bot?.username ? { inline_keyboard: [[{ text, url: groupDashboardUrl(bot) }]] } : undefined;
+  return bot?.username ? { inline_keyboard: [[{ text: DASHBOARD, url: groupDashboardUrl(bot) }]] } : undefined;
 }

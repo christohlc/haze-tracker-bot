@@ -22,8 +22,7 @@ const GROUP = {
   note: 'only admins can change a group’s alerts, which go to the topic /subscribe was sent in. The bot keeps the group’s chat ID and alert settings, nothing else.',
 };
 
-/** @param {typeof PRIVATE} copy */
-/** @param {{ note: string }} copy @param {string | undefined} username for the inline mode line */
+/** @param {typeof PRIVATE} copy @param {string | undefined} username for the inline mode line */
 const help = (copy, username) =>
   [
     '<b>I’m going hazelnuts!</b>',
