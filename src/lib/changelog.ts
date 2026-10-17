@@ -9,6 +9,12 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-17-wind-forecast',
+    date: '2026-10-17',
+    title: 'See which way the wind will blow',
+    body: 'Wind and rain now shows NEA’s wind forecast for today and the next four days. During a haze episode, it also tells you when the forecast wind could bring smoke from Sumatra.',
+  },
+  {
     id: '2026-10-17-haze-picture-map',
     date: '2026-10-17',
     title: 'A clearer haze picture',

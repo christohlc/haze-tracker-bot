@@ -56,7 +56,10 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   checkpoint and Sentosa cameras; names come from `CAMERAS` in `lib/cameras-parse.js`.
 - **Wind and rain (`endpoints/getWeather`) is fetched the same way**: only when the Mini App asks,
   cached for 5 min in `state('weather')`. It reads NEA's station feeds, and the “coming from Sumatra”
-  line (`smokeLine` in `lib/weather-parse.js`) is our reading, not NEA's.
+  line (`smokeLine` in `lib/weather-parse.js`) is our reading, not NEA's. The same endpoint returns NEA's
+  wind forecast (`lib/forecast.js`: data.gov.sg's 24-hour forecast and 4-day outlook, cached 30 min in
+  `state('forecast')`); its “smoke may blow in” line (`forecastSmokeLine`) is ours too, and only shows
+  while some 24-hour PSI is above 100.
 - **What's ahead (`lib/ahead.js`) has no model.** NEA's 24-hr PSI forecast comes from the
   undocumented JSON behind haze.gov.sg (`lib/outlook.js`, cached 30 min in `state('outlook')`,
   fetched only by /haze, /forecast and the dashboard). NEA issues it about 6 pm, during haze
@@ -68,11 +71,11 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   5 days per run back to back (`paced: false` in the result), so rerun a minute later.
 - **Some `tgcloud/lib/` modules are shared with the front-end and tests**
   (`psi`, `cigs`, `advice`, `alert-settings`, `alert-rules`, `breaking-rules`, `format`, `snapshot`,
-  `outlook-parse`, `range`, `html`, `time`, `news-parse`, `cameras-parse`, `weather-parse`, `chat-rules`,
+  `outlook-parse`, `range`, `html`, `time`, `news-parse`, `cameras-parse`, `weather-parse`, `forecast-parse`, `chat-rules`,
   `card/geometry|png|raster|summary|glyphs|art`). Keep these pure: no `sdk` import, no DB, so
   Vite and `node --test` can load them. Modules that touch `sdk`, directly or via `store`, are
   `store`, `nea`, `refresh`, `alerts`, `breaking`, `subscriptions`, `cli-only`, `outlook`, `ahead`,
-  `news`, `cameras`, `weather`, `bot-errors`, `messages`, `card/send`, `http`, `feed-cache`, `groups`,
+  `news`, `cameras`, `weather`, `forecast`, `bot-errors`, `messages`, `card/send`, `http`, `feed-cache`, `groups`,
   `buttons`.
 - **The summary picture (`tgcloud/lib/card/`) is drawn in plain JS**: the runtime has no canvas,
   fonts or zlib, so `png.js` has its own deflate and `glyphs.js` / `art.js` are pre-rendered
