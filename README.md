@@ -89,7 +89,8 @@ npm run check
 npm run deploy
 ```
 
-That builds the front-end and runs `tgcloud push`. Deploying never changes the database: after
+That builds the front-end and runs `tgcloud push`, but only from a clean `main` that matches
+`origin/main` (`scripts/deploy-guard.mjs`; `DEPLOY_FORCE=1 npm run deploy` overrides it). Deploying never changes the database: after
 editing `tgcloud/schema.js`, run `npx tgcloud migrate` as well. `npx tgcloud status` shows what
 differs from the cloud. It doesn't touch the cron Worker in `cron/`: after changing that, run
 `npx wrangler@4 deploy --config cron/wrangler.jsonc` ([below](#the-15-minute-tick)).
