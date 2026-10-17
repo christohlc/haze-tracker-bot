@@ -1,6 +1,6 @@
 // @ts-check
 // NEA's 24-hr PSI forecast, cached in state('outlook'). Fetched when someone asks (/haze, /forecast,
-// the Mini App), never by the tick: NEA issues it once a day at most.
+// the Mini App, and the tick only when a daily update is due): NEA issues it once a day at most.
 
 import { cachedFeed } from './feed-cache.js';
 import { getJson } from './http.js';

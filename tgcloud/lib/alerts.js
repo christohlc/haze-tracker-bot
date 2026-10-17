@@ -5,13 +5,14 @@
 // made) and the subscriber's lastBand stays behind, so the next tick catches them up.
 
 import { BotApiError } from 'sdk';
-import { ALERT_SCOPES, advanceBands, bandAlertsFor, dailyDue, runBatched, SEND_INTERVAL_MS, sgtHourOf } from './alert-rules.js';
+import { getAhead } from './ahead.js';
+import { ALERT_SCOPES, advanceBands, bandAlertsFor, dailyDue, runBatched, SEND_BATCH, SEND_INTERVAL_MS, sgtHourOf } from './alert-rules.js';
 import { dashboardButton } from './buttons.js';
 import { isRateLimited, isTopicGone, isUnreachable, movedTo } from './bot-errors.js';
 import { subscriberTarget } from './chat-rules.js';
-import { cachedCardId, sendCardOrText } from './card/send.js';
+import { cachedCardId, cachedForecastCardId, sendCardOrText, sendForecastCardOrText } from './card/send.js';
 import { sendBreaking } from './breaking.js';
-import { formatBandAlert, formatHaze, formatHazeCaption } from './format.js';
+import { formatBandAlert, formatForecast, formatHaze, formatHazeCaption } from './format.js';
 import { getAlertBands, setAlertBands } from './store.js';
 import { sgtDateOf } from './time.js';
 import {
@@ -37,6 +38,9 @@ const BUDGET_MS = 20_000;
  *  backlog of one doesn't starve the next. */
 const BREAKING_BUDGET_MS = 6_000;
 const BAND_BUDGET_MS = 12_000;
+
+/** How long the daily update waits for What's ahead (NEA's forecast may need fetching). */
+const AHEAD_WAIT_MS = 4_000;
 
 const DAILY_HEADER = '☀️ <b>Daily haze update</b>\n\n';
 
@@ -137,11 +141,31 @@ export async function runAlerts(snap, now = Date.now(), breaking = []) {
       if (!daily.has(region)) daily.set(region, { caption: `${DAILY_HEADER}${formatHazeCaption(snap, null, region)}`, text: `${DAILY_HEADER}${formatHaze(snap, null, { region })}` });
       return /** @type {{ caption: string, text: string }} */ (daily.get(region));
     };
-    const res = await runBatched(
-      due,
-      (sub) => sendNoting429(sub.chatId, `daily:${sub.chatId}:${date}`, card(sub, dailyFor(sub.region ?? null))),
-      { deadline, sleep, firstAlone: await firstAlone() },
-    );
+    // What's ahead follows as a second picture, while there's something to show.
+    // Fetching NEA's forecast can be slow on a cold cache: past AHEAD_WAIT_MS, the daily goes without.
+    const ahead = due.length
+      ? await Promise.race([getAhead(Promise.resolve(snap)).catch(() => null), ...(sleep ? [sleep(AHEAD_WAIT_MS).then(() => null)] : [])])
+      : null;
+    const forecast = ahead && (ahead.outlook || ahead.range) ? { caption: formatForecast(ahead, { table: false }), text: formatForecast(ahead) } : null;
+    /** @param {any} sub */
+    const deliver = (sub) => async () => {
+      await card(sub, dailyFor(sub.region ?? null))();
+      if (!forecast) return;
+      // The haze card went out, so the daily is sent: a forecast that fails (even on a 429) isn't
+      // retried, or the next tick would send the haze card twice.
+      await sendForecastCardOrText(subscriberTarget(sub), snap, /** @type {any} */ (ahead), forecast).catch((e) =>
+        console.error('daily forecast failed', e instanceof BotApiError ? `${e.code} ${e.description}` : String(e)),
+      );
+    };
+    // Until both cards are uploaded, one chat goes first so the rest reuse the file ids.
+    const alone = (await firstAlone()) || Boolean(forecast && !(await cachedForecastCardId(snap, /** @type {any} */ (ahead))));
+    const res = await runBatched(due, (sub) => sendNoting429(sub.chatId, `daily:${sub.chatId}:${date}`, deliver(sub)), {
+      deadline,
+      sleep,
+      // Two messages each: half the batch keeps under Telegram's overall rate.
+      size: forecast ? Math.floor(SEND_BATCH / 2) : SEND_BATCH,
+      firstAlone: alone,
+    });
     tally(res, 'daily');
   }
 

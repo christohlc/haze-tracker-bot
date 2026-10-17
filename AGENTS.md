@@ -73,7 +73,7 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   from Natural Earth (rerun it if `MAP_BOUNDS` changes).
 - **What's ahead (`lib/ahead.js`) has no model.** NEA's 24-hr PSI forecast comes from the
   undocumented JSON behind haze.gov.sg (`lib/outlook.js`, cached 30 min in `state('outlook')`,
-  fetched only by /haze, /forecast and the dashboard). NEA issues it about 6 pm, during haze
+  fetched only by /haze, /forecast, the dashboard and a tick with daily updates due). NEA issues it about 6 pm, during haze
   episodes only, so null is the usual answer. The next-hours range (`lib/range.js`) is worked out
   from the last 14 days of `readings` and needs at least 72 hours; the tick stores only today and
   yesterday, so after a fresh start or a gap fill it with `admin` `{ action: 'backfill', days: 14 }`
@@ -93,7 +93,10 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   bitmaps **generated** by `npm run card:assets` (fonts in `scripts/card/fonts/`, island outline
   in `scripts/card/singapore.svg`). Don't edit them by hand. `card/send` uploads it once per
   snapshot and reuses Telegram's file id (state `card`); if the photo fails, the text goes instead.
-  `/forecast` sends a second picture, `card/forecast.js`, drawn on every call (no cache).
+  `/forecast` and the daily update send a second picture, `card/forecast.js`, cached the same way
+  (state `forecast_card`, keyed by everything drawn on it). The daily update sends it as a second
+  message after the haze card, while NEA's forecast or our range exists, in half-size batches; if
+  it fails the daily still counts as sent.
   Check a layout change with `node scripts/card/preview.mjs <dir>`.
 - **The bot works in groups** (`lib/chat-rules.js`, `lib/groups.js`). A group subscribes as one
   chat; only its admins (`getChatMember`) may change alerts. Alerts go to the forum topic `/subscribe`
