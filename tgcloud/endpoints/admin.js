@@ -1,6 +1,7 @@
 // @ts-check
 // endpoints/admin.js — operator tools, reachable only through the CLI:
-//   read -rs KEY && npx tgcloud run endpoints/admin "{ action: 'set', key: 'firms_map_key', value: '$KEY' }"
+//   read -rs KEY && npx tgcloud run endpoints/admin "{ action: 'set', key: 'datagov_api_key', value: '$KEY' }" 2>&1 | grep -Ev "value: ?'"
+//     (the CLI and npm print a command's input, key and all: the grep drops those lines; paste the key, Enter)
 //   npx tgcloud run endpoints/admin "{ action: 'status' }"
 //   npx tgcloud run endpoints/admin "{ action: 'unset', key: 'firms_map_key' }"
 //   npx tgcloud run endpoints/admin "{ action: 'rewind_band', band: 'unhealthy' }"  (test: next tick alerts the change)

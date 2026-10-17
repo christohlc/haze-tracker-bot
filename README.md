@@ -170,7 +170,10 @@ private chat. The bot reads that setting once per isolate, so a change shows aft
 There is no secret store, so secrets live in the `settings` table and are set only through the
 CLI-only `admin` endpoint (see the comment at the top of
 [`tgcloud/endpoints/admin.js`](tgcloud/endpoints/admin.js)). Don’t paste keys into commands
-that end up in shell history; the file shows how to read one with `read -rs`.
+that end up in shell history; the file shows how to read one with `read -rs`. `tgcloud run` and
+npm print a command's input, key included, so the example filters those lines out; never share
+that output unfiltered. To rotate a data.gov.sg key, set the new one, then revoke the old: the
+bot drops a key data.gov.sg rejects and reads the setting again.
 
 ## What’s ahead
 
