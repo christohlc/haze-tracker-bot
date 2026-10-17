@@ -1,7 +1,6 @@
 <script lang="ts">
   import { Tween } from 'svelte/motion';
   import { cubicOut } from 'svelte/easing';
-  import { maskCard } from '../../tgcloud/lib/advice.js';
   import { bandFloor, psiBand } from '../../tgcloud/lib/psi.js';
   import { readingsFor } from '../../tgcloud/lib/snapshot.js';
   import type { RegionId, Snapshot } from '../lib/api';
@@ -10,7 +9,13 @@
   import { PERIODS, psiKey, type Period } from '../lib/period';
   import Segmented from './Segmented.svelte';
 
-  let { snapshot, period = $bindable('3h') }: { snapshot: Snapshot; period?: Period } = $props();
+  // `mask` is the short form of What to do's verdict (24-hr PSI and PM2.5, whichever is stricter),
+  // not of the period shown, so the two never give different advice.
+  let {
+    snapshot,
+    period = $bindable('3h'),
+    mask,
+  }: { snapshot: Snapshot; period?: Period; mask?: { title: string; text: string } | null } = $props();
 
   const worst = $derived(snapshot.worst[psiKey(period)]);
   // The user's area if they picked one, else the highest region.
@@ -18,7 +23,6 @@
   const mine = $derived(readings.area);
   const head = $derived(readings[psiKey(period)]);
   const band = $derived(psiBand(head?.value ?? null));
-  const mask = $derived(maskCard(head?.value ?? null));
 
   let locating = $state(false);
   let locateFailed = $state(false);

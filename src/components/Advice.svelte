@@ -1,23 +1,25 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { verdict } from '../../tgcloud/lib/advice.js';
+  import type { Group, verdict } from '../../tgcloud/lib/advice.js';
   import { readingsFor } from '../../tgcloud/lib/snapshot.js';
   import type { Snapshot } from '../lib/api';
   import { area } from '../lib/area.svelte';
   import { reducedMotion } from '../lib/motion';
-  import { getStored, setStored } from '../lib/telegram';
   import BandPill from './BandPill.svelte';
   import Segmented from './Segmented.svelte';
 
-  type Group = 'general' | 'vulnerable';
   const GROUPS: { value: Group; label: string }[] = [
     { value: 'general', label: 'General public' },
     { value: 'vulnerable', label: 'Vulnerable people' },
   ];
   const TREND = { rising: { arrow: '↑', word: 'Rising' }, easing: { arrow: '↓', word: 'Easing' }, steady: { arrow: '→', word: 'Steady' } };
-  const GROUP_KEY = 'advice_group';
 
-  let { snapshot }: { snapshot: Snapshot } = $props();
+  // The verdict and group live in App, which shares them with the hero and remembers the group.
+  let {
+    snapshot,
+    v,
+    group,
+    onpick,
+  }: { snapshot: Snapshot; v: ReturnType<typeof verdict>; group: Group; onpick: (g: Group) => void } = $props();
   // The user's area if they picked one, else the highest region for each reading.
   const readings = $derived(readingsFor(snapshot, area.id));
   const mine = $derived(readings.area);
@@ -25,17 +27,10 @@
   const pm = $derived(readings.pm25);
   const trend = $derived(readings.trend as keyof typeof TREND | null);
 
-  let group = $state<Group>('general');
-  const v = $derived(verdict(psi24?.value ?? null, pm?.value ?? null, group));
-  onMount(() => {
-    getStored(GROUP_KEY).then((g) => g === 'vulnerable' && (group = g));
-  });
-
-  // Picked by the user: remember it, and fade the answer back in so the change registers.
+  // Picked by the user: App remembers it; fade the answer back in so the change registers.
   let answer = $state<HTMLElement>();
   function pickGroup(g: Group) {
-    group = g;
-    setStored(GROUP_KEY, g);
+    onpick(g);
     if (!reducedMotion()) answer?.animate([{ opacity: 0.35 }, { opacity: 1 }], { duration: 150, easing: 'ease-out' });
   }
 </script>

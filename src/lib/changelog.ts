@@ -15,6 +15,12 @@ export const CHANGELOG: ChangelogEntry[] = [
     body: 'Tap the area at the top to pick your part of Singapore, or use your location. The reading, what to do and your alerts then follow your area instead of the worst one.',
   },
   {
+    id: '2026-10-17-one-answer',
+    date: '2026-10-17',
+    title: 'One answer on what to do',
+    body: 'The advice under the big number now matches What to do, and follows your General public or Vulnerable people choice. It no longer changes when you switch between 1, 3 and 24 hours.',
+  },
+  {
     id: '2026-10-17-outside-now',
     date: '2026-10-17',
     title: 'Know if it’s OK to go out',

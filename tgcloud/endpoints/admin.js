@@ -18,7 +18,7 @@ import { requireCli } from '../lib/cli-only.js';
 import { errorText } from '../lib/http.js';
 import { getPm25Day } from '../lib/nea.js';
 import { PSI_BANDS } from '../lib/psi.js';
-import { getSnapshot } from '../lib/refresh.js';
+import { getSnapshot, storedSnapshot } from '../lib/refresh.js';
 import { ALERT_SCOPES } from '../lib/alert-rules.js';
 import { breakingClaimedChats, countSubscribers, setAllLastBand } from '../lib/subscriptions.js';
 import { sgtDatesBack, sgtDayStart } from '../lib/time.js';
@@ -68,7 +68,7 @@ async function backfill(days) {
     }
     if (fetched++ && sleep) await sleep(BACKFILL_PAUSE_MS);
     try {
-      const items = await getPm25Day(date);
+      const items = await getPm25Day(date, deadline);
       await upsertReadings(items);
       done[date] = items.length;
     } catch (e) {
@@ -99,7 +99,7 @@ export default async function (input, ctx) {
       const status = {};
       // Never echo secrets back; just whether they are set.
       for (const k of SECRET_KEYS) status[k] = (await getSetting(k)) ? 'set' : 'missing';
-      const snap = (await getState('snapshot'))?.value;
+      const snap = await storedSnapshot();
       status.snapshot = snap ? { asOf: snap.asOf, psi3h: snap.worst.psi3h } : 'none';
       status.readings = await countReadings();
       status.subscribers = await countSubscribers();
