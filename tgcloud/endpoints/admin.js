@@ -18,10 +18,11 @@ import { requireCli } from '../lib/cli-only.js';
 import { errorText } from '../lib/http.js';
 import { getPm25Day } from '../lib/nea.js';
 import { PSI_BANDS } from '../lib/psi.js';
-import { getSnapshot } from '../lib/refresh.js';
+import { getSnapshot, storedSnapshot } from '../lib/refresh.js';
+import { ALERT_SCOPES } from '../lib/alert-rules.js';
 import { breakingClaimedChats, countSubscribers, setAllLastBand } from '../lib/subscriptions.js';
 import { sgtDatesBack, sgtDayStart } from '../lib/time.js';
-import { allSourceStatus, countReadings, countReadingsBetween, deleteSetting, getSetting, getState, setSetting, setState, toSgtIso, upsertReadings } from '../lib/store.js';
+import { allSourceStatus, countReadings, countReadingsBetween, deleteSetting, getAlertBands, getSetting, getState, setAlertBands, setSetting, setState, toSgtIso, upsertReadings } from '../lib/store.js';
 
 const SECRET_KEYS = ['firms_map_key'];
 
@@ -67,7 +68,7 @@ async function backfill(days) {
     }
     if (fetched++ && sleep) await sleep(BACKFILL_PAUSE_MS);
     try {
-      const items = await getPm25Day(date);
+      const items = await getPm25Day(date, deadline);
       await upsertReadings(items);
       done[date] = items.length;
     } catch (e) {
@@ -98,11 +99,11 @@ export default async function (input, ctx) {
       const status = {};
       // Never echo secrets back; just whether they are set.
       for (const k of SECRET_KEYS) status[k] = (await getSetting(k)) ? 'set' : 'missing';
-      const snap = (await getState('snapshot'))?.value;
+      const snap = await storedSnapshot();
       status.snapshot = snap ? { asOf: snap.asOf, psi3h: snap.worst.psi3h } : 'none';
       status.readings = await countReadings();
       status.subscribers = await countSubscribers();
-      status.alertBand = (await getState('alert_band'))?.value ?? null;
+      status.alertBands = await getAlertBands();
       const breaking = await getBreaking();
       status.breaking = {
         paused: await isBreakingPaused(),
@@ -126,9 +127,10 @@ export default async function (input, ctx) {
       return status;
     }
     case 'rewind_band': {
-      // Pretend the alert band was `band` long ago, so the next tick announces the real one.
+      // Pretend every alert band (highest region and each region) was `band` long ago, so the
+      // next tick announces the real ones.
       if (!PSI_BANDS.some((b) => b.id === input.band)) throw new EndpointError(`band must be one of ${PSI_BANDS.map((b) => b.id).join(', ')}`);
-      await setState('alert_band', { id: input.band, at: 0 });
+      await setAlertBands(Object.fromEntries(ALERT_SCOPES.map((s) => [s, { id: input.band, at: 0 }])));
       await setAllLastBand(input.band);
       return { ok: true, band: input.band };
     }

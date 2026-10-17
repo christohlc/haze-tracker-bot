@@ -13,6 +13,7 @@
     nea_weather: { name: 'NEA weather stations', role: 'Wind and rain' },
     nea_forecast24h: { name: 'NEA 24-hour forecast', role: 'Today’s wind forecast' },
     nea_forecast4day: { name: 'NEA 4-day outlook', role: 'Wind forecast for the next 4 days' },
+    nea_hazemap: { name: 'NEA regional haze map', role: 'Hotspots, haze areas, wind about 760 m up and NEA’s haze outlook, from haze.gov.sg' },
     lta_cameras: { name: 'LTA traffic cameras', role: 'Live views from Woodlands, Tuas and Sentosa' },
   };
   // Feeds we no longer use keep their old rows in the database.

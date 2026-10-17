@@ -11,6 +11,8 @@ export interface Region {
   psi3h: number | null;
   psi24h: number | null;
   pm25Mean24h: number | null;
+  /** Our calculation: the latest hour's PM2.5 against three hours earlier. Missing in older snapshots. */
+  trend?: 'rising' | 'easing' | 'steady' | null;
 }
 
 export interface Worst {
@@ -131,6 +133,29 @@ export async function loadWeather(): Promise<WeatherResult> {
     if (demo === 'worst') return dev.worstWeather();
     if (demo === 'empty') return { weather: null, forecast: null, serverTime: Date.now() };
     return dev.demoWeather();
+  }
+  throw new Error('Open this dashboard from the bot in Telegram.');
+}
+
+export type HazeMap = import('../../tgcloud/lib/hazemap-parse.js').HazeMap;
+
+export interface HazeMapResult {
+  /** Null until haze.gov.sg has answered once. */
+  map: HazeMap | null;
+  serverTime: number;
+}
+
+export async function loadHazeMap(): Promise<HazeMapResult> {
+  if (inTelegram) return callEndpoint<HazeMapResult>('getHazeMap');
+  if (import.meta.env.DEV) {
+    // ?demo=worst | empty, ?card=hazemap:error | loading | none (never fetched) | old (texts a week old)
+    const { demo, state } = await devQuery('hazemap', 'Couldn’t load NEA’s haze map.');
+    const dev = await import('../dev/hazemap');
+    if (state === 'none') return { map: null, serverTime: Date.now() };
+    if (state === 'old') return dev.oldHazeMap();
+    if (demo === 'worst') return dev.worstHazeMap();
+    if (demo === 'empty') return dev.emptyHazeMap();
+    return dev.demoHazeMap();
   }
   throw new Error('Open this dashboard from the bot in Telegram.');
 }

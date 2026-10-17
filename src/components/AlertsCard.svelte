@@ -8,8 +8,10 @@
 
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { DAILY_HOURS, hourLabel, isActive } from '../../tgcloud/lib/alert-settings.js';
+  import { areaLabel, DAILY_HOURS, hourLabel, isActive } from '../../tgcloud/lib/alert-settings.js';
+  import type { RegionId } from '../lib/api';
   import { saveAlerts, type AlertSettings } from '../lib/alerts';
+  import { area, areaFromAlerts, onAreaPicked, pickedHere, revertArea } from '../lib/area.svelte';
   import { confirmAction, inTelegram, notifyHaptic, setMainButtonBusy, showMainButton } from '../lib/telegram';
 
   let settings = $state<AlertSettings | null>(null);
@@ -17,22 +19,33 @@
   let busy = $state(false);
   let error = $state<string | null>(null);
 
-  onMount(async () => {
-    try {
-      settings = await initial;
-      status = 'ready';
-    } catch (e) {
-      error = e instanceof Error ? e.message : 'Couldn’t load your alerts.';
-      status = 'failed';
-    }
+  onMount(() => {
+    // Band alerts follow the area picked at the top.
+    const stop = onAreaPicked(saveRegion);
+    initial.then(
+      (loaded) => {
+        settings = loaded;
+        status = 'ready';
+        // Picked before the settings arrived: save it. Otherwise the app follows the alerts'
+        // region (it may have been set with /alerts).
+        if (loaded && pickedHere()) saveRegion(area.id);
+        else if (loaded) areaFromAlerts(loaded.region);
+      },
+      (e) => {
+        error = e instanceof Error ? e.message : 'Couldn’t load your alerts.';
+        status = 'failed';
+      },
+    );
+    return stop;
   });
 
   $effect(() => setMainButtonBusy(busy));
 
   // A change shows straight away (all off switches the card to its off state) and is undone if
   // the save fails. While it saves the controls are locked but not dimmed.
+  // Resolves true once saved.
   async function save(next: AlertSettings) {
-    if (busy) return;
+    if (busy) return false;
     busy = true;
     error = null;
     const prev = settings;
@@ -40,16 +53,33 @@
     try {
       settings = await saveAlerts(next);
       notifyHaptic('success');
+      return true;
     } catch (e) {
       settings = prev;
       error = e instanceof Error ? e.message : 'Couldn’t save your alerts.';
       notifyHaptic('error');
+      return false;
     } finally {
       busy = false;
+      if (queuedRegion !== undefined) {
+        const id = queuedRegion;
+        queuedRegion = undefined;
+        saveRegion(id);
+      }
     }
   }
 
-  const turnOn = () => save({ bandAlerts: true, dailyHour: null, breakingAlerts: true });
+  // An area picked while another save runs waits for it, so it isn't dropped. If the save fails,
+  // the area goes back to the one the alerts still follow.
+  let queuedRegion: RegionId | null | undefined;
+  async function saveRegion(id: RegionId | null) {
+    if (!settings || settings.region === id) return;
+    if (busy) return void (queuedRegion = id);
+    const was = settings.region;
+    if (!(await save({ ...settings, region: id })) && area.id === id) revertArea(was);
+  }
+
+  const turnOn = () => save({ bandAlerts: true, dailyHour: null, breakingAlerts: true, region: area.id });
 
   // Alerts off: the Telegram MainButton is the call to action. Not after a failed load: we
   // don't know the current settings, and turning on would reset an existing daily update.
@@ -70,7 +100,7 @@
     confirming = true;
     const ok = await confirmAction('Stop all haze alerts? You can turn them on again any time.');
     confirming = false;
-    if (ok) save({ bandAlerts: false, dailyHour: null, breakingAlerts: false });
+    if (ok) save({ bandAlerts: false, dailyHour: null, breakingAlerts: false, region: null });
   }
 </script>
 
@@ -120,7 +150,7 @@
   {#if settings}
     <!-- One guard for the whole list: while a save is in flight, taps don't change anything. -->
     <div class="rows" onclickcapture={(e) => busy && e.preventDefault()}>
-      {@render toggle('bandAlerts', 'Band changes', 'When the 3-hour PSI moves into another band')}
+      {@render toggle('bandAlerts', 'Band changes', `When the 3-hour PSI in ${areaLabel(settings.region)} moves into another band. Follows the area at the top.`)}
       {@render toggle('breakingAlerts', 'Breaking news', 'School closures, events called off, official 24-hour PSI over 200')}
 
       <div class="row daily">

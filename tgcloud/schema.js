@@ -38,6 +38,7 @@ export const subscribers = table('subscribers', {
   breakingAlerts: boolean('breaking_alerts').notNull().default(true),
   lastBand: text('last_band'),
   threadId: integer('thread_id'), // forum topic in a group where alerts go; null = General / not a forum
+  region: text('region'), // band alerts follow this region's 3-hour PSI; null = the highest region
   createdAt: integer('created_at').notNull(),
 });
 

@@ -39,6 +39,10 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   `tgcloud run` isn't documented; tune `BUDGET_MS` in `lib/alerts.js`. Pacing needs
   `setTimeout`: the tick's `alerts.paced` says whether the runtime has it (if not, batches run
   back to back and a 429 ends the run).
+  The budget counts from the tick's start, so it includes the NEA and news fetches (run side by
+  side): the platform's fetch gives up after about 5 s (“fetch: request failed”, often a CDN cache
+  miss) and `lib/http.js` retries once (`retryOnce`, in the pure `lib/fetch-retry.js`), so a feed
+  that times out twice costs ~10 s. Callers with their own budget (backfill) pass a `deadline`.
 - **Breaking news is sent automatically, with no one approving it.** `lib/breaking-rules.js`
   picks a story when its headline has a topic (schools closing / HBL, outdoor activities or sports
   called off, free masks, MOM advisories), mentions haze (headline or description), is under 6 h
@@ -60,6 +64,13 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   wind forecast (`lib/forecast.js`: data.gov.sg's 24-hour forecast and 4-day outlook, cached 30 min / 2 h
   in `state('forecast24h')` / `state('forecast4day')`); its “smoke may blow in” line (`forecastSmokeLine`) is ours too, and only shows
   while some 24-hour PSI is above 100.
+- **The Where it’s coming from map (`endpoints/getHazeMap`) is fetched the same way**: only when the
+  Mini App asks, cached for 30 min in `state('hazemap')`. It's NEA's own layers from haze.gov.sg (hotspots,
+  dense/moderate haze areas, the 2,500 ft wind picture, shown to users as “about 760 m up”, and its situation and outlook texts), found by
+  scraping the KML links out of the homepage: undocumented, so `lib/hazemap-parse.js` never throws and each
+  layer can go missing on its own. data.gov.sg has no regional layers. Hotspots are binned to 0.25° inside
+  `MAP_BOUNDS`; the land under them is `src/lib/coast.ts`, **generated** by `scripts/hazemap/coast.mjs`
+  from Natural Earth (rerun it if `MAP_BOUNDS` changes).
 - **What's ahead (`lib/ahead.js`) has no model.** NEA's 24-hr PSI forecast comes from the
   undocumented JSON behind haze.gov.sg (`lib/outlook.js`, cached 30 min in `state('outlook')`,
   fetched only by /haze, /forecast and the dashboard). NEA issues it about 6 pm, during haze
@@ -71,11 +82,11 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   5 days per run back to back (`paced: false` in the result), so rerun a minute later.
 - **Some `tgcloud/lib/` modules are shared with the front-end and tests**
   (`psi`, `cigs`, `advice`, `alert-settings`, `alert-rules`, `breaking-rules`, `format`, `snapshot`,
-  `outlook-parse`, `range`, `html`, `time`, `news-parse`, `cameras-parse`, `weather-parse`, `forecast-parse`, `chat-rules`,
+  `outlook-parse`, `range`, `html`, `time`, `news-parse`, `cameras-parse`, `weather-parse`, `hazemap-parse`, `forecast-parse`, `chat-rules`,
   `card/geometry|png|raster|summary|glyphs|art`). Keep these pure: no `sdk` import, no DB, so
   Vite and `node --test` can load them. Modules that touch `sdk`, directly or via `store`, are
   `store`, `nea`, `refresh`, `alerts`, `breaking`, `subscriptions`, `cli-only`, `outlook`, `ahead`,
-  `news`, `cameras`, `weather`, `forecast`, `bot-errors`, `messages`, `card/send`, `http`, `feed-cache`, `groups`,
+  `news`, `cameras`, `weather`, `hazemap`, `forecast`, `bot-errors`, `messages`, `card/send`, `http`, `feed-cache`, `groups`,
   `buttons`.
 - **The summary picture (`tgcloud/lib/card/`) is drawn in plain JS**: the runtime has no canvas,
   fonts or zlib, so `png.js` has its own deflate and `glyphs.js` / `art.js` are pre-rendered
@@ -94,6 +105,14 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   Telegram refuses an ephemeral send. web_app buttons don't work in groups, so the dashboard
   button there is a t.me link (main Mini App if set in BotFather; getMe is cached per isolate). **Run `npx tgcloud migrate` before pushing**
   a build that reads `thread_id`.
+- **Areas.** A chat can follow one NEA region (`subscribers.region`; null = the highest region,
+  as before). Band alerts keep an alert band per area (`ALERT_SCOPES` in `lib/alert-rules.js`) in
+  one `state('alert_bands')` row, which replaces `alert_band`; picking another region resets the
+  chat's `lastBand` to that region's band, so it doesn't fire at once. /haze, band alerts and daily
+  updates lead with the chat's region (`readingsFor` in `lib/snapshot.js`, shared with the Mini
+  App). In the Mini App the area is per user (`src/lib/area.svelte.ts`, CloudStorage); while alerts
+  are on, picking an area saves it to the subscription. **Run `npx tgcloud migrate` before
+  pushing** a build that reads `region`.
 - **Secrets live in the `settings` DB table**, set only via `endpoints/admin` from the
   CLI. Never commit or echo a key.
 - **1-hour and 3-hour PSI and the next-hours range are our own calculations**, not NEA's.

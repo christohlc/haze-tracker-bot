@@ -5,7 +5,8 @@
 A Telegram bot and Mini App for haze in Singapore. It shows current PSI by region (also as a
 shareable picture of the island), a cigarette
 equivalent, NEA’s 24-hour PSI forecast during haze episodes, a likely range for the next few hours,
-NEA’s health advice, wind and rain from NEA’s weather stations and NEA’s wind forecast, LTA’s checkpoint and Sentosa
+NEA’s health advice, wind and rain from NEA’s weather stations, NEA’s wind forecast, NEA’s regional map of fires and
+smoke haze (from haze.gov.sg), LTA’s checkpoint and Sentosa
 camera pictures and the latest haze headlines from The Straits Times, CNA and Mothership, and
 sends alerts to a chat when the haze band changes or there’s breaking haze news (schools closing,
 outdoor activities called off, NEA’s 24-hour PSI turning Very unhealthy or Hazardous).
@@ -29,7 +30,7 @@ Cloudflare Worker cron (cron/, every 15 min: :12, :27, :42, :57) ─▶ GitHub A
        └─ send breaking news, band-change and daily alerts → subscribers, alerts_sent
 
 Telegram ─ message / callback_query ─▶ tgcloud/handlers/*      (bot commands)
-Mini App  ─ Serverless.call(...)     ─▶ tgcloud/endpoints/*     (getDashboard, getWeather, getCameras, alerts, shareCard)
+Mini App  ─ Serverless.call(...)     ─▶ tgcloud/endpoints/*     (getDashboard, getWeather, getCameras, getHazeMap, alerts, shareCard)
 ```
 
 It runs on Telegram Serverless (tgcloud). There is no server to host: `tgcloud/` holds the
@@ -44,7 +45,7 @@ fresh data themselves when the snapshot is stale.
 | `tgcloud/schema.js` | Database tables |
 | `tgcloud/handlers/` | Bot commands and inline buttons |
 | `cron/` | Cloudflare Worker that starts the tick workflow every 15 minutes (deployed separately) |
-| `tgcloud/endpoints/` | `getDashboard`, `getWeather`, `getCameras`, `alerts`, `shareCard` (Mini App), `tick`, `admin` (CLI only) |
+| `tgcloud/endpoints/` | `getDashboard`, `getWeather`, `getCameras`, `getHazeMap`, `alerts`, `shareCard` (Mini App), `tick`, `admin` (CLI only) |
 | `tgcloud/lib/` | NEA fetch, PSI maths, alerts, breaking news, formatting, NEA’s outlook and the next-hours range, weather and cameras |
 | `src/` | Mini App (Svelte 5 + Vite + TypeScript) |
 | `scripts/fixture.mjs` | Builds `src/dev/fixture.json` from live data for local UI work |

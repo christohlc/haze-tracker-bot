@@ -1,6 +1,7 @@
 <script lang="ts">
   import { psiBand } from '../../tgcloud/lib/psi.js';
   import type { Snapshot } from '../lib/api';
+  import { area } from '../lib/area.svelte';
   import { fmt } from '../lib/format';
   import { PERIODS, psiKey, type Period } from '../lib/period';
 
@@ -23,7 +24,7 @@
 
   <ul>
     {#each rows as r (r.id)}
-      <li>
+      <li aria-current={area.id === r.id ? 'true' : undefined}>
         <span class="name">{r.name}</span>
         <span class="track" aria-hidden="true">
           {#if r.v != null}
@@ -33,6 +34,7 @@
         </span>
         <span class="value num"><span class="visually-hidden">{PERIODS[period].adj} PSI </span>{fmt(r.v)}</span>
         <span class="detail">
+          {#if area.id === r.id}<span class="mine">Your area</span> ·{/if}
           {r.band?.label ?? 'No reading'} ·
           <!-- The reading and its unit stay on one line. -->
           <span class="pm">PM2.5 <span class="num">{fmt(r.pm25)}</span>{#if r.pm25 != null}&nbsp;µg/m³{/if}</span>
@@ -54,6 +56,10 @@
     align-items: center;
     column-gap: 10px;
     padding: 8px 0;
+  }
+  .mine {
+    font-weight: 650;
+    color: var(--ink);
   }
   li + li {
     border-top: 1px solid var(--hairline);

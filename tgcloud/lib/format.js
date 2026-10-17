@@ -1,11 +1,12 @@
 // @ts-check
 // Telegram HTML for chat replies. Pure: takes a snapshot, returns strings.
 
-import { advice, maskCard } from './advice.js';
+import { verdict } from './advice.js';
 import { escapeHtml } from './html.js';
 import { PUBLISHERS } from './news-parse.js';
 import { bandById, PSI_BANDS, psiBand } from './psi.js';
 import { RANGE_RECORD } from './range.js';
+import { readingsFor } from './snapshot.js';
 import { sgtDayMonth, sgtDayName, sgtHour } from './time.js';
 
 /** "2026-10-16T13:00:00+08:00" → "1:00 pm" (the timestamp is already in SGT). @param {string} iso */
@@ -25,20 +26,34 @@ function regionTable(snap) {
 }
 
 /**
- * The /haze and daily-update text. With `table: false` it's the caption under the summary card,
- * which already shows each region's readings (photo captions are capped at 1,024 characters).
- * @param {any} snap @param {import('./ahead.js').Ahead | null} [ahead] @param {{ table?: boolean }} [opts]
+ * The readings a chat's messages lead with, and the 3-hour PSI's caption.
+ * @param {any} snap @param {string | null | undefined} region
  */
-export function formatHaze(snap, ahead, { table = true } = {}) {
-  const head = snap.worst.psi3h;
-  const band = psiBand(head?.value);
-  const mask = maskCard(head?.value);
-  const tips = advice(snap.worst.psi24h?.value ?? null, snap.worst.pm25?.value ?? null);
+function focus(snap, region) {
+  const r = readingsFor(snap, region);
+  const top = snap.worst.psi3h;
+  const where = !r.area
+    ? `worst region (${top?.name ?? '–'})`
+    : `${r.area.name}${top && top.region !== r.area.id ? `; highest ${top.name} ${n(top.value)}` : ''}`;
+  return { psi3h: r.psi3h?.value ?? null, psi24h: r.psi24h?.value ?? null, pm25: r.pm25?.value ?? null, where };
+}
+
+/**
+ * The /haze and daily-update text, leading with `region`'s readings when the chat follows one.
+ * With `table: false` it's the caption under the summary card, which already shows each region's
+ * readings (photo captions are capped at 1,024 characters).
+ * @param {any} snap @param {import('./ahead.js').Ahead | null} [ahead] @param {{ table?: boolean, region?: string | null }} [opts]
+ */
+export function formatHaze(snap, ahead, { table = true, region = null } = {}) {
+  const f = focus(snap, region);
+  const band = psiBand(f.psi3h);
+  const { mask, outside } = adviceLines(f.psi24h, f.pm25);
 
   const lines = [
-    `${band?.emoji ?? '⚪️'} <b>PSI ${n(head?.value)}</b> · ${band?.label ?? 'No data'}`,
-    `<i>3-hour PSI, worst region (${head?.name ?? '–'}) · ${sgtTime(snap.asOf)} SGT</i>`,
+    `${band?.emoji ?? '⚪️'} <b>PSI ${n(f.psi3h)}</b> · ${band?.label ?? 'No data'}`,
+    `<i>3-hour PSI, ${f.where} · ${sgtTime(snap.asOf)} SGT</i>`,
     ...(snap.stale ? ['⚠️ <i>NEA hasn’t updated recently, so this may be out of date.</i>'] : []),
+    ...(outside ? [outside] : []),
     '',
     ...(table
       ? [`<pre>${regionTable(snap)}</pre>`, '<i>PM2.5 in µg/m³. 1h/3h PSI computed from PM2.5; 24h PSI is NEA’s.</i>']
@@ -46,8 +61,7 @@ export function formatHaze(snap, ahead, { table = true } = {}) {
     '',
     `🚬 <b>${n(snap.cigs.past24h, 1)}</b> cigarettes over the past 24h (island-wide, outdoors all day)`,
   ];
-  if (mask) lines.push(`😷 <b>${mask.title}.</b> ${mask.text}`);
-  if (tips.rightNow) lines.push(`👉 Band ${tips.rightNow.band} (${tips.rightNow.label}): ${tips.rightNow.text}`);
+  if (mask) lines.push(mask);
   const soon = ahead?.range?.steps.find((s) => s.h === 3);
   if (ahead?.outlook) lines.push(`📅 ${outlookLine(ahead.outlook)} (/forecast)`);
   else if (soon) lines.push(`📈 Island-wide 1-hour PSI in 3 hours: likely <b>${soon.lo}–${soon.hi}</b>, our calculation (/forecast)`);
@@ -55,8 +69,24 @@ export function formatHaze(snap, ahead, { table = true } = {}) {
   return lines.join('\n');
 }
 
-/** Caption for the summary card. @param {any} snap @param {import('./ahead.js').Ahead | null} [ahead] */
-export const formatHazeCaption = (snap, ahead) => formatHaze(snap, ahead, { table: false });
+/**
+ * The 😷 line and "Outside now" from one verdict, so they can't disagree. "Outside now" adds
+ * vulnerable people's advice if it's stricter. Nulls without readings.
+ * @param {number | null} psi24h  @param {number | null} pm25Now
+ */
+function adviceLines(psi24h, pm25Now) {
+  const all = verdict(psi24h, pm25Now, 'general');
+  if (!all) return { mask: null, outside: null };
+  const vul = verdict(psi24h, pm25Now, 'vulnerable');
+  const outside = `👉 <b>Outside now:</b> ${all.headline}`;
+  return {
+    mask: `😷 <b>${all.mask.title}.</b> ${all.mask.text}`,
+    outside: vul && vul.rank > all.rank ? `${outside}\n      Vulnerable people: ${vul.headline}` : outside,
+  };
+}
+
+/** Caption for the summary card. @param {any} snap @param {import('./ahead.js').Ahead | null} [ahead] @param {string | null} [region] */
+export const formatHazeCaption = (snap, ahead, region = null) => formatHaze(snap, ahead, { table: false, region });
 
 /** Short caption for a card shared from the Mini App into another chat. @param {any} snap */
 export function formatShareCaption(snap) {
@@ -78,24 +108,24 @@ export function formatCigs(c, { place, outdoorPct }) {
 }
 
 /**
- * Short alert when the headline band changes.
+ * Short alert when the band the chat follows changes: its region's, or the highest region's.
  * @param {any} snap
  * @param {string} fromId previous band id
  * @param {string} toId new band id
+ * @param {string | null} [region]
  */
-export function formatBandAlert(snap, fromId, toId) {
+export function formatBandAlert(snap, fromId, toId, region = null) {
   const to = bandById(toId);
   const from = bandById(fromId);
-  const head = snap.worst.psi3h;
+  const f = focus(snap, region);
   const worse = PSI_BANDS.indexOf(/** @type {any} */ (to)) > PSI_BANDS.indexOf(/** @type {any} */ (from));
-  const tips = advice(snap.worst.psi24h?.value ?? null, snap.worst.pm25?.value ?? null);
-  const mask = maskCard(head?.value ?? null);
+  const { mask, outside } = adviceLines(f.psi24h, f.pm25);
   const lines = [
     `${to?.emoji ?? '⚪️'} <b>Haze ${worse ? 'up' : 'down'} to ${to?.label ?? toId}</b> (was ${from?.label ?? fromId})`,
-    `3-hour PSI <b>${n(head?.value)}</b>, worst in ${head?.name ?? '–'} · ${sgtTime(snap.asOf)} SGT`,
+    `3-hour PSI <b>${n(f.psi3h)}</b>, ${f.where} · ${sgtTime(snap.asOf)} SGT`,
   ];
-  if (mask) lines.push(`😷 <b>${mask.title}.</b> ${mask.text}`);
-  if (tips.rightNow) lines.push(`👉 ${tips.rightNow.text}`);
+  if (mask) lines.push(mask);
+  if (outside) lines.push(outside);
   lines.push('', '<i>/alerts to change or stop these.</i>');
   return lines.join('\n');
 }
@@ -113,14 +143,13 @@ export function formatBreaking(event, snap) {
   const footer = ['', '<i>/alerts to change or stop these.</i>'];
   if (event.kind === 'psi24') {
     const band = bandById(event.band);
-    const mask = maskCard(event.value);
-    const tips = advice(event.value, snap.worst.pm25?.value ?? null);
+    const { mask, outside } = adviceLines(event.value, snap.worst.pm25?.value ?? null);
     const lines = [
       `${band?.emoji ?? '⚪️'} <b>Official 24-hour PSI now ${band?.label ?? event.band}</b>`,
       `NEA’s 24-hour PSI is <b>${n(event.value)}</b>, worst in ${psi?.name ?? '–'} · ${sgtTime(snap.asOf)} SGT`,
     ];
-    if (mask) lines.push(`😷 <b>${mask.title}.</b> ${mask.text}`);
-    if (tips.rightNow) lines.push(`👉 ${tips.rightNow.text}`);
+    if (mask) lines.push(mask);
+    if (outside) lines.push(outside);
     return [...lines, ...footer].join('\n');
   }
   const publisher = PUBLISHERS[/** @type {keyof typeof PUBLISHERS} */ (event.source)]?.name ?? event.source;

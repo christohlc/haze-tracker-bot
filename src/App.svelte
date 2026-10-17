@@ -18,7 +18,9 @@
   import { loadDashboard, loadWeather, type Dashboard, type WeatherResult } from './lib/api';
   import { LATEST_ID } from './lib/changelog';
   import type { Period } from './lib/period';
-  import { inTelegram, showBackButton } from './lib/telegram';
+  import { getStored, inTelegram, setStored, showBackButton } from './lib/telegram';
+  import { snapshotVerdict, type Group } from '../tgcloud/lib/advice.js';
+  import { area } from './lib/area.svelte';
   import { getSeen, markSeen } from './lib/whats-new';
 
   type Tab = 'now' | 'outlook' | 'more';
@@ -31,12 +33,23 @@
   // The hidden game behind the header; loaded only once someone finds it.
   let ninja = $state(false);
   const loadNinja = () => import('./components/HazelnutNinja.svelte');
+  // The haze map and its land outline are only fetched once Outlook is opened.
+  const loadHazeMapCard = () => import('./components/HazeMap.svelte');
 
   const DevToggle = import.meta.env.DEV && !inTelegram ? import('./dev/DevDataToggle.svelte') : null;
 
   let data = $state<Dashboard | null>(null);
   let error = $state<string | null>(null);
   let period = $state<Period>('3h');
+  // Who What to do advises; the hero's mask line is the same verdict's short form, so they agree.
+  const GROUP_KEY = 'advice_group';
+  let group = $state<Group>('general');
+  const outside = $derived(data ? snapshotVerdict(data.snapshot, group, area.id) : null);
+  getStored(GROUP_KEY).then((g) => g === 'vulnerable' && (group = g));
+  function pickGroup(g: Group) {
+    group = g;
+    setStored(GROUP_KEY, g);
+  }
   let loadedAt = 0;
   // Started alongside the dashboard rather than when its card mounts, so it isn't a second round trip.
   let weatherFirst = $state<Promise<WeatherResult> | null>(null);
@@ -140,9 +153,9 @@
     </div>
     {#if visited.now}
       <div id="panel-now" class="sections" class:off={tab !== 'now'} role="tabpanel" aria-labelledby="tab-now">
-        <Hero snapshot={data.snapshot} bind:period />
+        <Hero snapshot={data.snapshot} bind:period mask={outside?.mask} />
         <RegionTable snapshot={data.snapshot} {period} />
-        <Advice snapshot={data.snapshot} />
+        <Advice snapshot={data.snapshot} v={outside} {group} onpick={pickGroup} />
         <AlertsCard />
         <ShareCard snapshot={data.snapshot} />
       </div>
@@ -151,6 +164,7 @@
       <div id="panel-outlook" class="sections" class:off={tab !== 'outlook'} role="tabpanel" aria-labelledby="tab-outlook">
         {#if data.ahead?.outlook || data.ahead?.range}<AheadSection ahead={data.ahead} />{/if}
         <WindRain snapshot={data.snapshot} first={weatherFirst} />
+        {#await loadHazeMapCard() then m}<m.default />{/await}
         <HistoryChart snapshot={data.snapshot} history={data.history} />
       </div>
     {/if}

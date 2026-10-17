@@ -38,9 +38,10 @@ export function sgtDayMonth(ymd) {
 }
 
 
-/** "today" or "tomorrow" for an SGT date, else "on 18 Oct". @param {string} ymd @param {number} [now] ms */
+/** "today", "tomorrow" or "yesterday" for an SGT date, else "on 18 Oct". @param {string} ymd @param {number} [now] ms */
 export function sgtDayName(ymd, now = Date.now()) {
   if (ymd === sgtDateOf(now)) return 'today';
   if (ymd === sgtDateOf(now + 86_400_000)) return 'tomorrow';
+  if (ymd === sgtDateOf(now - 86_400_000)) return 'yesterday';
   return `on ${sgtDayMonth(ymd)}`;
 }

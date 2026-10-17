@@ -7,7 +7,6 @@
 
   const SATELLITE = [
     { title: 'Satellite pictures of the smoke', meta: 'Himawari images of Sumatra and Malaysia, from ASMC', link: 'https://asmc.asean.org/satellite-geo-sat/' },
-    { title: 'Fire hotspots around the region', meta: 'Daily hotspot map, from ASMC', link: 'https://asmc.asean.org/asmc-hotspot/' },
   ];
 
   let result = $state<CamerasResult | null>(null);
