@@ -4,7 +4,7 @@
 // load it; lib/hazemap.js fetches it. None of this is a documented API (the homepage embeds the
 // KML links in a script), so nothing here may throw.
 
-import { decodeEntities, HTTPS_LINK } from './html.js';
+import { decodeEntities, resolveUrl } from './html.js';
 import { MONTHS, sgtDateOf, toSgtIso } from './time.js';
 
 export const HAZE_HOME = 'https://www.haze.gov.sg/';
@@ -200,19 +200,6 @@ export function parseHaze(kml, date = null) {
     }
   }
   return haze;
-}
-
-/**
- * The https address of a link NEA writes on the page at `base`: absolute, "/root/…" or
- * "same-folder.png". By hand (HTTPS_LINK): the bot's runtime has no `URL`. Null for anything
- * else (another scheme, "//host", "./", "../", "?…", "#…").
- * @param {string} href @param {unknown} base
- */
-export function resolveUrl(href, base) {
-  if (HTTPS_LINK.test(href)) return href;
-  const m = typeof base === 'string' ? base.match(HTTPS_LINK) : null;
-  if (!m || !href || /^(?:[a-z][a-z\d+.-]*:|\/\/|[.?#])/i.test(href)) return null;
-  return `https://${m[1]}${href.startsWith('/') ? '' : m[2].replace(/[^/]*$/, '') || '/'}${href}`;
 }
 
 /**

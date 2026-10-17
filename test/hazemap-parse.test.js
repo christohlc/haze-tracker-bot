@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-import { fileDate, MAP_BOUNDS, parseHaze, project, parseHome, parseHotspots, parseUpdated, parseWind, resolveUrl } from '../tgcloud/lib/hazemap-parse.js';
+import { fileDate, MAP_BOUNDS, parseHaze, project, parseHome, parseHotspots, parseUpdated, parseWind } from '../tgcloud/lib/hazemap-parse.js';
+import { resolveUrl } from '../tgcloud/lib/html.js';
 
 // haze.gov.sg's homepage and the three KML files it linked to, fetched on 17 Oct 2026, 1:40 pm SGT.
 const read = (name) => readFileSync(new URL(`./hazemap/${name}`, import.meta.url), 'utf8');

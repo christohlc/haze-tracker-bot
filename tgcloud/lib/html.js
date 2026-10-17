@@ -24,3 +24,17 @@ export const escapeHtml = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').
 // The Serverless runtime has no URL global, so links are split by hand: https only,
 // host (anything before / ? #, so user@host or host:port never match), then path.
 export const HTTPS_LINK = /^https:\/\/([^/?#]+)([^?#]*)/i;
+
+/**
+ * The https address of a link on the page at `base`, for the kinds NEA writes: absolute,
+ * "/root/…" or "same-folder.png", split by hand with HTTPS_LINK. Null for anything else
+ * (another scheme, "//host", "./", "../", "?…", "#…").
+ * @param {string} href @param {unknown} base
+ */
+export function resolveUrl(href, base) {
+  if (HTTPS_LINK.test(href)) return href;
+  const m = typeof base === 'string' ? base.match(HTTPS_LINK) : null;
+  if (!m || !href || /^(?:[a-z][a-z\d+.-]*:|\/\/|[.?#])/i.test(href)) return null;
+  const folder = href.startsWith('/') ? '' : m[2].replace(/[^/]*$/, '') || '/';
+  return `https://${m[1]}${folder}${href}`;
+}
