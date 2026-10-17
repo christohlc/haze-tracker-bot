@@ -110,8 +110,8 @@ test('a chat following a region hears about that region, and where the highest i
   assert.match(north, /3-hour PSI <b>184<\/b>, North; highest Central 221/);
   assert.match(north, /Outside now:<\/b> Go easy/, 'advice from North’s readings, not the highest');
   assert.match(formatBandAlert(snap, 'unhealthy', 'very_unhealthy', 'central'), /, Central ·/, 'no “highest” when it is the highest');
-  assert.match(formatHaze(snap, null, { region: 'north' }), /<b>PSI 184<\/b> · Unhealthy/);
-  assert.match(formatHaze(snap, null, { region: 'mars' }), /<b>PSI 221<\/b>/, 'unknown region falls back to the highest');
+  assert.match(formatHaze(snap, null, { region: 'north' }), /<b>Unhealthy<\/b> · 3-hr PSI 184 in North/);
+  assert.match(formatHaze(snap, null, { region: 'mars' }), /PSI 221 in Central, the highest/, 'unknown region falls back to the highest');
 });
 
 test('Mini App alert settings are validated, and all-off means unsubscribe', () => {

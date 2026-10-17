@@ -129,6 +129,11 @@ messages is the same short form, for the general public.
   large preview above), then the official 24-hour PSI. It says the bot picked the story itself.
   The PSI version says “Official 24-hour PSI now Hazardous”: only NEA’s 24-hour PSI is ever
   called official.
+- `/haze` and the card caption (`formatHaze`): the band and the chat’s area first (“🟡 Unhealthy ·
+  3-hr PSI 170 in East”), then “Our calculation from PM2.5” with the time, then the advice, then
+  NEA’s forecast and the cigarette count. One closing note; the table only in the text version.
+- Advice lines (`adviceLines`) go in one order in every message, each with its own emoji:
+  👉 Outside now, 🧓 Vulnerable people (only when their advice is stricter), 😷 the short form.
 - Band alerts (`formatBandAlert`) name the chat’s area (“Haze in East down to Unhealthy”), say
   “Our 3-hour PSI” and add NEA’s 24-hour PSI, the number on the picture above them (left out
   when a folded official crossing already gives the same number). An official
