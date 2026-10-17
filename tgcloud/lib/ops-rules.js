@@ -1,0 +1,64 @@
+// @ts-check
+// Which feeds to tell the operator about (ops.js sends it). Pure: shared with tests.
+
+import { toSgtIso } from './time.js';
+
+/** At most one DM per source in this many seconds (ops.js claims `ops:<source>`). */
+export const OPS_REPEAT_S = 6 * 3600;
+
+// The tick fetches these itself, so one failed fetch is retried within minutes: they count as failing
+// only once they've had no good fetch for this long. NEA every 15 min, the news about hourly.
+const SCHEDULED_STALE_S = { nea_pm25: 2 * 3600, nea_psi: 2 * 3600 };
+const NEWS_STALE_S = 6 * 3600;
+
+/**
+ * @typedef {{ source: string, lastOkAt: number | null, lastErrorAt: number | null, lastError: string | null }} SourceStatus
+ * (store.js allSourceStatus; times in unix seconds)
+ */
+
+/** How long a source may go without a good fetch, or null for a feed fetched only when asked for. @param {string} source */
+function staleAfterS(source) {
+  if (source in SCHEDULED_STALE_S) return SCHEDULED_STALE_S[/** @type {keyof typeof SCHEDULED_STALE_S} */ (source)];
+  return source.startsWith('news_') ? NEWS_STALE_S : null;
+}
+
+/** @param {SourceStatus} s */
+const lastFetchFailed = (s) => (s.lastErrorAt ?? 0) > (s.lastOkAt ?? 0);
+
+/**
+ * The sources whose latest fetch failed, and, for the ones the tick fetches, that have gone too long
+ * without a good one. A feed fetched only when the Mini App asks (cachedFeed) may not be asked for
+ * again for hours, so its latest fetch failing is enough.
+ * @param {SourceStatus[]} statuses @param {number} now unix seconds @returns {SourceStatus[]}
+ */
+export function failingSources(statuses, now) {
+  return statuses.filter((s) => {
+    if (!lastFetchFailed(s)) return false;
+    const staleS = staleAfterS(s.source);
+    return staleS === null || now - (s.lastOkAt ?? 0) > staleS;
+  });
+}
+
+/**
+ * Of the sources the operator was told about, the ones whose latest fetch worked.
+ * @param {SourceStatus[]} statuses @param {string[]} notified @returns {string[]}
+ */
+export function recoveredSources(statuses, notified) {
+  return notified.filter((source) => {
+    const s = statuses.find((x) => x.source === source);
+    return s && !lastFetchFailed(s);
+  });
+}
+
+/**
+ * The DM: newly failing sources first, then the recovered ones. Plain text (no parse_mode).
+ * @param {SourceStatus[]} failing @param {string[]} recovered @returns {string}
+ */
+export function opsMessage(failing, recovered) {
+  const lines = failing.map(
+    (s) =>
+      `⚠️ ${s.source} failing: ${(s.lastError ?? 'unknown error').slice(0, 200)} (last good fetch ${s.lastOkAt ? toSgtIso(s.lastOkAt) : 'never'})`,
+  );
+  if (recovered.length) lines.push(`✅ Working again: ${recovered.join(', ')}`);
+  return lines.join('\n\n');
+}

@@ -37,6 +37,16 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   3 am or while some of its hours are missing. News about hourly (every run
   while some PSI is above 100, for breaking news); the extra runs are for alerts a previous run
   didn't reach. `{"force":true}` refetches NEA and news regardless.
+- **Ops alerts go to the operator, never to users.** At the end of every tick `lib/ops.js` writes
+  `state('tick_heartbeat')` (`admin` `status` shows it as `lastTick`) and DMs the `ops_chat_id`
+  setting about each feed in `source_status` that keeps failing (`failingSources` in
+  `lib/ops-rules.js`: NEA after 2 h without a good fetch, news after 6 h, on-demand feeds as soon as
+  their latest fetch failed), at most once per feed per 6 h (claim `ops:<source>`), then once when it
+  works again (`state('ops_notified')`). The tick can't report its own absence, so the Worker
+  (`cron/worker.js`) DMs `OPS_CHAT_ID` when the last successful tick run is over 45 min old or the
+  dispatch failed, only on the hour's first cron (it has no store), so at most hourly. Its secrets
+  `TELEGRAM_BOT_TOKEN` / `OPS_CHAT_ID` are optional: without them it only dispatches. The Actions
+  logs are public, so the tick's output names sources but never the chat.
 - **Alerts go out in batches of 25/s within a ~20 s budget** (`runBatched` in `lib/alert-rules.js`).
   Whoever isn't reached (budget, 429) keeps their old `lastBand` / unclaimed key and the next tick
   resumes. Breaking news gets the first 6 s after the news fetch, band alerts run until 12 s, so
@@ -90,12 +100,12 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   5 days per run back to back (`paced: false` in the result), so rerun a minute later.
 - **Some `tgcloud/lib/` modules are shared with the front-end and tests**
   (`psi`, `cigs`, `advice`, `alert-settings`, `alert-rules`, `breaking-rules`, `format`, `snapshot`,
-  `outlook-parse`, `range`, `html`, `time`, `config`, `fetch-retry`, `news-parse`, `cameras-parse`, `weather-parse`, `hazemap-parse`, `forecast-parse`, `chat-rules`,
+  `outlook-parse`, `range`, `html`, `time`, `config`, `fetch-retry`, `news-parse`, `cameras-parse`, `weather-parse`, `hazemap-parse`, `forecast-parse`, `chat-rules`, `ops-rules`,
   `card/geometry|png|raster|summary|forecast|glyphs|art`). Keep these pure: no `sdk` import, no DB, so
   Vite and `node --test` can load them. Modules that touch `sdk`, directly or via `store`, are
   `store`, `nea`, `refresh`, `alerts`, `breaking`, `subscriptions`, `cli-only`, `outlook`, `ahead`,
   `news`, `cameras`, `weather`, `hazemap`, `forecast`, `bot-errors`, `messages`, `card/send`, `http`, `feed-cache`, `groups`,
-  `buttons`.
+  `buttons`, `ops`.
 - **The summary picture (`tgcloud/lib/card/`) is drawn in plain JS**: the runtime has no canvas,
   fonts or zlib, so `png.js` has its own deflate and `glyphs.js` / `art.js` are pre-rendered
   bitmaps **generated** by `npm run card:assets` (fonts in `scripts/card/fonts/`, island outline
@@ -150,7 +160,7 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
 - **New or changed UI gets a pass with the UI skills** before it's committed:
   `emil-design-eng` (polish, motion) and `mobile-native` (touch, safe areas), plus
   `break-ui` for components that show data. Keep the result consistent with docs/design.md.
-- Checks: `npm test` and `npm run check`. Deploy: `npm run deploy` (+ `npx tgcloud
+- Checks: `npm test`, `npm run check` and `npm run build` (CI runs all three). Deploy: `npm run deploy` (+ `npx tgcloud
   migrate` after schema changes; + `npx wrangler@4 deploy --config cron/wrangler.jsonc` after
   changing `cron/`, which `npm run deploy` doesn't touch). `npm run deploy` refuses
   (`scripts/deploy-guard.mjs`) unless on a clean `main` level with `origin/main`, since `push`
