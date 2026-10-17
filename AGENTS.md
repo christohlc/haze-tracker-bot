@@ -105,7 +105,8 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   supergroup takes its subscription along (`migrate_to_chat_id`). In groups most commands are
   **ephemeral** (Bot API 10.2+, `COMMANDS` in `chat-rules.js`): the command and the bot's reply are
   seen only by the sender, and the reply must go within 15 s. The menus are set by `admin`
-  `{ action: 'commands' }`; rerun it after changing `COMMANDS` (which /help is built from too).
+  `{ action: 'commands' }` (which also clears any admins-only menu, since it would win over the
+  group one); rerun it after changing `COMMANDS` (which /help is built from too).
   Answers go through `answer` in `lib/messages.js`, which falls back down `answerTargets` when
   Telegram refuses an ephemeral send. web_app buttons don't work in groups, so the dashboard
   button there is a t.me link (main Mini App if set in BotFather; getMe is cached per isolate). **Run `npx tgcloud migrate` before pushing**
