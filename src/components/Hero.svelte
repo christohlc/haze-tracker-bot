@@ -1,18 +1,22 @@
 <script lang="ts">
   import { Tween } from 'svelte/motion';
   import { cubicOut } from 'svelte/easing';
-  import { maskCard } from '../../tgcloud/lib/advice.js';
   import { bandFloor, psiBand } from '../../tgcloud/lib/psi.js';
   import type { Snapshot } from '../lib/api';
   import { reducedMotion } from '../lib/motion';
   import { PERIODS, psiKey, type Period } from '../lib/period';
   import Segmented from './Segmented.svelte';
 
-  let { snapshot, period = $bindable('3h') }: { snapshot: Snapshot; period?: Period } = $props();
+  // `mask` is the short form of What to do's verdict (24-hr PSI and PM2.5, whichever is stricter),
+  // not of the period shown, so the two never give different advice.
+  let {
+    snapshot,
+    period = $bindable('3h'),
+    mask,
+  }: { snapshot: Snapshot; period?: Period; mask?: { title: string; text: string } | null } = $props();
 
   const worst = $derived(snapshot.worst[psiKey(period)]);
   const band = $derived(psiBand(worst?.value ?? null));
-  const mask = $derived(maskCard(worst?.value ?? null));
   // First open counts up once (rare, so it can take a little longer); period switches retarget quickly.
   // The count starts at the bottom of the band, so the number never reads lower than the band shown.
   const shown = new Tween(0, { easing: cubicOut });

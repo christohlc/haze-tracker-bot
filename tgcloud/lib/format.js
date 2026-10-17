@@ -1,7 +1,7 @@
 // @ts-check
 // Telegram HTML for chat replies. Pure: takes a snapshot, returns strings.
 
-import { maskCard, verdict } from './advice.js';
+import { verdict } from './advice.js';
 import { escapeHtml } from './html.js';
 import { PUBLISHERS } from './news-parse.js';
 import { bandById, PSI_BANDS, psiBand } from './psi.js';
@@ -32,8 +32,7 @@ function regionTable(snap) {
 export function formatHaze(snap, ahead, { table = true } = {}) {
   const head = snap.worst.psi3h;
   const band = psiBand(head?.value);
-  const mask = maskCard(head?.value);
-  const outside = verdictLine(snap.worst.psi24h?.value ?? null, snap.worst.pm25?.value ?? null);
+  const { mask, outside } = snapshotLines(snap);
 
   const lines = [
     `${band?.emoji ?? '⚪️'} <b>PSI ${n(head?.value)}</b> · ${band?.label ?? 'No data'}`,
@@ -47,7 +46,7 @@ export function formatHaze(snap, ahead, { table = true } = {}) {
     '',
     `🚬 <b>${n(snap.cigs.past24h, 1)}</b> cigarettes over the past 24h (island-wide, outdoors all day)`,
   ];
-  if (mask) lines.push(`😷 <b>${mask.title}.</b> ${mask.text}`);
+  if (mask) lines.push(mask);
   const soon = ahead?.range?.steps.find((s) => s.h === 3);
   if (ahead?.outlook) lines.push(`📅 ${outlookLine(ahead.outlook)} (/forecast)`);
   else if (soon) lines.push(`📈 Island-wide 1-hour PSI in 3 hours: likely <b>${soon.lo}–${soon.hi}</b>, our calculation (/forecast)`);
@@ -56,17 +55,23 @@ export function formatHaze(snap, ahead, { table = true } = {}) {
 }
 
 /**
- * "Outside now" in one line: the stricter of NEA's PSI and PM2.5 advice, plus vulnerable people's
- * if it's stricter still. Null without readings.
+ * The 😷 line and "Outside now" from one verdict, so they can't disagree. "Outside now" adds
+ * vulnerable people's advice if it's stricter. Nulls without readings.
  * @param {number | null} psi24h  @param {number | null} pm25Now
  */
-function verdictLine(psi24h, pm25Now) {
+function adviceLines(psi24h, pm25Now) {
   const all = verdict(psi24h, pm25Now, 'general');
-  if (!all) return null;
+  if (!all) return { mask: null, outside: null };
   const vul = verdict(psi24h, pm25Now, 'vulnerable');
-  const line = `👉 <b>Outside now:</b> ${all.headline}`;
-  return vul && vul.rank > all.rank ? `${line}\n      Vulnerable people: ${vul.headline}` : line;
+  const outside = `👉 <b>Outside now:</b> ${all.headline}`;
+  return {
+    mask: `😷 <b>${all.mask.title}.</b> ${all.mask.text}`,
+    outside: vul && vul.rank > all.rank ? `${outside}\n      Vulnerable people: ${vul.headline}` : outside,
+  };
 }
+
+/** @param {any} snap */
+const snapshotLines = (snap) => adviceLines(snap.worst.psi24h?.value ?? null, snap.worst.pm25?.value ?? null);
 
 /** Caption for the summary card. @param {any} snap @param {import('./ahead.js').Ahead | null} [ahead] */
 export const formatHazeCaption = (snap, ahead) => formatHaze(snap, ahead, { table: false });
@@ -101,13 +106,12 @@ export function formatBandAlert(snap, fromId, toId) {
   const from = bandById(fromId);
   const head = snap.worst.psi3h;
   const worse = PSI_BANDS.indexOf(/** @type {any} */ (to)) > PSI_BANDS.indexOf(/** @type {any} */ (from));
-  const outside = verdictLine(snap.worst.psi24h?.value ?? null, snap.worst.pm25?.value ?? null);
-  const mask = maskCard(head?.value ?? null);
+  const { mask, outside } = snapshotLines(snap);
   const lines = [
     `${to?.emoji ?? '⚪️'} <b>Haze ${worse ? 'up' : 'down'} to ${to?.label ?? toId}</b> (was ${from?.label ?? fromId})`,
     `3-hour PSI <b>${n(head?.value)}</b>, worst in ${head?.name ?? '–'} · ${sgtTime(snap.asOf)} SGT`,
   ];
-  if (mask) lines.push(`😷 <b>${mask.title}.</b> ${mask.text}`);
+  if (mask) lines.push(mask);
   if (outside) lines.push(outside);
   lines.push('', '<i>/alerts to change or stop these.</i>');
   return lines.join('\n');
@@ -126,13 +130,12 @@ export function formatBreaking(event, snap) {
   const footer = ['', '<i>/alerts to change or stop these.</i>'];
   if (event.kind === 'psi24') {
     const band = bandById(event.band);
-    const mask = maskCard(event.value);
-    const outside = verdictLine(event.value, snap.worst.pm25?.value ?? null);
+    const { mask, outside } = adviceLines(event.value, snap.worst.pm25?.value ?? null);
     const lines = [
       `${band?.emoji ?? '⚪️'} <b>Official 24-hour PSI now ${band?.label ?? event.band}</b>`,
       `NEA’s 24-hour PSI is <b>${n(event.value)}</b>, worst in ${psi?.name ?? '–'} · ${sgtTime(snap.asOf)} SGT`,
     ];
-    if (mask) lines.push(`😷 <b>${mask.title}.</b> ${mask.text}`);
+    if (mask) lines.push(mask);
     if (outside) lines.push(outside);
     return [...lines, ...footer].join('\n');
   }

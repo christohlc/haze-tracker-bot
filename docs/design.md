@@ -97,6 +97,12 @@ text colours are fixed per sky rather than taken from the Telegram theme, so the
 contrast with the gradient. `--ink-2` has to stay at 4.5:1 or better against the top and bottom
 of the sky and the haze. Check that again whenever a sky colour changes.
 
+The number, band and sky follow the period picked (1, 3 or 24 hours). The verdict line under
+them (“Mask up.”) doesn’t: it’s the short form of What to do’s answer (`verdict()` in
+`tgcloud/lib/advice.js`, the stricter of NEA’s 24-hour PSI and 1-hour PM2.5 advice, for the group
+picked there), so the app never gives two different answers on what to do. The 😷 line in bot
+messages is the same short form, for the general public.
+
 ## Motion
 
 - Short and purposeful: cards rise 8px over 280ms with a small stagger, the first time a tab is
