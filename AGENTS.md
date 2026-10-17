@@ -135,7 +135,7 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   migrate` after schema changes; + `npx wrangler@4 deploy --config cron/wrangler.jsonc` after
   changing `cron/`, which `npm run deploy` doesn't touch). `npm run deploy` refuses
   (`scripts/deploy-guard.mjs`) unless on a clean `main` level with `origin/main`, since `push`
-  uploads whatever is on disk. Emergency override: `DEPLOY_FORCE=1` (not `-- --force`).
+  uploads whatever is on disk; never run `tgcloud push` directly. Emergency override: `DEPLOY_FORCE=1`.
 
 ## Layout
 

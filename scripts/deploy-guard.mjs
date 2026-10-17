@@ -8,14 +8,15 @@ const git = (...args) => execFileSync('git', args, { encoding: 'utf8', stdio: ['
 
 function refusal() {
   const branch = git('rev-parse', '--abbrev-ref', 'HEAD');
-  if (branch !== 'main') return branch === 'HEAD' ? 'detached HEAD, not main' : `on branch '${branch}', not main`;
+  if (branch !== 'main') return `on ${branch === 'HEAD' ? 'a detached HEAD' : `branch '${branch}'`}, not main`;
   if (git('status', '--porcelain')) return 'uncommitted or untracked changes';
   try {
     git('fetch', '--quiet', 'origin', 'main');
   } catch {
     return 'could not fetch origin/main';
   }
-  if (git('rev-parse', 'HEAD') !== git('rev-parse', 'origin/main')) return 'not level with origin/main';
+  const [head, origin] = git('rev-parse', 'HEAD', 'origin/main').split('\n');
+  if (head !== origin) return 'not level with origin/main';
   return null;
 }
 
