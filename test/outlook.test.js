@@ -91,3 +91,13 @@ test('a steady reading stays put; too little or old history gives no range', () 
   assert.equal(nextHours(rows(14, () => 30), END + 4 * 3600_000), null, 'NEA stopped updating');
   assert.equal(nextHours([], NOW), null);
 });
+
+test('the span NEA’s words cover, for the meter', async () => {
+  const { outlookSpan } = await import('../tgcloud/lib/outlook-parse.js');
+  assert.deepEqual(outlookSpan('Unhealthy to Low Very Unhealthy'), { lo: 101, hi: 233 });
+  assert.deepEqual(outlookSpan('High Moderate to Mid Unhealthy'), { lo: 84, hi: 167 });
+  assert.deepEqual(outlookSpan('Good'), { lo: 0, hi: 50 });
+  assert.deepEqual(outlookSpan('High Very Unhealthy to Hazardous'), { lo: 268, hi: 400 });
+  assert.deepEqual(outlookSpan('Unhealthy to Moderate'), { lo: 51, hi: 200 }, 'either order');
+  assert.equal(outlookSpan('Smoky'), null);
+});

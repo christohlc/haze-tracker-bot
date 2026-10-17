@@ -138,6 +138,12 @@ own states take `?card=<card>:<state>`, comma-separated: `cameras:error|loading`
 worst-case data has long names, missing readings and extreme values, so use it before shipping a
 layout change.
 
+## What’s ahead
+
+- **NEA’s forecast** is a half-dial of the PSI bands, after haze.gov.sg’s meter (`PsiMeter.svelte`). The span NEA’s words cover is full strength over a faded dial (`outlookSpan`: a third of a band for Low, Mid or High). There are no forecast numbers, because NEA forecasts in bands. A tick marks today’s official 24-hour PSI (labelled “today”, not “now”, which is our 1-hour PSI), and its label tucks under an end of the dial when it's near one. The pills sit under the dial, so large text never covers it.
+- **The next few hours** are colour bars on one 0–300+ scale: faded band segments, the likely span at full strength with hard stops at band edges, and a “now” line through every row. The band names sit under each bar, with dots, so colour never stands alone.
+- Neither animates. People revisit the Outlook tab, and the tab already rises in once.
+
 ## Summary card
 
 The picture that `/haze`, alerts and the Mini App’s share button send

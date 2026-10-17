@@ -58,6 +58,13 @@ export function bandFloor(psi) {
   return i > 0 ? PSI_BANDS[i - 1].max + 1 : 0;
 }
 
+/**
+ * Each PSI band's stretch, `from`–`to` inclusive, with Hazardous ending at `cap`.
+ * @param {number} [cap]
+ */
+export const bandRanges = (cap = Infinity) =>
+  PSI_BANDS.map((b, i) => ({ id: b.id, label: b.label, from: i ? PSI_BANDS[i - 1].max + 1 : 0, to: Math.min(b.max, cap) }));
+
 /** NEA 1-hour PM2.5 bands, used for "what to do right now". */
 export const PM25_BANDS = [
   { id: 'I', label: 'Normal', max: 55 },
