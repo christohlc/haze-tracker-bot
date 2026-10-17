@@ -141,8 +141,11 @@ newspaper graphic:
 - **Severity at a glance:** each region’s card is filled with its own 24-hour PSI band colour and
   outlined in white, so it stands off a sky of a similar colour. No region colours and no second
   palette for PM2.5: on the cards, colour only ever means the band.
-- **Answer first:** logo and name, then the band in big type and “24-hr PSI up to N in Region”.
-- **One card per region**, placed roughly where the region is: name, the 24-hour PSI as the big
+- **Answer first:** logo and name, then the band in big type on a pill of its own colour (as in
+  the legend; band-coloured text on that band’s sky would be too faint) and “24-hr PSI up to N in
+  Region”.
+- **One card per region**, centred on NEA’s reference point for it (`REGIONS`), nudged so the
+  cards don’t overlap and the row sits balanced over the island: name, the 24-hour PSI as the big
   number, the band in words, and the 1-hour PM2.5 as plain text.
 - **One legend row** of band chips (“Card colour: 24-hr PSI band”), ranges from `PSI_BANDS`.
 - Both numbers are NEA’s, so no “our calculation” note; the 3-hour PSI stays out of the picture.
