@@ -5,7 +5,6 @@
   import AlertsCard from './components/AlertsCard.svelte';
   import BrandHeader from './components/BrandHeader.svelte';
   import CigCalc from './components/CigCalc.svelte';
-  import HazeMap from './components/HazeMap.svelte';
   import Hero from './components/Hero.svelte';
   import HistoryChart from './components/HistoryChart.svelte';
   import LiveViews from './components/LiveViews.svelte';
@@ -32,6 +31,8 @@
   // The hidden game behind the header; loaded only once someone finds it.
   let ninja = $state(false);
   const loadNinja = () => import('./components/HazelnutNinja.svelte');
+  // The haze map and its land outline are only fetched once Outlook is opened.
+  const loadHazeMapCard = () => import('./components/HazeMap.svelte');
 
   const DevToggle = import.meta.env.DEV && !inTelegram ? import('./dev/DevDataToggle.svelte') : null;
 
@@ -152,7 +153,7 @@
       <div id="panel-outlook" class="sections" class:off={tab !== 'outlook'} role="tabpanel" aria-labelledby="tab-outlook">
         {#if data.ahead?.outlook || data.ahead?.range}<AheadSection ahead={data.ahead} />{/if}
         <WindRain snapshot={data.snapshot} first={weatherFirst} />
-        <HazeMap />
+        {#await loadHazeMapCard() then m}<m.default />{/await}
         <HistoryChart snapshot={data.snapshot} history={data.history} />
       </div>
     {/if}

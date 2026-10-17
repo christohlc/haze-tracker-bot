@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-import { fileDate, MAP_BOUNDS, parseHaze, parseHome, parseHotspots, parseUpdated, parseWind } from '../tgcloud/lib/hazemap-parse.js';
+import { fileDate, MAP_BOUNDS, parseHaze, project, parseHome, parseHotspots, parseUpdated, parseWind } from '../tgcloud/lib/hazemap-parse.js';
 
 // haze.gov.sg's homepage and the three KML files it linked to, fetched on 17 Oct 2026, 1:40 pm SGT.
 const read = (name) => readFileSync(new URL(`./hazemap/${name}`, import.meta.url), 'utf8');
@@ -84,7 +84,7 @@ test('reads the wind picture and the box it covers', () => {
 test('never throws on what haze.gov.sg might send instead', () => {
   for (const junk of [undefined, null, 42, '', 'Service Unavailable', '<html><body>Maintenance</body></html>', '<kml><Placemark><Point><coordinates>nope</coordinates></Point></Placemark></kml>']) {
     const page = parseHome(junk, NOW);
-    assert.deepEqual(page, { hotspotsUrl: null, hazeUrl: null, windUrl: null, windImage: null, situation: null, outlook: null, updatedAt: null });
+    assert.deepEqual(page, { hotspotsUrl: null, hazeUrl: null, windUrl: null, situation: null, outlook: null, updatedAt: null });
     parseHaze(junk);
     parseWind(junk, 'https://www.haze.gov.sg/x.kml');
     const h = parseHotspots(junk);
@@ -97,4 +97,19 @@ test('never throws on what haze.gov.sg might send instead', () => {
   const wind = read('wind.kml');
   assert.equal(parseWind(wind, 'http://www.haze.gov.sg/w.kml'), null);
   assert.equal(parseWind(wind.replace('<east>150.0</east>', '<east>10</east>'), home.windUrl ?? ''), null);
+});
+
+test('the land asset was drawn for MAP_BOUNDS', async () => {
+  // src/lib/coast.ts is generated; rerun scripts/hazemap/coast.mjs after changing MAP_BOUNDS.
+  const { BOUNDS } = await import('../src/lib/coast.ts');
+  assert.deepEqual(BOUNDS, MAP_BOUNDS);
+  assert.deepEqual(project(MAP_BOUNDS.west, MAP_BOUNDS.north), [0, 0]);
+});
+
+test('files haze areas only by NEA’s own words and styles', () => {
+  const area = (name, style) =>
+    `<Placemark><name>${name}</name><styleUrl>${style}</styleUrl><Polygon><outerBoundaryIs><LinearRing><coordinates>100,0 101,0 101,1 100,1 100,0</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark>`;
+  const haze = parseHaze(`<kml>${area('Golden Triangle', '#golden')}${area('Model run', '#other')}${area('Dense Haze', '#x')}${area('', '#modHaze')}</kml>`);
+  assert.equal(haze?.dense.length, 1);
+  assert.equal(haze?.moderate.length, 1);
 });

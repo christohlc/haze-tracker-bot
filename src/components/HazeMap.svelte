@@ -1,19 +1,19 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { MAP_BOUNDS } from '../../tgcloud/lib/hazemap-parse.js';
-  import { sgtDateOf } from '../../tgcloud/lib/time.js';
+  import { MAP_HEIGHT, MAP_SCALE, MAP_WIDTH, project } from '../../tgcloud/lib/hazemap-parse.js';
   import { loadHazeMap, type HazeMapResult } from '../lib/api';
-  import { HEIGHT, LAND, SCALE, WIDTH } from '../lib/coast';
-  import { sgtDayMonth, timeAgo } from '../lib/format';
+  import { LAND } from '../lib/coast';
+  import { sgtDayName, timeAgo } from '../lib/format';
 
   // NEA redraws the map once or twice a day; past two days its texts are likely left over from an episode.
   const OLD_MS = 48 * 3_600_000;
-  const SINGAPORE = [103.82, 1.35];
+  const [SG_X, SG_Y] = project(103.82, 1.35);
   // Places to find your way by, put on land (or just off it) away from Singapore's label.
   const PLACES: [string, number, number][] = [
     ['Malaysia', 101.4, 4.6],
     ['Sumatra', 99.6, 0.6],
-    ['Borneo', 113.6, 1.2],
+    // NEA counts hotspots by Kalimantan, Borneo's Indonesian part, so the map uses its name too.
+    ['Kalimantan', 111.6, 1.4],
     ['Java', 109.6, -8.4],
   ];
 
@@ -27,16 +27,13 @@
   const haze = $derived(map?.haze ?? null);
   const old = $derived(!!map?.updatedAt && result!.serverTime - Date.parse(map.updatedAt) > OLD_MS);
 
-  const x = (lon: number) => +((lon - MAP_BOUNDS.west) * SCALE).toFixed(1);
-  const y = (lat: number) => +((MAP_BOUNDS.north - lat) * SCALE).toFixed(1);
-
   /** Rings of flat [lon, lat, …] → one SVG path. */
   function areaPath(areas: number[][][]) {
     let d = '';
     for (const rings of areas)
       for (const r of rings) {
         d += 'M';
-        for (let i = 0; i < r.length; i += 2) d += `${i ? 'L' : ''}${x(r[i])} ${y(r[i + 1])}`;
+        for (let i = 0; i < r.length; i += 2) d += `${i ? 'L' : ''}${project(r[i], r[i + 1]).join(' ')}`;
         d += 'Z';
       }
     return d;
@@ -47,8 +44,9 @@
     const flat = hot?.dots ?? [];
     let d = '';
     for (let i = 0; i < flat.length; i += 3) {
-      const r = +Math.min(1.6 + Math.sqrt(flat[i + 2]) * 0.7, 5).toFixed(1);
-      d += `M${(x(flat[i]) - r).toFixed(1)} ${y(flat[i + 1])}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0`;
+      const r = Math.round(Math.min(1.6 + Math.sqrt(flat[i + 2]) * 0.7, 5) * 10) / 10;
+      const [cx, cy] = project(flat[i], flat[i + 1]);
+      d += `M${(cx - r).toFixed(1)} ${cy}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0`;
     }
     return d;
   });
@@ -56,27 +54,26 @@
   const dense = $derived(haze ? areaPath(haze.dense) : '');
   const hasHaze = $derived(!!(moderate || dense));
 
-  /** "today", "yesterday", else "on 14 Oct". */
-  function onDay(ymd: string, now: number) {
-    if (ymd === sgtDateOf(now)) return 'today';
-    if (ymd === sgtDateOf(now - 86_400_000)) return 'yesterday';
-    return `on ${sgtDayMonth(ymd)}`;
-  }
-
   const summary = $derived.by(() => {
     if (!hot && !haze) return 'NEA’s hotspots and haze areas didn’t load this time.';
     if (hot && !hot.total && !hasHaze) return 'NEA’s map shows no fires or smoke haze in the region right now.';
     if (!hot) return 'NEA’s haze areas are shown. Its hotspots didn’t load this time.';
     const n = (v: number) => v.toLocaleString('en-GB');
-    const when = hot.date ? ` ${onDay(hot.date, result!.serverTime)}` : '';
+    const when = hot.date ? ` ${sgtDayName(hot.date, result!.serverTime)}` : '';
     const near = (['Sumatra', 'Kalimantan'] as const).filter((r) => hot.regions[r]).map((r) => `${n(hot.regions[r])} in ${r}`);
     if (!hot.total) return `Satellites spotted no fires in the region${when}.`;
     return `Satellites spotted ${n(hot.total)} hotspot${hot.total === 1 ? '' : 's'} in the region${when}${near.length ? `, ${near.join(' and ')}` : ''}.`;
   });
 
-  function paragraphs(text: string | null) {
-    return text ? text.split('\n\n') : [];
-  }
+  // NEA's two texts under their own headings, skipping one it left out.
+  const texts = $derived(
+    (
+      [
+        ['Latest weather and haze situation', map?.situation],
+        ['Weather and haze outlook', map?.outlook],
+      ] as const
+    ).flatMap(([title, text]) => (text ? [{ title, paragraphs: text.split('\n\n') }] : [])),
+  );
 
   async function load() {
     error = null;
@@ -92,7 +89,7 @@
 
 <section class="card" aria-labelledby="map-title">
   <h2 id="map-title" class="section-title">Where it’s coming from</h2>
-  <p class="note">NEA’s map of fires and smoke haze around Singapore. Haze here mostly blows in from Sumatra and Borneo.</p>
+  <p class="note">NEA’s map of fires and smoke haze in the region around Singapore.</p>
 
   {#if error}
     <div class="state">
@@ -100,13 +97,13 @@
       <button type="button" class="primary" onclick={load}>Try again</button>
     </div>
   {:else if !result}
-    <div class="frame sk" aria-busy="true" aria-label="Loading NEA’s haze map"></div>
+    <div class="frame sk" style:aspect-ratio="{MAP_WIDTH} / {MAP_HEIGHT}" aria-busy="true" aria-label="Loading NEA’s haze map"></div>
   {:else if !map}
     <p class="note empty">NEA’s haze map isn’t available right now.</p>
   {:else}
     <figure>
-      <div class="frame">
-        <svg viewBox="0 0 {WIDTH} {HEIGHT}" role="img" aria-label="Map of Singapore and the region. {summary}">
+      <div class="frame" style:aspect-ratio="{MAP_WIDTH} / {MAP_HEIGHT}">
+        <svg viewBox="0 0 {MAP_WIDTH} {MAP_HEIGHT}" role="img" aria-label="Map of Singapore and the region. {summary}">
           <path class="land" d={LAND} />
           <g class="layer">
             {#if moderate}<path class="haze moderate" d={moderate} />{/if}
@@ -116,10 +113,10 @@
               <image
                 class="wind"
                 href={map.wind.image}
-                x={x(map.wind.box.west)}
-                y={y(map.wind.box.north)}
-                width={(map.wind.box.east - map.wind.box.west) * SCALE}
-                height={(map.wind.box.north - map.wind.box.south) * SCALE}
+                x={project(map.wind.box.west, map.wind.box.north)[0]}
+                y={project(map.wind.box.west, map.wind.box.north)[1]}
+                width={(map.wind.box.east - map.wind.box.west) * MAP_SCALE}
+                height={(map.wind.box.north - map.wind.box.south) * MAP_SCALE}
                 preserveAspectRatio="none"
                 onerror={() => (windBroken = true)}
               />
@@ -127,10 +124,11 @@
             {#if dots}<path class="fire" d={dots} />{/if}
           </g>
           {#each PLACES as [name, lon, lat] (name)}
-            <text class="place" x={x(lon)} y={y(lat)}>{name}</text>
+            {@const [px, py] = project(lon, lat)}
+            <text class="place" x={px} y={py}>{name}</text>
           {/each}
-          <circle class="sg" cx={x(SINGAPORE[0])} cy={y(SINGAPORE[1])} r="4" />
-          <text class="sg-label" x={x(SINGAPORE[0]) + 8} y={y(SINGAPORE[1]) - 6}>Singapore</text>
+          <circle class="sg" cx={SG_X} cy={SG_Y} r="4" />
+          <text class="sg-label" x={SG_X + 8} y={SG_Y - 6}>Singapore</text>
         </svg>
       </div>
       <!-- A key only for what's on the map: on a clear day it would explain nothing. -->
@@ -160,20 +158,16 @@
       </label>
     {/if}
 
-    {#if map.situation || map.outlook}
+    {#if texts.length}
       <details>
         <summary>
           <span>NEA’s haze situation and outlook</span>
           <span class="more" aria-hidden="true"><span class="show">Read</span><span class="hide">Hide</span></span>
         </summary>
-        {#if map.situation}
-          <h3 class="subhead">Latest weather and haze situation</h3>
-          {#each paragraphs(map.situation) as p, i (i)}<p class="nea">{p}</p>{/each}
-        {/if}
-        {#if map.outlook}
-          <h3 class="subhead">Weather and haze outlook</h3>
-          {#each paragraphs(map.outlook) as p, i (i)}<p class="nea">{p}</p>{/each}
-        {/if}
+        {#each texts as t (t.title)}
+          <h3 class="subhead">{t.title}</h3>
+          {#each t.paragraphs as p}<p class="nea">{p}</p>{/each}
+        {/each}
       </details>
     {/if}
 
@@ -188,7 +182,6 @@
     margin: 12px 0 0;
   }
   .frame {
-    aspect-ratio: 400 / 288;
     overflow: hidden;
     border-radius: 12px;
     background: var(--map-sea);

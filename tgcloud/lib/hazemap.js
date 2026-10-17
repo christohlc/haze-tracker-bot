@@ -20,7 +20,10 @@ export function getHazeMap() {
     const failed = [];
     /** @template T @param {string} label @param {string | null} url @param {(kml: string, url: string) => T | null} parse */
     const layer = async (label, url, parse) => {
-      if (!url) return failed.push(`${label}: no link on haze.gov.sg`), null;
+      if (!url) {
+        failed.push(`${label}: no link on haze.gov.sg`);
+        return null;
+      }
       try {
         const value = parse(await getText(url, label), url);
         if (!value) failed.push(`${label}: nothing we could read`);
@@ -37,7 +40,7 @@ export function getHazeMap() {
     ]);
     /** @type {HazeMap} */
     const value = { hotspots, haze, wind, situation: home.situation, outlook: home.outlook, updatedAt: home.updatedAt };
-    if (!hotspots && !haze && !wind && !home.situation) throw new Error(failed.join('; ') || 'Nothing we could read');
+    if (!hotspots && !haze && !wind && !home.situation && !home.outlook) throw new Error(failed.join('; ') || 'Nothing we could read');
     return {
       value,
       error: failed.join('; ') || undefined,
