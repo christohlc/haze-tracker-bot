@@ -1,4 +1,4 @@
-import { sgtDayMonth, sgtDayName, sgtHour, sgtWeekday } from '../../tgcloud/lib/time.js';
+import { sgtDateOf, sgtDayMonth, sgtDayName, sgtHour, sgtWeekday } from '../../tgcloud/lib/time.js';
 
 export { sgtDayMonth, sgtDayName, sgtHour, sgtWeekday };
 
@@ -23,5 +23,9 @@ export function timeAgo(iso: string, nowMs: number): string {
   if (min < 24 * 60) return `${Math.floor(min / 60)} h ago`;
   return sgtDayMonth(sgtIso(t).slice(0, 10));
 }
+
+/** “3 pm SGT”, or “3 pm SGT, 16 Oct” when it's not from today. */
+export const readingTime = (iso: string) =>
+  `${sgtHour(iso)} SGT${iso.slice(0, 10) === sgtDateOf(Date.now()) ? '' : `, ${sgtDayMonth(iso)}`}`;
 
 export const fmt = (v: number | null | undefined, digits = 0) => (v == null ? '–' : v.toFixed(digits));
