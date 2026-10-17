@@ -9,6 +9,12 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-17-outside-now',
+    date: '2026-10-17',
+    title: 'Know if it’s OK to go out',
+    body: 'What to do now opens with one plain answer for right now, following whichever of NEA’s readings is stricter, and whether the haze is rising or easing. Switch to Vulnerable people for the stricter advice for the elderly, children, pregnant women and anyone with lung or heart disease.',
+  },
+  {
     id: '2026-10-17-haze-picture-map',
     date: '2026-10-17',
     title: 'A clearer haze picture',
