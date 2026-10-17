@@ -9,7 +9,7 @@ import { REGIONS } from '../config.js';
 import { PSI_BANDS, psiBand } from '../psi.js';
 import { LOGO, MAP_MASK } from './art.js';
 import { sgtDayMonth, sgtHour } from '../time.js';
-import { CARD_H, CARD_W } from './geometry.js';
+import { CARD_H, CARD_W, project } from './geometry.js';
 import { encodePng } from './png.js';
 import { Canvas, decodeMask, fromBase64, rgb } from './raster.js';
 
@@ -49,16 +49,23 @@ const BAND = {
   hazardous: [rgb('#8e3a9e'), rgb('#ffffff')],
 };
 
-const CARD = { w: 262, h: 222, r: 24 };
+const CARD = { w: 262, h: 182, r: 24 };
 
-/** Top-left of each region's card, roughly where the region is. */
-export const CARD_AT = {
-  north: [409, 372],
-  west: [36, 600],
-  central: [409, 610],
-  east: [782, 600],
-  south: [409, 848],
-};
+/** Each region's card is centred on NEA's reference point for it, with three nudges: North and
+ *  South are closer to Central than a card is tall, so they're pushed out just enough to clear it;
+ *  the middle column sits a little east (103.83°) and East further toward Changi (103.96°), so the
+ *  row is balanced over the island. */
+const centres = Object.fromEntries(REGIONS.map((r) => [r.id, project(r.lon, r.lat)]));
+const PITCH = CARD.h + 32;
+for (const id of ['north', 'central', 'south']) centres[id][0] = project(103.83, 0)[0];
+centres.east[0] = project(103.96, 0)[0];
+centres.north[1] = Math.min(centres.north[1], centres.central[1] - PITCH);
+centres.south[1] = Math.max(centres.south[1], centres.central[1] + PITCH);
+
+/** Top-left of each region's card. @type {Record<string, [number, number]>} */
+export const CARD_AT = Object.fromEntries(
+  Object.entries(centres).map(([id, [x, y]]) => [id, [Math.round(x - CARD.w / 2), Math.round(y - CARD.h / 2)]]),
+);
 
 /** → "16 Oct, 1 pm SGT". @param {string} iso */
 export const cardDate = (iso) => `${sgtDayMonth(iso)}, ${sgtHour(iso)} SGT`;
@@ -93,18 +100,18 @@ function pill(c, x, y, text, fill, ink, { h = 34, pad = 14 } = {}) {
  * @param {Canvas} c @param {any} region
  */
 function regionCard(c, region) {
-  const [x, y] = CARD_AT[/** @type {keyof typeof CARD_AT} */ (region.id)];
+  const [x, y] = CARD_AT[region.id];
   const band = psiBand(shown(region.psi24h));
   const [fill, ink] = band ? BAND[/** @type {keyof typeof BAND} */ (band.id)] : [C.none, C.noneInk];
   c.fillRoundRect(x - OUTLINE, y - OUTLINE, CARD.w + OUTLINE * 2, CARD.h + OUTLINE * 2, CARD.r + OUTLINE, C.card);
   c.fillRoundRect(x, y, CARD.w, CARD.h, CARD.r, fill);
 
-  c.text(region.name, x + 24, y + 46, 'head', ink);
-  c.text('24-hr PSI', x + CARD.w - 24, y + 44, 'label', ink, 'right');
+  c.text(region.name, x + 24, y + 40, 'head', ink);
+  c.text('24-hr PSI', x + CARD.w - 24, y + 38, 'label', ink, 'right');
   const value = fmt(region.psi24h);
-  c.text(value, x + 22, y + 128, c.measure(value, 'num') <= CARD.w - 44 ? 'num' : 'numSmall', ink);
-  c.text(band?.label ?? 'No reading', x + 24, y + 170, 'body', ink);
-  c.text(`1-hr PM2.5: ${region.pm25 == null ? '–' : `${fmt(region.pm25)} µg/m³`}`, x + 24, y + 204, 'label', ink);
+  c.text(value, x + 22, y + 106, c.measure(value, 'num') <= CARD.w - 44 ? 'num' : 'numSmall', ink);
+  c.text(band?.label ?? 'No reading', x + 24, y + 141, 'body', ink);
+  c.text(`1-hr PM2.5: ${region.pm25 == null ? '–' : `${fmt(region.pm25)} µg/m³`}`, x + 24, y + 168, 'label', ink);
 }
 
 /**
@@ -150,8 +157,15 @@ export function drawSummaryCard(snap) {
   c.blitRgba(logoRgba, LOGO.w, LOGO.h, 56, 48);
   c.text('I’m going hazelnuts!', 164, 84, 'head', sky.ink);
   c.text(`Singapore haze · ${cardDate(snap.asOf)}`, 164, 122, 'body', sky.ink);
-  c.text(band?.label ?? 'No reading yet', 56, 236, 'title', sky.ink);
-  if (worst) c.text(`24-hr PSI up to ${fmt(worst.value)} in ${worst.name}`, 56, 292, 'subtitle', sky.ink);
+  // The band as a chip in its own colour, as in the legend: band-coloured text on the sky of the
+  // same band would be too faint to read.
+  if (band) {
+    const [fill, ink] = BAND[/** @type {keyof typeof BAND} */ (band.id)];
+    const w = Math.ceil(c.measure(band.label, 'title')) + 64;
+    c.fillRoundRect(56, 158, w, 84, 42, fill);
+    c.text(band.label, 88, 200 + c.capHeight('title') / 2, 'title', ink);
+  } else c.text('No reading yet', 56, 236, 'title', sky.ink);
+  if (worst) c.text(`24-hr PSI up to ${fmt(worst.value)} in ${worst.name}`, 56, 296, 'subtitle', sky.ink);
   if (snap.stale) {
     const note = 'NEA hasn’t updated recently, so this may be out of date';
     c.fillRoundRect(56, 314, Math.ceil(c.measure(note, 'body')) + 36, 44, 22, C.stale);

@@ -6,12 +6,12 @@
 //   node scripts/card/outline.mjs path/to/subzones.geojson
 
 import { readFileSync, writeFileSync } from 'node:fs';
-import { CARD_H, CARD_W, MAP } from '../../tgcloud/lib/card/geometry.js';
+import { CARD_H, CARD_W, project as toCard } from '../../tgcloud/lib/card/geometry.js';
 
 const geo = JSON.parse(readFileSync(process.argv[2], 'utf8'));
 
 /** @param {[number, number]} p lon, lat → card px */
-const project = ([lon, lat]) => [MAP.x + (lon - MAP.lon) * MAP.scale, MAP.y - (lat - MAP.lat) * MAP.scale];
+const project = ([lon, lat]) => toCard(lon, lat);
 
 /** Douglas–Peucker. @param {number[][]} pts @param {number} tol */
 function simplify(pts, tol) {

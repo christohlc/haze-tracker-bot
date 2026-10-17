@@ -9,6 +9,12 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-17-haze-picture-map',
+    date: '2026-10-17',
+    title: 'A clearer haze picture',
+    body: 'In the picture you share, each region now sits where it is on the map, and the overall reading is shown in its band’s colour.',
+  },
+  {
     id: '2026-10-17-polish',
     date: '2026-10-17',
     title: 'Clearer alert settings',
