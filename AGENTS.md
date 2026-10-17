@@ -75,7 +75,8 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   undocumented JSON behind haze.gov.sg (`lib/outlook.js`, cached 30 min in `state('outlook')`,
   fetched only by /haze, /forecast, the dashboard and a tick with daily updates due). NEA issues it about 6 pm, during haze
   episodes only, so null is the usual answer. The next-hours range (`lib/range.js`) is worked out
-  from the last 14 days of `readings` and needs at least 72 hours; the tick stores only today and
+  from the last 14 days of `readings` and needs at least 72 hours. It's worked out when NEA is
+  refetched (and after a backfill) and kept in `state('range')`; its age is checked when read. The tick stores only today and
   yesterday, so after a fresh start or a gap fill it with `admin` `{ action: 'backfill', days: 14 }`
   (one NEA request per day, 1 s apart, ~20 s budget; rerun until `remaining` is empty). The runtime
   may lack `setTimeout`: then it waits with `Atomics.wait`, or, if that's missing too, fetches at most
@@ -92,7 +93,8 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   fonts or zlib, so `png.js` has its own deflate and `glyphs.js` / `art.js` are pre-rendered
   bitmaps **generated** by `npm run card:assets` (fonts in `scripts/card/fonts/`, island outline
   in `scripts/card/singapore.svg`). Don't edit them by hand. `card/send` uploads it once per
-  snapshot and reuses Telegram's file id (state `card`); if the photo fails, the text goes instead.
+  snapshot and reuses Telegram's file id (state `card`, rechecked before drawing, so isolates share
+  one upload); if the photo fails, the text goes instead.
   `/forecast` and the daily update send a second picture, `card/forecast.js`, cached the same way
   (state `forecast_card`, keyed by everything drawn on it). The daily update sends it as a second
   message after the haze card, while there's haze to talk about (`dailyForecastDue`): a phase of

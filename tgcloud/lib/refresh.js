@@ -5,7 +5,8 @@
 
 import { getLatestPsi, getPm25History } from './nea.js';
 import { buildSnapshot } from './snapshot.js';
-import { claimEvery, getState, recentReadings, recordSource, setState, upsertReadings } from './store.js';
+import { HISTORY_HOURS, latestRange } from './range.js';
+import { claimEvery, getState, lastHours, recentReadings, recordSource, setState, upsertReadings } from './store.js';
 import { unixHour } from './time.js';
 
 const STALE_MS = 80 * 60_000; // NEA publishes ~15 min past the hour
@@ -30,11 +31,13 @@ export async function refreshNea() {
     await recordSource('nea_psi', { ok: false, error: psi.reason?.message ?? psi.reason });
   }
 
-  const history = await recentReadings(25);
-  const psiState = (await getState('psi'))?.value;
+  // One read for the snapshot (the last 25 hours) and the range (two weeks).
+  const [rows, psiState] = await Promise.all([recentReadings(HISTORY_HOURS), getState('psi').then((s) => s?.value)]);
+  const history = lastHours(rows, 25);
   if (!history.length || !psiState) throw new Error('No NEA data yet (fetch failed and nothing cached)');
   const snap = buildSnapshot(history, psiState);
-  await setState('snapshot', snap);
+  // The range is extra: if it can't be stored, the old one ages out (currentRange) and the snapshot still goes.
+  await Promise.all([setState('snapshot', snap), saveRange(rows).catch(() => null)]);
   return snap;
 }
 
@@ -73,4 +76,22 @@ export async function getSnapshot() {
     if (cached) return { ...cached, stale: true };
     throw e;
   }
+}
+
+/**
+ * Work the next-hours range out from two weeks of readings and keep it in state('range'), so a
+ * request reads one row instead of 336. `rows` if the caller has just read them (the last
+ * HISTORY_HOURS). Called when the readings change: a refetch, a backfill.
+ * @param {Array<{ timestamp: string, readings: Record<string, number> }>} [rows]
+ */
+export async function saveRange(rows) {
+  const stored = latestRange(rows ?? (await recentReadings(HISTORY_HOURS)));
+  await setState('range', stored);
+  return stored;
+}
+
+/** The stored range (currentRange() checks its age), worked out now if none was stored yet. */
+export async function storedRange() {
+  const row = await getState('range');
+  return row ? row.value : saveRange();
 }

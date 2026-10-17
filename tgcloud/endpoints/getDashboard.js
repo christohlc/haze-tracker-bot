@@ -2,21 +2,18 @@
 // endpoints/getDashboard.js — everything the Mini App renders, in one call.
 // The platform verifies init data before this runs, so only Telegram users reach it.
 
-import { aheadFrom } from '../lib/ahead.js';
+import { getAhead } from '../lib/ahead.js';
 import { getNews } from '../lib/news.js';
-import { HISTORY_HOURS } from '../lib/range.js';
 import { getSnapshot } from '../lib/refresh.js';
-import { allSourceStatus, lastHours, recentReadings } from '../lib/store.js';
+import { allSourceStatus, recentReadings } from '../lib/store.js';
 
 export default async function () {
   const refreshed = getSnapshot();
-  // One read of the readings for both the range (two weeks) and the chart (the last 48 h).
-  const readings = refreshed.then(() => recentReadings(HISTORY_HOURS));
   const [{ history: _recent, ...snapshot }, ahead, history, sources, news] = await Promise.all([
     refreshed,
-    aheadFrom(readings),
+    getAhead(refreshed),
     // 48h so the chart can draw 24h rolling averages across the whole past day.
-    readings.then((rows) => lastHours(rows, 48)),
+    refreshed.then(() => recentReadings(48)),
     allSourceStatus(),
     getNews(),
   ]);

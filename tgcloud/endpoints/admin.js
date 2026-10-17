@@ -18,7 +18,7 @@ import { requireCli } from '../lib/cli-only.js';
 import { errorText } from '../lib/http.js';
 import { getPm25Day } from '../lib/nea.js';
 import { PSI_BANDS } from '../lib/psi.js';
-import { getSnapshot, storedSnapshot } from '../lib/refresh.js';
+import { getSnapshot, saveRange, storedSnapshot } from '../lib/refresh.js';
 import { ALERT_SCOPES } from '../lib/alert-rules.js';
 import { breakingClaimedChats, countSubscribers, setAllLastBand } from '../lib/subscriptions.js';
 import { sgtDatesBack, sgtDayStart } from '../lib/time.js';
@@ -78,6 +78,7 @@ async function backfill(days) {
       deadline = 0;
     }
   }
+  if (fetched) await saveRange(); // the stored range is worked out from these readings
   return { ok: true, paced, days: done, remaining, readings: await countReadings() };
 }
 
