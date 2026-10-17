@@ -8,8 +8,12 @@ import { fileURLToPath } from 'node:url';
 
 const guard = fileURLToPath(new URL('../scripts/deploy-guard.mjs', import.meta.url));
 // Keep the developer's git out: a hook's GIT_DIR or a global hook/config would act on another repo.
-const env = Object.fromEntries(Object.entries(process.env).filter(([k]) => !k.startsWith('GIT_')));
-Object.assign(env, { GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1', DEPLOY_FORCE: '' });
+const env = {
+  ...Object.fromEntries(Object.entries(process.env).filter(([k]) => !k.startsWith('GIT_'))),
+  GIT_CONFIG_GLOBAL: '/dev/null',
+  GIT_CONFIG_NOSYSTEM: '1',
+  DEPLOY_FORCE: '',
+};
 const run = (cwd) => spawnSync(process.execPath, [guard], { cwd, encoding: 'utf8', env });
 
 // A checkout inside a folder that has `.tgcloud/`, as a worktree under .claude/worktrees/ is.
