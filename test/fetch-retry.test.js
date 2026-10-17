@@ -3,9 +3,9 @@ import { test } from 'node:test';
 import { retryOnce } from '../tgcloud/lib/fetch-retry.js';
 
 /** Calls `request` through retryOnce; resolves to what it returned (or threw) and how often it ran. */
-async function run(request) {
+async function run(request, retryUntil) {
   let calls = 0;
-  const result = await retryOnce(() => request(++calls)).catch((e) => e);
+  const result = await retryOnce(() => request(++calls), retryUntil).catch((e) => e);
   return { result, calls };
 }
 
@@ -30,4 +30,11 @@ test('a request that fails twice throws the second error', async () => {
 
 test('an HTTP error is a response, so it isn’t retried', async () => {
   assert.deepEqual(await run(async () => ({ ok: false, status: 503 })), { result: { ok: false, status: 503 }, calls: 1 });
+});
+
+test('no retry once the caller’s budget is spent', async () => {
+  const past = Date.now() - 1;
+  const { result, calls } = await run(failFirst(1), past);
+  assert.match(result.message, /request failed \(1\)/);
+  assert.equal(calls, 1);
 });
