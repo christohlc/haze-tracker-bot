@@ -283,6 +283,18 @@ summary {
   initial-value: transparent;
 }
 
+/* A ring that spreads and fades: the live point on the history chart, Singapore on the map. */
+@keyframes ping {
+  from {
+    transform: scale(1);
+    opacity: var(--ping-from, 0.5);
+  }
+  to {
+    transform: scale(3);
+    opacity: 0;
+  }
+}
+
 /* Looping (ambient) animations stop while their element is off screen or the app is in the
    background: see ambient() in src/lib/motion.ts. */
 [data-paused],

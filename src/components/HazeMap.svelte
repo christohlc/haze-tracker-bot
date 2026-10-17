@@ -3,11 +3,13 @@
   import { MAP_HEIGHT, MAP_SCALE, MAP_WIDTH, project } from '../../tgcloud/lib/hazemap-parse.js';
   import { loadHazeMap, type HazeMapResult } from '../lib/api';
   import { LAND } from '../lib/coast';
+  import { ambient } from '../lib/motion';
   import { sgtDayName, timeAgo } from '../lib/format';
 
   // NEA redraws the map once or twice a day; past two days its texts are likely left over from an episode.
   const OLD_MS = 48 * 3_600_000;
   const [SG_X, SG_Y] = project(103.82, 1.35);
+  const VIEW = `0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`;
   // Places to find your way by, put on land (or just off it) away from Singapore's label.
   const PLACES: [string, number, number][] = [
     ['Malaysia', 101.4, 4.6],
@@ -103,8 +105,9 @@
     <p class="note empty">NEA’s haze map isn’t available right now.</p>
   {:else}
     <figure>
-      <div class="frame" style:aspect-ratio="{MAP_WIDTH} / {MAP_HEIGHT}">
-        <svg viewBox="0 0 {MAP_WIDTH} {MAP_HEIGHT}" role="img" aria-label="Map of Singapore and the region. {summary}">
+      <!-- Three stacked SVGs: the map, the fires, then the labels (see the CSS). -->
+      <div class="frame" style:aspect-ratio="{MAP_WIDTH} / {MAP_HEIGHT}" use:ambient>
+        <svg viewBox={VIEW} role="img" aria-label="Map of Singapore and the region. {summary}">
           <path class="land" d={LAND} />
           <g class="layer">
             {#if moderate}<path class="haze moderate" d={moderate} />{/if}
@@ -122,8 +125,15 @@
                 onerror={() => (windBroken = true)}
               />
             {/if}
-            {#if dots}<path class="fire" d={dots} />{/if}
           </g>
+        </svg>
+        {#if dots}
+          <div class="overlay layer">
+            <svg class="embers" viewBox={VIEW} aria-hidden="true"><path class="fire" d={dots} /></svg>
+          </div>
+        {/if}
+        <span class="sg-ping" style:left="{(SG_X / MAP_WIDTH) * 100}%" style:top="{(SG_Y / MAP_HEIGHT) * 100}%" aria-hidden="true"></span>
+        <svg class="overlay" viewBox={VIEW} aria-hidden="true">
           {#each PLACES as [name, lon, lat] (name)}
             {@const [px, py] = project(lon, lat)}
             <text class="place" x={px} y={py}>{name}</text>
@@ -183,6 +193,7 @@
     margin: 12px 0 0;
   }
   .frame {
+    position: relative;
     overflow: hidden;
     border-radius: 12px;
     background: var(--map-sea);
@@ -234,6 +245,37 @@
   }
   .wind {
     opacity: 0.9;
+  }
+  .overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  /* Fires glow like embers; Singapore gets a slow "you are here" ring under its dot. Both are
+     whole layers animating opacity and transform, so the map underneath never repaints. */
+  @media (prefers-reduced-motion: no-preference) {
+    .embers {
+      animation: ember 3s ease-in-out infinite alternate;
+    }
+    .sg-ping {
+      animation: ping 3s var(--ease-out) infinite;
+    }
+  }
+  @keyframes ember {
+    from {
+      opacity: 0.75;
+    }
+  }
+  .sg-ping {
+    --ping-from: 0.35;
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    margin: -6px 0 0 -6px;
+    border-radius: 50%;
+    background: var(--ink);
+    opacity: 0;
+    pointer-events: none;
   }
   /* NEA draws its strongest winds in navy, which a dark sea would swallow. */
   :global(:root[data-theme='dark']) .wind {
