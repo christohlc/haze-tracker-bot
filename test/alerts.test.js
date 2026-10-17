@@ -233,12 +233,12 @@ test('each area keeps its own alert band, and chats hear about theirs', async ()
     { chatId: 4, region: 'north', lastBand: null },
     { chatId: 5, region: 'toString', lastBand: 'moderate' },
   ];
-  const { due, unseeded } = bandAlertsFor(subs, next);
+  const { due, silent } = bandAlertsFor(subs, next);
   assert.deepEqual(due.map((d) => [d.sub.chatId, d.scope, d.band.id]), [
     [1, 'north', 'unhealthy'],
     [5, 'highest', 'unhealthy'],
   ], 'an unknown region follows the highest');
-  assert.deepEqual(unseeded.map((d) => d.sub.chatId), [4]);
+  assert.deepEqual(silent.map((d) => d.sub.chatId), [4]);
   assert.equal(scopeOf('constructor'), 'highest');
 });
 
@@ -260,9 +260,9 @@ test('an alert level skips changes below it, but not the drop back below it', as
     { chatId: 2, region: null, lastBand: 'good', minBand: 'unhealthy' },
     { chatId: 3, region: null, lastBand: 'unhealthy', minBand: 'unhealthy' },
   ];
-  const { due, skipped } = bandAlertsFor(subs, bands);
+  const { due, silent } = bandAlertsFor(subs, bands);
   assert.deepEqual(due.map((d) => d.sub.chatId), [1, 3]);
-  assert.deepEqual(skipped.map((d) => [d.sub.chatId, d.band.id]), [[2, 'moderate']], 'moves to the band without an alert');
+  assert.deepEqual(silent.map((d) => [d.sub.chatId, d.band.id]), [[2, 'moderate']], 'moves to the band without an alert');
 });
 
 test('quiet nights send alerts without sound from 11 pm to 7 am SGT', async () => {

@@ -8,7 +8,7 @@
 
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { areaLabel, DAILY_HOURS, hourLabel, isActive, LEVEL_CHOICES, levelLabel, QUIET_HOURS, settingsOf } from '../../tgcloud/lib/alert-settings.js';
+  import { areaLabel, DAILY_HOURS, hourLabel, isActive, LEVEL_CHOICES, levelLabel, QUIET_HOURS, settingsOf, TURNED_ON } from '../../tgcloud/lib/alert-settings.js';
   import type { Group } from '../../tgcloud/lib/advice.js';
   import type { RegionId } from '../lib/api';
   import { saveAlerts, type AlertSettings } from '../lib/alerts';
@@ -83,7 +83,7 @@
     if (!(await save({ ...settings, region: id })) && area.id === id) revertArea(was);
   }
 
-  const turnOn = () => save({ ...(settingsOf(null) as AlertSettings), bandAlerts: true, breakingAlerts: true, region: area.id });
+  const turnOn = () => save({ ...TURNED_ON, region: area.id });
 
   // Alerts off: the Telegram MainButton is the call to action. Not after a failed load: we
   // don't know the current settings, and turning on would reset an existing daily update.
@@ -109,7 +109,7 @@
     confirming = true;
     const ok = await confirmAction('Stop all haze alerts? You can turn them on again any time.');
     confirming = false;
-    if (ok) save(settingsOf(null) as AlertSettings);
+    if (ok) save({ ...settingsOf(null), region: null });
   }
 </script>
 
@@ -170,7 +170,7 @@
                 role="radio"
                 aria-checked={settings.minBand === l}
                 class:on={settings.minBand === l}
-                onclick={() => pickLevel(l as AlertSettings['minBand'])}
+                onclick={() => pickLevel(l)}
               >
                 {levelLabel(l)}
               </button>

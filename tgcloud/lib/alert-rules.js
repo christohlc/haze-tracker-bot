@@ -61,9 +61,7 @@ export const alertTarget = (sub, now) => ({ ...subscriberTarget(sub), ...(sub.qu
  */
 export function wantsBandAlert(from, to, minBand) {
   const level = levelOrNull(minBand);
-  if (!level) return true;
-  const min = bandRank(level);
-  return bandRank(to) >= min || bandRank(from) >= min;
+  return !level || Math.max(bandRank(from), bandRank(to)) >= bandRank(level);
 }
 
 /**
@@ -137,8 +135,8 @@ export function advanceBands(prev, snap, now) {
 
 /**
  * Band subscribers with their scope's band: `due` were told another band and get an alert;
- * `unseeded` were never told one, and `skipped` moved between bands below their alert level:
- * both just move to it, without an alert, so a later alert says where it came from.
+ * `silent` just move to it, without an alert, so a later alert says where it came from: they
+ * were never told one (rare: subscribing seeds it), or moved below their alert level.
  * @template {{ region?: string | null, lastBand?: string | null, minBand?: string | null }} S
  * @param {S[]} subs @param {Record<string, AlertBand>} bands
  */
@@ -146,17 +144,14 @@ export function bandAlertsFor(subs, bands) {
   /** @type {Array<{ sub: S, band: AlertBand, scope: string }>} */
   const due = [];
   /** @type {Array<{ sub: S, band: AlertBand, scope: string }>} */
-  const unseeded = [];
-  /** @type {Array<{ sub: S, band: AlertBand, scope: string }>} */
-  const skipped = [];
+  const silent = [];
   for (const sub of subs) {
     const scope = scopeOf(sub.region);
     const band = bands[scope];
     if (!band) continue;
-    if (!sub.lastBand) unseeded.push({ sub, band, scope });
-    else if (sub.lastBand === band.id) continue;
-    else if (wantsBandAlert(sub.lastBand, band.id, sub.minBand)) due.push({ sub, band, scope });
-    else skipped.push({ sub, band, scope });
+    if (sub.lastBand === band.id) continue;
+    if (sub.lastBand && wantsBandAlert(sub.lastBand, band.id, sub.minBand)) due.push({ sub, band, scope });
+    else silent.push({ sub, band, scope });
   }
-  return { due, unseeded, skipped };
+  return { due, silent };
 }

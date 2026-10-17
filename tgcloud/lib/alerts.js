@@ -94,7 +94,7 @@ export async function runAlerts(snap, now = Date.now(), breaking = []) {
   const bands = advanceBands(prev, snap, now);
   const savingBands = ALERT_SCOPES.some((s) => bands[s] !== prev[s]) ? setAlertBands(bands) : null;
   out.band = bands.highest?.id ?? null;
-  const { due: bandDue, unseeded, skipped } = bandAlertsFor(bandSubs, bands);
+  const { due: bandDue, silent } = bandAlertsFor(bandSubs, bands);
   const bandDueChats = new Set(bandDue.map(({ sub }) => sub.chatId));
 
   // Breaking news: every event still to send × breaking subscribers who haven't had it and
@@ -128,9 +128,12 @@ export async function runAlerts(snap, now = Date.now(), breaking = []) {
   // event left unsent stays unclaimed, so the next tick sends it (with the band alert, or alone).
   let bandStopped = breakingStopped === 'limited' ? 'limited' : null;
   if (Object.keys(bands).length && (await canGoOn(breakingStopped, now + BAND_BUDGET_MS))) {
-    // Never told a band (rare: subscribing seeds it), or a move below the chat's alert level:
-    // move them to it, without an alert.
-    await Promise.all([...unseeded, ...skipped].map(({ sub, band }) => setLastBand(sub.chatId, band.id)));
+    // Never told a band, or a move below the chat's alert level: move them to it, without an
+    // alert. One write per band, not per chat.
+    /** @type {Map<string, number[]>} */
+    const moving = new Map();
+    for (const { sub, band } of silent) moving.set(band.id, [...(moving.get(band.id) ?? []), sub.chatId]);
+    await Promise.all([...moving].map(([band, chatIds]) => setLastBands(chatIds, band)));
     const res = await runBatched(
       bandDue,
       async ({ sub, band, scope }) => {

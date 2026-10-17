@@ -2,7 +2,7 @@
 // The /alerts settings message: text + inline keyboard. Pure.
 
 import { REGIONS, REGION_NAMES } from './config.js';
-import { PSI_BANDS } from './psi.js';
+import { bandById } from './psi.js';
 
 export const DAILY_HOURS = [7, 8, 12, 18];
 
@@ -16,15 +16,15 @@ export const QUIET_UNTIL = 7;
 export const QUIET_HOURS = `${hourLabel(QUIET_FROM)}–${hourLabel(QUIET_UNTIL)} SGT`;
 
 /** The lowest band a chat can ask band alerts to start from; null is every band. */
-export const ALERT_LEVELS = ['unhealthy', 'very_unhealthy'];
+export const ALERT_LEVELS = /** @type {const} */ (['unhealthy', 'very_unhealthy']);
 
 /** A band we offer as an alert level, or null for every band. @param {unknown} v */
-export const levelOrNull = (v) => (ALERT_LEVELS.includes(/** @type {string} */ (v)) ? /** @type {string} */ (v) : null);
+export const levelOrNull = (v) => ALERT_LEVELS.find((l) => l === v) ?? null;
 
 /** `region`: band alerts follow this region's 3-hour PSI; null follows the highest region.
     `minBand`: band alerts only from this band up (and the drop back below it); null is every band.
     `quietNights`: alerts from 11 pm to 7 am SGT arrive without sound.
-    @typedef {{ bandAlerts: boolean, dailyHour: number | null, breakingAlerts: boolean, region: string | null, minBand: string | null, quietNights: boolean }} AlertSettings */
+    @typedef {{ bandAlerts: boolean, dailyHour: number | null, breakingAlerts: boolean, region: string | null, minBand: typeof ALERT_LEVELS[number] | null, quietNights: boolean }} AlertSettings */
 
 /** Settings as the code sees them, from a stored row or older settings without the newer fields.
     @param {Partial<AlertSettings> | null | undefined} sub @returns {AlertSettings} */
@@ -38,10 +38,13 @@ export const settingsOf = (sub) => ({
 });
 
 /** "Any band", "Unhealthy", "Very unhealthy". @param {string | null | undefined} level */
-export const levelLabel = (level) => PSI_BANDS.find((b) => b.id === levelOrNull(level))?.label ?? 'Any band';
+export const levelLabel = (level) => bandById(levelOrNull(level))?.label ?? 'Any band';
 
 /** The levels offered, every band first. */
 export const LEVEL_CHOICES = [null, ...ALERT_LEVELS];
+
+/** Turning alerts on: band changes and breaking news, every band, no daily update. */
+export const TURNED_ON = { ...settingsOf(null), bandAlerts: true, breakingAlerts: true };
 
 /** "Central", or "the highest region" for island-wide. @param {string | null | undefined} region */
 export const areaLabel = (region) => (regionOrNull(region) ? REGION_NAMES[/** @type {string} */ (region)] : 'the highest region');
@@ -97,7 +100,7 @@ export function renderAlertSettings(sub) {
 export function applyAlertAction(sub, data) {
   if (data === 'a:stop') return null;
   // From "off" entirely, "Turn on alerts" (a:band) turns on band alerts and breaking news.
-  if (!sub && data === 'a:band') return { ...settingsOf(null), bandAlerts: true, breakingAlerts: true };
+  if (!sub && data === 'a:band') return TURNED_ON;
   const cur = settingsOf(sub);
   if (data.startsWith('a:region:')) return { ...cur, region: regionOrNull(data.slice(9)) };
   if (data.startsWith('a:level:')) return { ...cur, minBand: levelOrNull(data.slice(8)) };
@@ -134,7 +137,7 @@ export function parseAlertInput(input, current = null) {
   if (o.breakingAlerts !== undefined && typeof o.breakingAlerts !== 'boolean') throw new Error('breakingAlerts must be true or false');
   const region = o.region === undefined ? (current?.region ?? null) : regionOrNull(o.region);
   if (o.region != null && !region) throw new Error(`region must be one of ${REGIONS.map((r) => r.id).join(', ')} or null`);
-  const minBand = o.minBand === undefined ? levelOrNull(current?.minBand) : levelOrNull(o.minBand);
+  const minBand = levelOrNull(o.minBand === undefined ? current?.minBand : o.minBand);
   if (o.minBand != null && !minBand) throw new Error(`minBand must be one of ${ALERT_LEVELS.join(', ')} or null`);
   if (o.quietNights !== undefined && typeof o.quietNights !== 'boolean') throw new Error('quietNights must be true or false');
   const quietNights = /** @type {boolean | undefined} */ (o.quietNights) ?? Boolean(current?.quietNights);
