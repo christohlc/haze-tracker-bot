@@ -2,7 +2,7 @@
 // Thin DB helpers over schema.js.
 
 import { db } from 'sdk';
-import { and, desc, eq, gte, lt } from 'sdk/db';
+import { and, desc, eq, gte, lt, sql } from 'sdk/db';
 import { readings, settings, sourceStatus, state } from '../schema.js';
 import { toSgtIso } from './time.js';
 
@@ -20,6 +20,26 @@ export async function setState(key, value) {
     .values({ key, value, updatedAt })
     .onConflictDoUpdate({ target: state.key, set: { value, updatedAt } })
     .run();
+}
+
+/**
+ * Claim the right to do something at most once per `everyS` seconds, across every isolate: one
+ * statement, so of many Mini Apps opened together only one wins. The claim is state(key)'s
+ * updated_at; its value is left alone. If the claim itself fails, it's granted: a duplicate fetch
+ * beats a feed that never refreshes. @param {string} key @param {number} everyS
+ */
+export async function claimEvery(key, everyS) {
+  const now = nowSec();
+  try {
+    const res = await db.run(
+      sql`INSERT INTO state (key, value, updated_at) VALUES (${key}, NULL, ${now})
+          ON CONFLICT (key) DO UPDATE SET updated_at = excluded.updated_at WHERE state.updated_at <= ${now - everyS}`,
+    );
+    return res.rowsAffected > 0;
+  } catch (e) {
+    console.error('claim failed', key, e instanceof Error ? e.message : e);
+    return true;
+  }
 }
 
 /**
@@ -62,11 +82,23 @@ export async function upsertReadings(items) {
   }
 }
 
+/** Readings count as the last `hours` from here (a little slack for NEA publishing late). @param {number} hours */
+const windowStart = (hours) => nowSec() - (hours + 2) * 3600;
+
 /** Last `hours` of readings, oldest first, in NEA's item shape (timestamps in SGT). */
 export async function recentReadings(hours = 25) {
-  const since = nowSec() - (hours + 2) * 3600;
+  const since = windowStart(hours);
   const rows = await db.select().from(readings).where(gte(readings.hour, since)).orderBy(desc(readings.hour)).limit(hours).all();
   return rows.reverse().map((r) => ({ timestamp: toSgtIso(r.hour), readings: r.pm25 }));
+}
+
+/**
+ * The last `hours` of readings already read with recentReadings(more), as recentReadings(hours) would give them.
+ * @param {Array<{ timestamp: string, readings: Record<string, number> }>} rows oldest first @param {number} hours
+ */
+export function lastHours(rows, hours) {
+  const since = windowStart(hours);
+  return rows.filter((r) => Date.parse(r.timestamp) / 1000 >= since).slice(-hours);
 }
 
 export async function countReadings() {

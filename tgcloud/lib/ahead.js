@@ -14,7 +14,18 @@ import { recentReadings } from './store.js';
  * @param {number} [deadline] passed to getOutlook
  * @returns {Promise<Ahead>}
  */
-export async function getAhead(refreshed, deadline) {
-  const [rows, outlook] = await Promise.all([refreshed.then(() => recentReadings(HISTORY_HOURS)), getOutlook(deadline)]);
+export function getAhead(refreshed, deadline) {
+  return aheadFrom(refreshed.then(() => recentReadings(HISTORY_HOURS)), deadline);
+}
+
+/**
+ * The same from readings already being read (the last HISTORY_HOURS, oldest first), for a caller
+ * that needs them too.
+ * @param {Promise<Array<{ timestamp: string, readings: Record<string, number> }>>} readings
+ * @param {number} [deadline] passed to getOutlook
+ * @returns {Promise<Ahead>}
+ */
+export async function aheadFrom(readings, deadline) {
+  const [rows, outlook] = await Promise.all([readings, getOutlook(deadline)]);
   return { outlook, range: nextHours(rows) };
 }
