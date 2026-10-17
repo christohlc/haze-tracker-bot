@@ -37,6 +37,22 @@ export function pm25Trend(rows, region) {
   return d > 0 ? 'rising' : 'easing';
 }
 
+/** NEA can't have published an hour's readings before this many ms past it. */
+const NEA_EARLIEST_MS = 5 * 60_000;
+/** While the current hour is awaited, refetch this often; once it's in, this often, for NEA's revisions. */
+export const AWAITED_EVERY_S = 2 * 60;
+export const REVISED_EVERY_S = 10 * 60; // under the tick's 15 min, so every tick refetches
+
+/**
+ * How often to refetch NEA (seconds), given the latest reading we have: often while NEA's current
+ * hour is due and not in yet, less often once it is, as NEA revises an hour's readings during it.
+ * @param {string} asOf the stored snapshot's latest hour @param {number} nowMs
+ */
+export function neaRefetchEveryS(asOf, nowMs) {
+  const awaited = unixHour(asOf) < Math.floor(nowMs / 3_600_000) && nowMs % 3_600_000 >= NEA_EARLIEST_MS;
+  return awaited ? AWAITED_EVERY_S : REVISED_EVERY_S;
+}
+
 /**
  * @param {Array<{ timestamp: string, readings: Record<string, number> }>} pm25History oldest first
  * @param {{ timestamp: string, readings: Record<string, Record<string, number>> }} psi
@@ -45,6 +61,9 @@ export function buildSnapshot(pm25History, psi) {
   if (!pm25History.length) throw new Error('No PM2.5 readings');
   const history = pm25History.slice(-25);
   const rows = history.map((h) => ({ t: h.timestamp, ...h.readings }));
+  // NEA's own 24-hour PM2.5 averages when its PSI item is for the same hour as the latest reading;
+  // otherwise ours, from the hourly readings.
+  const nea24h = psi.timestamp === history.at(-1)?.timestamp ? psi.readings.pm25_twenty_four_hourly : null;
 
   const regions = REGIONS.map(({ id, name }) => {
     const series = history.map((h) => h.readings?.[id] ?? null);
@@ -56,7 +75,7 @@ export function buildSnapshot(pm25History, psi) {
       psi1h: pm25ToPsi(pm25),
       psi3h: pm25ToPsi(meanOfLast(series, 3)),
       psi24h: psi.readings.psi_twenty_four_hourly?.[id] ?? null,
-      pm25Mean24h: meanOfLast(series, 24),
+      pm25Mean24h: nea24h?.[id] ?? meanOfLast(series, 24),
       trend: pm25Trend(rows, id),
     };
   });

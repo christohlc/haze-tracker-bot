@@ -1,21 +1,24 @@
 // @ts-check
-// Keep the DB's snapshot current. The tick calls refreshNeaIfNewHour(); chat commands and
-// the Mini App call getSnapshot(), which refetches itself if the tick is late
-// (the GitHub Actions cron can be delayed or skipped).
+// Keep the DB's snapshot current. The tick calls refreshNeaIfDue(); chat commands and the Mini
+// App call getSnapshot(), which does the same, so a new NEA hour shows within minutes of NEA
+// publishing it, whoever asks first (the tick only runs every 15 min, and can be late).
 
 import { getLatestPsi, getPm25History } from './nea.js';
-import { buildSnapshot } from './snapshot.js';
+import { buildSnapshot, neaRefetchEveryS } from './snapshot.js';
 import { HISTORY_HOURS, latestRange } from './range.js';
-import { claimEvery, getState, lastHours, recentReadings, recordSource, setState, upsertReadings } from './store.js';
-import { unixHour } from './time.js';
+import { claimEvery, getState, getStates, lastHours, recentReadings, recordSource, setState, upsertReadings } from './store.js';
 
 const STALE_MS = 80 * 60_000; // NEA publishes ~15 min past the hour
-const RETRY_MS = 5 * 60_000; // don't hammer NEA when it's down
+/** A refetch someone is waiting for gets one try (the platform's fetch gives up after ~5 s): no retry. */
+const ONE_TRY_MS = 5_000;
 
-/** Fetch NEA, store readings and the new snapshot. Feed errors are recorded, not thrown, if cached data exists. */
-export async function refreshNea() {
+/**
+ * Fetch NEA, store readings and the new snapshot. Feed errors are recorded, not thrown, if cached data exists.
+ * @param {number} [deadline] see retryOnce() in fetch-retry.js
+ */
+export async function refreshNea(deadline) {
   await claimEvery('last_fetch_attempt', 0); // always granted: Mini Apps don't refetch right after
-  const [pm25, psi] = await Promise.allSettled([getPm25History(), getLatestPsi()]);
+  const [pm25, psi] = await Promise.allSettled([getPm25History(deadline), getLatestPsi(deadline)]);
 
   if (pm25.status === 'fulfilled') {
     await upsertReadings(pm25.value);
@@ -24,7 +27,8 @@ export async function refreshNea() {
     await recordSource('nea_pm25', { ok: false, error: pm25.reason?.message ?? pm25.reason });
   }
   if (psi.status === 'fulfilled') {
-    const latest = { timestamp: psi.value.timestamp, readings: { psi_twenty_four_hourly: psi.value.readings.psi_twenty_four_hourly } };
+    const { psi_twenty_four_hourly, pm25_twenty_four_hourly } = psi.value.readings;
+    const latest = { timestamp: psi.value.timestamp, readings: { psi_twenty_four_hourly, pm25_twenty_four_hourly } };
     await setState('psi', latest);
     await recordSource('nea_psi', { ok: true, detail: `latest ${psi.value.timestamp}` });
   } else {
@@ -32,7 +36,8 @@ export async function refreshNea() {
   }
 
   // One read for the snapshot (the last 25 hours) and the range (two weeks).
-  const [rows, psiState] = await Promise.all([recentReadings(HISTORY_HOURS), getState('psi').then((s) => s?.value)]);
+  const [rows, states] = await Promise.all([recentReadings(HISTORY_HOURS), getStates(['psi'])]);
+  const psiState = states.get('psi')?.value;
   const history = lastHours(rows, 25);
   if (!history.length || !psiState) throw new Error('No NEA data yet (fetch failed and nothing cached)');
   const snap = buildSnapshot(history, psiState);
@@ -43,39 +48,30 @@ export async function refreshNea() {
 
 /** The stored snapshot as it is, or undefined before the first fetch. */
 export async function storedSnapshot() {
-  return (await getState('snapshot'))?.value;
+  return (await getStates(['snapshot'])).get('snapshot')?.value;
 }
 
 /**
- * For the tick (every 15 min): refetch only until NEA has published the current hour.
- * @param {any} stored from storedSnapshot(), which the tick reads once for news too
- * @param {number} [now]
+ * The snapshot, refetched from NEA if it's due (neaRefetchEveryS: every 2 min while NEA's current
+ * hour is awaited, every 10 min after for revisions). One caller at a time refetches, across every
+ * isolate (claimEvery); the rest get the stored one. Throws only if NEA fails with nothing stored.
+ * @param {number} [now] @param {number} [deadline] see retryOnce() in fetch-retry.js
  */
-export async function refreshNeaIfNewHour(stored, now = Date.now()) {
-  if (stored && unixHour(stored.asOf) === Math.floor(now / 3_600_000)) return stored;
-  return refreshNea();
+export async function refreshNeaIfDue(now = Date.now(), deadline) {
+  // One read for both rows: a snapshot that isn't due costs a single query.
+  const rows = await getStates(['snapshot', 'last_fetch_attempt']);
+  const stored = rows.get('snapshot')?.value;
+  if (!stored) return refreshNea(deadline);
+  const every = neaRefetchEveryS(stored.asOf, now);
+  const tried = now / 1000 - (rows.get('last_fetch_attempt')?.updatedAt ?? 0) < every;
+  if (tried || !(await claimEvery('last_fetch_attempt', every))) return stored;
+  return refreshNea(deadline).catch(() => stored);
 }
 
-/** Latest snapshot, refetching when stale. `stale: true` means NEA couldn't be reached. */
+/** Latest snapshot, refetched if due (one try). `stale: true` means NEA couldn't be reached for a while. */
 export async function getSnapshot() {
-  const cached = await storedSnapshot();
-  const fresh = cached && Date.now() - Date.parse(cached.asOf) < STALE_MS;
-  if (fresh) return { ...cached, stale: false };
-
-  if (cached) {
-    const lastAttempt = (await getState('last_fetch_attempt'))?.updatedAt ?? 0;
-    // A read first, so NEA being down doesn't make every open a write; then only one of the Mini
-    // Apps opened together refetches (data.gov.sg rate-limits), the rest show the stored copy.
-    const tried = Date.now() / 1000 - lastAttempt < RETRY_MS / 1000;
-    if (tried || !(await claimEvery('last_fetch_attempt', RETRY_MS / 1000))) return { ...cached, stale: true };
-  }
-  try {
-    const snap = await refreshNea();
-    return { ...snap, stale: Date.now() - Date.parse(snap.asOf) >= STALE_MS };
-  } catch (e) {
-    if (cached) return { ...cached, stale: true };
-    throw e;
-  }
+  const snap = await refreshNeaIfDue(Date.now(), Date.now() + ONE_TRY_MS);
+  return { ...snap, stale: Date.now() - Date.parse(snap.asOf) >= STALE_MS };
 }
 
 /**

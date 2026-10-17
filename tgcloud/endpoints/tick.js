@@ -1,8 +1,10 @@
 // @ts-check
 // endpoints/tick.js — the 15-minute job. Run by .github/workflows/tick.yml:
 //   npx tgcloud run endpoints/tick            ('{"force":true}' refetches NEA and news regardless)
-// (Telegram Serverless has no built-in scheduler.) NEA and news are fetched about once an hour
-// (news every run while there's haze); the extra runs are for alerts a previous run didn't reach.
+// (Telegram Serverless has no built-in scheduler.) NEA is refetched every run (refreshNeaIfDue: NEA
+// revises an hour's readings, and /haze or the Mini App may have fetched the new hour already),
+// news about once an hour (every run while there's haze); the extra runs also send alerts a previous
+// run didn't reach.
 // News comes before alerts, so breaking news from it goes out in the same run (breaking news gets
 // its own slice of the alert budget, after the fetch). The budget counts from the start, so NEA and
 // news are fetched side by side. News not due by the stored snapshot is checked again by the new
@@ -12,7 +14,7 @@ import { runAlerts } from '../lib/alerts.js';
 import { updateBreaking } from '../lib/breaking.js';
 import { requireCli } from '../lib/cli-only.js';
 import { refreshNews, refreshNewsIfDue } from '../lib/news.js';
-import { refreshNea, refreshNeaIfNewHour, storedSnapshot } from '../lib/refresh.js';
+import { refreshNea, refreshNeaIfDue, storedSnapshot } from '../lib/refresh.js';
 
 export default async function (input, ctx) {
   requireCli(ctx);
@@ -20,7 +22,7 @@ export default async function (input, ctx) {
   const force = Boolean(input?.force);
   const stored = await storedSnapshot();
   const [snap, firstNews] = await Promise.all([
-    force ? refreshNea() : refreshNeaIfNewHour(stored, started),
+    force ? refreshNea() : refreshNeaIfDue(started),
     force ? refreshNews() : refreshNewsIfDue(stored),
   ]);
   const news = 'skipped' in firstNews ? await refreshNewsIfDue(snap) : firstNews;

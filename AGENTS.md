@@ -29,7 +29,10 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   `tick` and `admin` call `requireCli(ctx)`: they're CLI-only, never Mini App endpoints.
   The repo is public (free Actions minutes); a weekly `keepalive` job in the same workflow
   stops GitHub's 60-day pause of scheduled workflows.
-  NEA is refetched only until the current hour is published and news about hourly (every run
+  NEA is refetched by one rule (`neaRefetchEveryS` in `lib/snapshot.js`, via `refreshNeaIfDue`),
+  whoever asks first (tick, /haze, Mini App), claimed once across isolates: every 2 min from :05 while
+  the current hour isn't in, then every 10 min, because NEA revises an hour's readings during it (so
+  every tick refetches). A refetch someone is waiting for gets one try. News about hourly (every run
   while some PSI is above 100, for breaking news); the extra runs are for alerts a previous run
   didn't reach. `{"force":true}` refetches NEA and news regardless.
 - **Alerts go out in batches of 25/s within a ~20 s budget** (`runBatched` in `lib/alert-rules.js`).
@@ -72,7 +75,7 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   `MAP_BOUNDS`; the land under them is `src/lib/coast.ts`, **generated** by `scripts/hazemap/coast.mjs`
   from Natural Earth (rerun it if `MAP_BOUNDS` changes).
 - **What's ahead (`lib/ahead.js`) has no model.** NEA's 24-hr PSI forecast comes from the
-  undocumented JSON behind haze.gov.sg (`lib/outlook.js`, cached 30 min in `state('outlook')`,
+  undocumented JSON behind haze.gov.sg (`lib/outlook.js`, cached 10 min in `state('outlook')`,
   fetched only by /haze, /forecast, the dashboard and a tick with daily updates due). NEA issues it about 6 pm, during haze
   episodes only, so null is the usual answer. The next-hours range (`lib/range.js`) is worked out
   from the last 14 days of `readings` and needs at least 72 hours. It's worked out when NEA is

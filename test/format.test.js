@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { formatHaze, sgtTime } from '../tgcloud/lib/format.js';
-import { buildSnapshot } from '../tgcloud/lib/snapshot.js';
+import { AWAITED_EVERY_S, buildSnapshot, neaRefetchEveryS, REVISED_EVERY_S } from '../tgcloud/lib/snapshot.js';
 
 test('sgtTime', () => {
   assert.equal(sgtTime('2026-10-16T13:00:00+08:00'), '1:00 pm');
@@ -26,4 +26,25 @@ test('buildSnapshot + formatHaze on the site example', () => {
   const html = formatHaze(snap);
   assert.match(html, /<pre>Region/);
   assert.match(html, /11:00 pm SGT/);
+});
+
+test('the 24-hour PM2.5 average is NEA’s when its PSI item is for the latest hour, ours otherwise', () => {
+  const history = Array.from({ length: 24 }, (_, i) => ({
+    timestamp: `2026-10-16T${String(i).padStart(2, '0')}:00:00+08:00`,
+    readings: { north: 100, west: 100, central: 100, east: 100, south: 100 },
+  }));
+  const readings = { psi_twenty_four_hourly: { north: 150 }, pm25_twenty_four_hourly: { north: 86 } };
+  const north = (/** @type {string} */ timestamp) => buildSnapshot(history, { timestamp, readings }).regions.find((r) => r.id === 'north');
+  assert.equal(north(history.at(-1).timestamp).pm25Mean24h, 86, 'NEA’s');
+  assert.equal(north(history.at(-2).timestamp).pm25Mean24h, 100, 'PSI an hour behind: ours');
+});
+
+test('NEA is refetched often while the current hour is awaited, then for revisions', () => {
+  const at = (/** @type {string} */ s) => Date.parse(s);
+  const asOf = '2026-10-17T15:00:00+08:00';
+  assert.equal(neaRefetchEveryS(asOf, at('2026-10-17T15:40:00+08:00')), REVISED_EVERY_S, 'the hour is in');
+  assert.equal(neaRefetchEveryS(asOf, at('2026-10-17T16:03:00+08:00')), REVISED_EVERY_S, 'too early for NEA to have 16:00');
+  assert.equal(neaRefetchEveryS(asOf, at('2026-10-17T16:05:00+08:00')), AWAITED_EVERY_S, '16:00 is due');
+  assert.equal(neaRefetchEveryS(asOf, at('2026-10-17T18:30:00+08:00')), AWAITED_EVERY_S, 'NEA missed hours');
+  assert.ok(REVISED_EVERY_S < 15 * 60, 'every 15-minute tick refetches');
 });
