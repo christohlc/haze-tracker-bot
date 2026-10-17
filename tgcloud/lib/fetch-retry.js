@@ -1,7 +1,6 @@
 // @ts-check
-// One retry for a request that fails before any response. The platform's fetch gives up after
-// about 5 s ("fetch: request failed"), and a feed's CDN is often that slow only on a cache miss,
-// so the second try usually comes straight back. HTTP errors are responses, so they aren't retried.
+// Retry a request once if it throws: the platform's fetch gives up after about 5 s (see the
+// alerts note in AGENTS.md). fetch resolves on HTTP errors, so a 4xx/5xx isn't retried.
 // Pure (the request is passed in) so node --test can load it.
 
 /**

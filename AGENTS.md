@@ -39,6 +39,9 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   `tgcloud run` isn't documented; tune `BUDGET_MS` in `lib/alerts.js`. Pacing needs
   `setTimeout`: the tick's `alerts.paced` says whether the runtime has it (if not, batches run
   back to back and a 429 ends the run).
+  The budget counts from the tick's start, so it includes the NEA and news fetches: the platform's
+  fetch gives up after about 5 s (“fetch: request failed”, often a CDN cache miss) and `lib/http.js`
+  retries once, so a feed that times out twice costs ~10 s.
 - **Breaking news is sent automatically, with no one approving it.** `lib/breaking-rules.js`
   picks a story when its headline has a topic (schools closing / HBL, outdoor activities or sports
   called off, free masks, MOM advisories), mentions haze (headline or description), is under 6 h
@@ -68,7 +71,7 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   5 days per run back to back (`paced: false` in the result), so rerun a minute later.
 - **Some `tgcloud/lib/` modules are shared with the front-end and tests**
   (`psi`, `cigs`, `advice`, `alert-settings`, `alert-rules`, `breaking-rules`, `format`, `snapshot`,
-  `outlook-parse`, `range`, `html`, `time`, `news-parse`, `fetch-retry`, `cameras-parse`, `weather-parse`, `chat-rules`,
+  `outlook-parse`, `range`, `html`, `time`, `news-parse`, `cameras-parse`, `weather-parse`, `chat-rules`, `fetch-retry`,
   `card/geometry|png|raster|summary|glyphs|art`). Keep these pure: no `sdk` import, no DB, so
   Vite and `node --test` can load them. Modules that touch `sdk`, directly or via `store`, are
   `store`, `nea`, `refresh`, `alerts`, `breaking`, `subscriptions`, `cli-only`, `outlook`, `ahead`,
