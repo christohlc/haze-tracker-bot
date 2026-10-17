@@ -295,6 +295,17 @@ summary {
   }
 }
 
+/* Opening a region from Around the island: its name morphs into the region's title while the
+   rest crossfades (viewTransition() in src/lib/motion.ts). Moving on screen, so --ease-in-out. */
+::view-transition-group(region-name) {
+  animation-duration: 280ms;
+  animation-timing-function: var(--ease-in-out);
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 220ms;
+}
+
 /* Looping (ambient) animations stop while their element is off screen or the app is in the
    background: see ambient() in src/lib/motion.ts. */
 [data-paused],

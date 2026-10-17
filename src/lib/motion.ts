@@ -33,6 +33,21 @@ tg?.onEvent?.('deactivated', () => {
 });
 
 /**
+ * Runs `update` (a DOM change) as a View Transition where the browser has them, so elements
+ * sharing a `view-transition-name` morph between the two states; otherwise, or under reduced
+ * motion, it just runs. Resolves once the transition (if any) has finished.
+ */
+export async function viewTransition(update: () => Promise<void>) {
+  if (!document.startViewTransition || reducedMotion()) return update();
+  const t = document.startViewTransition(update);
+  // The update waits for a frame to snapshot the old state. If none comes (a page that isn't
+  // painting), skip the animation rather than hold the tap; a skipped transition still updates.
+  const stuck = setTimeout(() => t.skipTransition(), 300);
+  await t.updateCallbackDone.finally(() => clearTimeout(stuck)); // rejects if `update` threw
+  await t.finished.catch(() => {}); // only the animation, which may have been skipped
+}
+
+/**
  * Sets `data-revealed` the first time the element is mostly in view, so a one-off entrance
  * (CSS keyed on that attribute) plays when someone can see it, not below the fold. At once
  * under reduced motion or without IntersectionObserver.

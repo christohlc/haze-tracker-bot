@@ -9,6 +9,12 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-18-region-morph',
+    date: '2026-10-18',
+    title: 'Smoother moves into a region',
+    body: 'Tap a region in Around the island and its name glides up into the region’s page, then back again. Taps that open something now give a light buzz.',
+  },
+  {
     id: '2026-10-18-living-map',
     date: '2026-10-18',
     title: 'Fires and wind you can see moving',
