@@ -57,8 +57,8 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
 - **Wind and rain (`endpoints/getWeather`) is fetched the same way**: only when the Mini App asks,
   cached for 5 min in `state('weather')`. It reads NEA's station feeds, and the “coming from Sumatra”
   line (`smokeLine` in `lib/weather-parse.js`) is our reading, not NEA's. The same endpoint returns NEA's
-  wind forecast (`lib/forecast.js`: data.gov.sg's 24-hour forecast and 4-day outlook, cached 30 min in
-  `state('forecast')`); its “smoke may blow in” line (`forecastSmokeLine`) is ours too, and only shows
+  wind forecast (`lib/forecast.js`: data.gov.sg's 24-hour forecast and 4-day outlook, cached 30 min / 2 h
+  in `state('forecast24h')` / `state('forecast4day')`); its “smoke may blow in” line (`forecastSmokeLine`) is ours too, and only shows
   while some 24-hour PSI is above 100.
 - **What's ahead (`lib/ahead.js`) has no model.** NEA's 24-hr PSI forecast comes from the
   undocumented JSON behind haze.gov.sg (`lib/outlook.js`, cached 30 min in `state('outlook')`,

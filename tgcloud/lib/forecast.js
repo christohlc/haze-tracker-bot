@@ -1,37 +1,36 @@
 // @ts-check
-// NEA's wind forecast for the Mini App's Wind and rain card, cached in state('forecast').
+// NEA's wind forecast for the Mini App's Wind and rain card. Each feed has its own state row
+// (forecast24h, forecast4day), so one feed failing never wipes the other's stored copy.
 // Fetched only when someone opens the Mini App, never by the tick.
 
 import { cachedFeed } from './feed-cache.js';
-import { errorText, getJson } from './http.js';
-import { combineForecast, currentForecast, FORECAST_FEEDS, parse24h, parse4day } from './forecast-parse.js';
+import { getJson } from './http.js';
+import { combineForecast, FORECAST_24H_FEED, FORECAST_4DAY_FEED, parse24h, parse4day } from './forecast-parse.js';
 
-// NEA reissues the 24-hour forecast a few times a day and the 4-day outlook about twice;
-// 30 minutes keeps the two feeds well inside data.gov.sg's rate limits.
-const FORECAST_EVERY_S = 30 * 60;
+// NEA reissues the 24-hour forecast a few times a day and the 4-day outlook about twice; these keep
+// both well inside data.gov.sg's rate limits alongside the weather feeds.
+const FORECAST_24H_EVERY_S = 30 * 60;
+const FORECAST_4DAY_EVERY_S = 2 * 3600;
 
 /**
+ * One feed through cachedFeed; throws (so the stored copy stays) when it has no wind we can read.
  * @template T
- * @param {number} i index into FORECAST_FEEDS @param {(json: any) => T | null} parse
- * @returns {Promise<T>}
+ * @param {string} key @param {number} everyS @param {string} url @param {string} what
+ * @param {(json: any) => (T & { issuedAt: string }) | null} parse
  */
-async function getFeed(i, parse) {
-  const { url, label } = FORECAST_FEEDS[i];
-  const parsed = parse(await getJson(url, `NEA ${label}`));
-  if (!parsed) throw new Error('Feed had no wind forecast we could read');
-  return parsed;
+function cachedForecast(key, everyS, url, what, parse) {
+  return cachedFeed(key, everyS, `nea_${key}`, async () => {
+    const value = parse(await getJson(url, what));
+    if (!value) throw new Error(`${what} had no wind forecast we could read`);
+    return { value, detail: `issued ${value.issuedAt}` };
+  });
 }
 
-/** NEA's wind forecast, or the last we got if the feeds are down (null if never, or all past). Never throws. */
+/** NEA's wind forecast, or the last we got of each part if a feed is down (null if never, or all past). Never throws. */
 export async function getForecast() {
-  const forecast = await cachedFeed('forecast', FORECAST_EVERY_S, 'nea_forecast', async () => {
-    // One feed failing still leaves the other: today's wind without the next days, or the reverse.
-    const results = await Promise.allSettled([getFeed(0, parse24h), getFeed(1, parse4day)]);
-    const [day, days] = results;
-    const value = combineForecast(day.status === 'fulfilled' ? day.value : null, days.status === 'fulfilled' ? days.value : null);
-    const failed = results.flatMap((r, i) => (r.status === 'rejected' ? [`${FORECAST_FEEDS[i].label}: ${errorText(r.reason)}`] : []));
-    if (!value) throw new Error(failed.join('; ') || 'No forecast');
-    return { value, error: failed.join('; ') || undefined, detail: `issued ${value.issuedAt}` };
-  });
-  return currentForecast(forecast);
+  const [next24h, outlook] = await Promise.all([
+    cachedForecast('forecast24h', FORECAST_24H_EVERY_S, FORECAST_24H_FEED, 'NEA 24-hour forecast', parse24h),
+    cachedForecast('forecast4day', FORECAST_4DAY_EVERY_S, FORECAST_4DAY_FEED, 'NEA 4-day outlook', parse4day),
+  ]);
+  return combineForecast(next24h, outlook);
 }

@@ -4,8 +4,8 @@ import { parseStations, summariseWeather, type RegionId } from '../../tgcloud/li
 import { parse24h, parse4day, type Forecast } from '../../tgcloud/lib/forecast-parse.js';
 import { sgtDateOf } from '../../tgcloud/lib/time.js';
 import type { WeatherResult } from '../lib/api';
-import day from '../../test/forecast-24h.json';
-import days from '../../test/forecast-4day.json';
+import feed24h from '../../test/forecast-24h.json';
+import feed4day from '../../test/forecast-4day.json';
 import dir from '../../test/weather-wind-direction.json';
 import speed from '../../test/weather-wind-speed.json';
 import rain from '../../test/weather-rainfall.json';
@@ -17,12 +17,13 @@ const dayFromNow = (n: number) => sgtDateOf(Date.now() + n * 86_400_000);
 
 /** NEA's real forecast from 17 Oct 2026 (SSE today, then SSE, SE, SE, ESE), re-dated to start today. */
 function demoForecast(): Forecast {
-  const today = parse24h(day)!;
-  const next = parse4day(days)!;
+  const next24h = parse24h(feed24h)!;
+  const outlook = parse4day(feed4day)!;
   return {
     issuedAt: ago(95),
-    next24h: { ...today.next24h, until: new Date(Date.now() + 20 * 3_600_000).toISOString() },
-    days: next.days.map((d, i) => ({ ...d, date: dayFromNow(i + 1) })),
+    // Valid from midday, so the chip reads “Today”.
+    next24h: { ...next24h, start: `${dayFromNow(0)}T12:00:00+08:00`, until: new Date(Date.now() + 20 * 3_600_000).toISOString() },
+    days: outlook.days.map((d, i) => ({ ...d, date: dayFromNow(i + 1) })),
   };
 }
 

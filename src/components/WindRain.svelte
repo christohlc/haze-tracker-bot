@@ -1,7 +1,16 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { REGION_NAMES, REGIONS } from '../../tgcloud/lib/config.js';
-  import { dayLong, dayShort, forecastLine, forecastName, forecastSmokeLine } from '../../tgcloud/lib/forecast-parse.js';
+  import {
+    allWinds,
+    FORECAST_STALE_MS,
+    forecastLine,
+    forecastName,
+    forecastSmokeLine,
+    next24hLabel,
+    windsPhrase,
+  } from '../../tgcloud/lib/forecast-parse.js';
+  import { sgtWeekday } from '../../tgcloud/lib/time.js';
   import { clearDirection, smokeLine, windHeadline } from '../../tgcloud/lib/weather-parse.js';
   import { loadWeather, type Snapshot, type WeatherResult } from '../lib/api';
   import { STALE_MS, timeAgo } from '../lib/format';
@@ -22,12 +31,9 @@
   const stale = $derived(!!weather && result!.serverTime - Date.parse(weather.takenAt) > STALE_MS);
 
   const forecast = $derived(result?.forecast ?? null);
-  // Today's wind (from the 24-hour forecast) first, then each day of the 4-day outlook.
-  const forecastDays = $derived(
-    forecast ? [...(forecast.next24h ? [{ date: null, wind: forecast.next24h.wind }] : []), ...forecast.days] : [],
-  );
+  const forecastDays = $derived(forecast ? allWinds(forecast) : []);
   // NEA reissues the 4-day outlook twice a day, so a day-old copy means data.gov.sg hasn't answered since.
-  const forecastStale = $derived(!!forecast && result!.serverTime - Date.parse(forecast.issuedAt) > 24 * 3_600_000);
+  const forecastStale = $derived(!!forecast && result!.serverTime - Date.parse(forecast.issuedAt) > FORECAST_STALE_MS);
   const forecastSummary = $derived(forecastLine(forecast, result?.serverTime));
   const forecastSmoke = $derived(forecastSmokeLine(forecast, snapshot.worst.psi24h?.value, result?.serverTime));
 
@@ -42,6 +48,13 @@
 
   onMount(() => load(first));
 </script>
+
+<!-- Points the way the wind is blowing, so it's the opposite of where it comes from. -->
+{#snippet pointer(cls: string, from: number)}
+  <svg class={cls} viewBox="0 0 24 24" style="--deg: {from + 180}deg">
+    <path d="M12 3 L18 15 L12 12.5 L6 15 Z" />
+  </svg>
+{/snippet}
 
 <section class="card" aria-labelledby="wx-title">
   <h2 id="wx-title" class="section-title">Wind and rain</h2>
@@ -58,82 +71,78 @@
       <div class="lines"><div class="bar sk"></div><div class="bar short sk"></div></div>
     </div>
   {:else}
-  {#if !weather}
-    <p class="note empty">NEA’s weather stations aren’t reporting right now.</p>
-  {:else}
-    {#if wind}
-      <div class="wind">
-        <div class="compass" aria-hidden="true">
-          <span class="n">N</span>
-          {#if arrow != null}
-            <!-- Points the way the wind is blowing, so it's the opposite of where it comes from. -->
-            <svg class="arrow" viewBox="0 0 24 24" style="--deg: {arrow + 180}deg">
-              <path d="M12 3 L18 15 L12 12.5 L6 15 Z" />
-            </svg>
+    {#if !weather}
+      <p class="note empty">NEA’s weather stations aren’t reporting right now.</p>
+    {:else}
+      {#if wind}
+        <div class="wind">
+          <div class="compass" aria-hidden="true">
+            <span class="n">N</span>
+            {#if arrow != null}
+              {@render pointer('arrow', arrow)}
+            {:else}
+              <span class="calm"></span>
+            {/if}
+          </div>
+          <div class="lines">
+            <p class="headline">
+              {windHeadline(wind)}
+              · <span class="num">{wind.kmh}</span> km/h
+            </p>
+            {#if smoke}<p class="text">{smoke}</p>{/if}
+          </div>
+        </div>
+      {/if}
+
+      {#if weather.rain}
+        <p class="text rain">
+          {#if !weather.rain.raining.length}
+            No rain anywhere right now.
           {:else}
-            <span class="calm"></span>
+            {weather.rain.raining.length === REGIONS.length
+              ? 'Raining now across the island.'
+              : `Raining now in the ${listFmt.format(weather.rain.raining.map((id) => REGION_NAMES[id]))}.`}
+            Rain helps wash haze out of the air.
           {/if}
-        </div>
-        <div class="lines">
-          <p class="headline">
-            {windHeadline(wind)}
-            · <span class="num">{wind.kmh}</span> km/h
-          </p>
-          {#if smoke}<p class="text">{smoke}</p>{/if}
-        </div>
+        </p>
+      {:else}
+        <p class="note rain">NEA’s rain gauges aren’t reporting right now.</p>
+      {/if}
+      {#if !wind}
+        <p class="note">NEA’s wind stations aren’t reporting right now.</p>
+      {/if}
+
+      <p class="note meta">
+        NEA weather stations · {timeAgo(weather.takenAt, result!.serverTime)}{#if stale}{' · '}<span class="stale-note"><span class="status-dot stale" aria-hidden="true"></span>May be out of date</span>{/if}
+      </p>
+    {/if}
+
+    {#if forecast}
+      <div class="forecast">
+        <h3 class="sub-title">Coming days</h3>
+        {#if forecastSummary}<p class="text">{forecastSummary}</p>{/if}
+        <ol class="days" style="--n: {forecastDays.length}">
+          {#each forecastDays as d (d.date ?? 'next24h')}
+            {@const day = d.date ? sgtWeekday(d.date) : next24hLabel(forecast.next24h!)}
+            <li class="day" aria-label="{day}: {windsPhrase(forecastName(d.wind))}">
+              <span class="day-name" aria-hidden="true">{d.date ? day.slice(0, 3) : day}</span>
+              <span class="mini" aria-hidden="true">
+                {#if d.wind.from != null}
+                  {@render pointer('mini-arrow', d.wind.from)}
+                {:else}
+                  <span class="calm small"></span>
+                {/if}
+              </span>
+              <span class="day-code" aria-hidden="true">{d.wind.from == null ? 'Varies' : d.wind.code}</span>
+            </li>
+          {/each}
+        </ol>
+        {#if forecastSmoke}<p class="text">{forecastSmoke}</p>{/if}
+        <p class="note">
+          NEA forecast · issued {timeAgo(forecast.issuedAt, result!.serverTime)}{#if forecastStale}{' · '}<span class="stale-note"><span class="status-dot stale" aria-hidden="true"></span>May be out of date</span>{/if}
+        </p>
       </div>
     {/if}
-
-    {#if weather.rain}
-      <p class="text rain">
-        {#if !weather.rain.raining.length}
-          No rain anywhere right now.
-        {:else}
-          {weather.rain.raining.length === REGIONS.length
-            ? 'Raining now across the island.'
-            : `Raining now in the ${listFmt.format(weather.rain.raining.map((id) => REGION_NAMES[id]))}.`}
-          Rain helps wash haze out of the air.
-        {/if}
-      </p>
-    {:else}
-      <p class="note rain">NEA’s rain gauges aren’t reporting right now.</p>
-    {/if}
-    {#if !wind}
-      <p class="note">NEA’s wind stations aren’t reporting right now.</p>
-    {/if}
-
-    <p class="note meta">
-      NEA weather stations · {timeAgo(weather.takenAt, result!.serverTime)}{#if stale}{' · '}<span class="stale-note"><span class="status-dot stale" aria-hidden="true"></span>May be out of date</span>{/if}
-    </p>
-  {/if}
-
-  {#if forecast && forecastDays.length}
-    <div class="forecast">
-      <h3 class="sub-title">Coming days</h3>
-      {#if forecastSummary}<p class="text">{forecastSummary}</p>{/if}
-      <ol class="days" style="--n: {forecastDays.length}">
-        {#each forecastDays as d (d.date ?? 'today')}
-          <li class="day" aria-label="{dayLong(d.date)}: {forecastName(d.wind) === 'variable' ? 'variable winds' : `from the ${forecastName(d.wind)}`}">
-            <span class="day-name" aria-hidden="true">{dayShort(d.date)}</span>
-            <span class="mini" aria-hidden="true">
-              {#if d.wind.from != null}
-                <svg class="mini-arrow" viewBox="0 0 24 24" style="--deg: {d.wind.from + 180}deg">
-                  <path d="M12 3 L18 15 L12 12.5 L6 15 Z" />
-                </svg>
-              {:else}
-                <span class="calm small"></span>
-              {/if}
-            </span>
-            <span class="day-code" aria-hidden="true">{d.wind.from == null ? 'Varies' : d.wind.code}</span>
-          </li>
-        {/each}
-      </ol>
-      {#if forecastSmoke}<p class="text">{forecastSmoke}</p>{/if}
-      <p class="note">
-        NEA forecast · issued {timeAgo(forecast.issuedAt, result!.serverTime)}{#if forecastStale}{' · '}<span class="stale-note"><span class="status-dot stale" aria-hidden="true"></span>May be out of date</span>{/if}
-      </p>
-    </div>
-  {/if}
   {/if}
 </section>
 

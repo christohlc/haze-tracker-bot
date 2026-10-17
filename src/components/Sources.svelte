@@ -11,7 +11,8 @@
     nea_outlook: { name: 'NEA haze update', role: 'NEA’s 24-hr PSI forecast, during haze episodes' },
     ...Object.fromEntries(Object.entries(PUBLISHERS).map(([id, p]) => [`news_${id}`, { name: p.name, role: 'Haze headlines' }])),
     nea_weather: { name: 'NEA weather stations', role: 'Wind and rain' },
-    nea_forecast: { name: 'NEA weather forecast', role: 'Wind forecast for today and the next 4 days' },
+    nea_forecast24h: { name: 'NEA 24-hour forecast', role: 'Today’s wind forecast' },
+    nea_forecast4day: { name: 'NEA 4-day outlook', role: 'Wind forecast for the next 4 days' },
     lta_cameras: { name: 'LTA traffic cameras', role: 'Live views from Woodlands, Tuas and Sentosa' },
   };
   // Feeds we no longer use keep their old rows in the database.
