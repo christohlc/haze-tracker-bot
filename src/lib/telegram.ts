@@ -158,7 +158,7 @@ export function callEndpoint<T>(name: string, input: Record<string, unknown> = {
       input,
       (err: { message?: string; parameters?: { code?: string } } | null, result: T) =>
         err
-          ? reject(new EndpointCallError(err.message ?? 'Request failed', err.parameters?.code ?? null))
+          ? reject(new EndpointCallError(err.message ?? 'Something went wrong.', err.parameters?.code ?? null))
           : resolve(result),
     );
   });

@@ -22,6 +22,9 @@ const PSI_RANK = {
 /** NEA's 1-hour PM2.5 bands as a rank; NEA gives one piece of advice per band for everyone. */
 const PM25_RANK = { I: 0, II: 1, III: 3, IV: 4 };
 
+/** The first rank whose 😷 line mentions an N95: where the Mini App's mask and window tips start. */
+export const N95_FROM_RANK = 2;
+
 /** One entry per rank. `mask` is the short form for the hero and the 😷 line in bot messages
     ("Mask up." in docs/design.md), so the headline and the verdict can never disagree. */
 const VERDICT = [

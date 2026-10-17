@@ -56,8 +56,7 @@
   </div>
 
   <p class="note foot">
-    Indoors is assumed to have about 40% of outdoor PM2.5 (a home with windows mostly closed), so 0% outdoors lowers
-    the count but doesn’t reach zero.
+    Assumes indoor air has 40% of outdoor PM2.5, so 0% outdoors still counts some.
   </p>
 </section>
 

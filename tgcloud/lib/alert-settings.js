@@ -15,6 +15,9 @@ export const QUIET_UNTIL = 7;
 /** "11 pm–7 am SGT" */
 export const QUIET_HOURS = `${hourLabel(QUIET_FROM)}–${hourLabel(QUIET_UNTIL)} SGT`;
 
+/** What breaking news covers, for the bot's settings and the Mini App's. */
+export const BREAKING_WHAT = 'School closures, events called off, official 24-hr PSI Very unhealthy or worse';
+
 /** The lowest band a chat can ask band alerts to start from; null is every band. */
 export const ALERT_LEVELS = /** @type {const} */ (['unhealthy', 'very_unhealthy']);
 
@@ -56,17 +59,19 @@ export const regionOrNull = (v) => (REGIONS.some((r) => r.id === v) ? /** @type 
 export function renderAlertSettings(sub) {
   if (!sub) {
     return {
-      text: '<b>Haze alerts are off.</b>\nTap below to get a message when the haze band changes, and breaking haze news such as school closures.',
+      text: '<b>Haze alerts are off.</b>\nGet a message when the haze band changes or haze news breaks.',
       reply_markup: { inline_keyboard: [[{ text: '🔔 Turn on alerts', callback_data: 'a:band' }]] },
     };
   }
   const text = [
     '<b>Haze alerts</b>',
-    `Band changes: <b>${sub.bandAlerts ? 'on' : 'off'}</b>. A message when the 3-hour PSI in <b>${areaLabel(sub.region)}</b> moves into another band (rises straight away, drops after 3 hours).`,
-    ...(sub.bandAlerts ? [`Alert me from: <b>${levelLabel(sub.minBand)}</b>${levelOrNull(sub.minBand) ? ', and when it drops back below' : ''}`] : []),
-    `Breaking news: <b>${sub.breakingAlerts ? 'on' : 'off'}</b>. School closures, halted outdoor activities, and the official 24-hour PSI turning Very unhealthy or Hazardous.`,
+    `Band changes: <b>${sub.bandAlerts ? 'on' : 'off'}</b> · ${areaLabel(sub.region)}`,
+    ...(sub.bandAlerts ? [`From: <b>${levelLabel(sub.minBand)}</b>${levelOrNull(sub.minBand) ? ' (and when it drops back)' : ''}`] : []),
+    `Breaking news: <b>${sub.breakingAlerts ? 'on' : 'off'}</b> · ${BREAKING_WHAT}`,
     `Daily update: <b>${sub.dailyHour == null ? 'off' : `${hourLabel(sub.dailyHour)} SGT`}</b>`,
-    `Quiet at night: <b>${sub.quietNights ? 'on' : 'off'}</b>. Alerts ${QUIET_HOURS} arrive without sound.`,
+    `Quiet at night: <b>${sub.quietNights ? 'on' : 'off'}</b> · ${QUIET_HOURS}, no sound`,
+    '',
+    '<i>Band = our 3-hr PSI. Drops wait 3 hours.</i>',
   ].join('\n');
   /** @param {boolean} on @param {string} label */
   const mark = (on, label) => `${on ? '● ' : ''}${label}`;

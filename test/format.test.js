@@ -1,12 +1,14 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { formatHaze, formatHazeCaption, sgtTime } from '../tgcloud/lib/format.js';
+import { formatHaze, formatHazeCaption } from '../tgcloud/lib/format.js';
+import { sgtHour } from '../tgcloud/lib/time.js';
 import { AWAITED_EVERY_S, buildSnapshot, neaRefetchEveryS, REVISED_EVERY_S } from '../tgcloud/lib/snapshot.js';
 
-test('sgtTime', () => {
-  assert.equal(sgtTime('2026-10-16T13:00:00+08:00'), '1:00 pm');
-  assert.equal(sgtTime('2026-10-16T00:00:00+08:00'), '12:00 am');
-  assert.equal(sgtTime('2026-10-16T12:00:00+08:00'), '12:00 pm');
+test('sgtHour', () => {
+  assert.equal(sgtHour('2026-10-16T13:00:00+08:00'), '1 pm');
+  assert.equal(sgtHour('2026-10-16T13:30:00+08:00'), '1:30 pm');
+  assert.equal(sgtHour('2026-10-16T00:00:00+08:00'), '12 am');
+  assert.equal(sgtHour('2026-10-16T12:00:00+08:00'), '12 pm');
 });
 
 test('buildSnapshot + formatHaze on the site example', () => {
@@ -25,7 +27,7 @@ test('buildSnapshot + formatHaze on the site example', () => {
   assert.equal(snap.worst.psi24h.value, 226);
   const html = formatHaze(snap);
   assert.match(html, /<pre>Region/);
-  assert.match(html, /11:00 pm SGT/);
+  assert.match(html, /11 pm SGT/);
 });
 
 test('the 24-hour PM2.5 average is NEA’s when its PSI item is for the latest hour, ours otherwise', () => {

@@ -42,7 +42,7 @@
     try {
       result = await (pending ?? loadWeather());
     } catch {
-      error = 'Couldn’t load wind and rain. Check your connection and try again.';
+      error = 'Couldn’t load wind and rain. Check your connection.';
     }
   }
 

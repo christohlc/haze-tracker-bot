@@ -33,7 +33,7 @@
 
 <section class="card" aria-labelledby="regions-title">
   <h2 id="regions-title" class="section-title">Around the island</h2>
-  <p class="note">{PERIODS[period].adj} PSI by NEA region. PM2.5 is the latest hourly reading. Tap a region for its past week.</p>
+  <p class="note">{PERIODS[period].adj} PSI. PM2.5 is the latest hour. Tap a region for its past week.</p>
 
   <ul>
     {#each rows as r (r.id)}

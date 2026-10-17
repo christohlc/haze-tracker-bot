@@ -7,6 +7,7 @@
 
 import { REGIONS } from '../config.js';
 import { PSI_BANDS, psiBand } from '../psi.js';
+import { STALE_NOTE } from '../snapshot.js';
 import { LOGO, MAP_MASK } from './art.js';
 import { sgtDayMonth, sgtHour } from '../time.js';
 import { CARD_H, CARD_W, project } from './geometry.js';
@@ -178,9 +179,8 @@ export function drawSummaryCard(snap) {
   } else c.text('No reading yet', 56, 236, 'title', sky.ink);
   if (worst) c.text(`24-hr PSI up to ${fmt(worst.value)} in ${worst.name}`, 56, 296, 'subtitle', sky.ink);
   if (snap.stale) {
-    const note = 'NEA hasn’t updated recently, so this may be out of date';
-    c.fillRoundRect(56, 314, Math.ceil(c.measure(note, 'body')) + 36, 44, 22, C.stale);
-    c.text(note, 74, 336 + c.capHeight('body') / 2, 'body', C.ink);
+    c.fillRoundRect(56, 314, Math.ceil(c.measure(STALE_NOTE, 'body')) + 36, 44, 22, C.stale);
+    c.text(STALE_NOTE, 74, 336 + c.capHeight('body') / 2, 'body', C.ink);
   }
 
   const byId = new Map(snap.regions.map((/** @type {any} */ r) => [r.id, r]));

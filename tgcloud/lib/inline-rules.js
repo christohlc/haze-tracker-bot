@@ -35,7 +35,7 @@ export function inlineResults(snap, { fileId, region, reply_markup }) {
     type: 'article',
     id: `text:${region ?? 'all'}:${snap.asOf}`,
     title: psi == null ? 'Singapore haze: no reading yet' : `PSI ${psi} · ${band?.label ?? ''}`,
-    description: `Our 3-hour PSI, ${where}. Tap to send the haze summary.`,
+    description: `Our 3-hr PSI, ${where}. Tap to send.`,
     input_message_content: { message_text: formatHaze(snap, null, { region }), parse_mode: 'HTML', link_preview_options: { is_disabled: true } },
     ...extra,
   });

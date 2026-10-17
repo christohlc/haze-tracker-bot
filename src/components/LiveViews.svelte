@@ -22,7 +22,7 @@
       broken = {};
     } catch {
       // Our own words, not the transport's: a failed call here only ever means no pictures.
-      error = 'Couldn’t load the camera pictures. Check your connection and try again.';
+      error = 'Couldn’t load the camera pictures. Check your connection.';
     }
   }
 
@@ -42,8 +42,7 @@
 <section class="card" aria-labelledby="views-title">
   <h2 id="views-title" class="section-title">Live views</h2>
   <p class="note">
-    LTA’s road cameras at Woodlands, Tuas and Sentosa, the only ones still running. On hazy days the view looks grey
-    and washed out.
+    LTA road cameras at Woodlands, Tuas and Sentosa. Haze turns the view grey.
   </p>
 
   {#if error}

@@ -15,10 +15,9 @@ import { getSnapshot } from '../lib/refresh.js';
 import { deleteSubscriber, getSubscriber, moveSubscriber, saveSubscriber } from '../lib/subscriptions.js';
 
 /** Copy that depends on whether the chat is a group. */
-const PRIVATE = { will: 'You’ll', whose: 'your', note: 'if you subscribe, the bot keeps your chat ID and alert settings, nothing else.' };
+const PRIVATE = { whose: 'Your', note: 'if you subscribe, the bot keeps your chat ID and alert settings, nothing else.' };
 const GROUP = {
-  will: 'This group will',
-  whose: 'this group’s',
+  whose: 'This group’s',
   note: 'only admins can change a group’s alerts, which go to the topic /subscribe was sent in. The bot keeps the group’s chat ID and alert settings, nothing else.',
 };
 
@@ -63,7 +62,7 @@ export default async function (message) {
     case 'forecast': {
       const refreshed = getSnapshot();
       const [snap, ahead, reply_markup] = await Promise.all([refreshed, getAhead(refreshed), dashboardButton(message.chat.id)]);
-      if (!ahead.outlook && !ahead.range) return reply(message, 'Nothing to show yet. NEA issues a 24-hr PSI forecast only during haze episodes, and our range for the next few hours needs three days of recent readings.');
+      if (!ahead.outlook && !ahead.range) return reply(message, 'No forecast yet. NEA issues one only during haze episodes, and ours needs 3 days of readings.');
       return answer(message, (to) => sendForecastCardOrText(to, snap, ahead, { ...forecastMessage(ahead), reply_markup }));
     }
     case 'cigs': {
@@ -85,12 +84,12 @@ export default async function (message) {
       if (!(await canManageAlerts(message))) return answer(message, (to) => sendHtml(to, ADMINS_ONLY), true);
       if (cmd !== 'subscribe') {
         await deleteSubscriber(message.chat.id);
-        return reply(message, `🔕 Alerts are off, and ${copy.whose} chat ID and alert settings are deleted. Send /subscribe to turn them back on.`);
+        return reply(message, `🔕 Alerts off. ${copy.whose} chat ID and settings are deleted. /subscribe turns them back on.`);
       }
       const existing = await getSubscriber(message.chat.id);
       const { sub } = await saveSubscriber(message.chat.id, { bandAlerts: true, dailyHour: existing?.dailyHour ?? null, threadId: topicOf(message) });
       const view = renderAlertSettings(sub);
-      return reply(message, `✅ ${copy.will} get a message when the haze band changes${sub.breakingAlerts ? ', and breaking haze news' : ''}.\n\n${view.text}`, view.reply_markup);
+      return reply(message, `✅ Alerts on.\n\n${view.text}`, view.reply_markup);
     }
     default:
       if (!group) return reply(message, help(copy));

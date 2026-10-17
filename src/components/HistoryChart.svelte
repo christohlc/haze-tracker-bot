@@ -112,8 +112,7 @@
 <section class="card" aria-labelledby="{uid}-title">
   <h2 id="{uid}-title" class="section-title">Past {span}</h2>
   <p class="note">
-    Rolling {winLabel} averages ending at each hour. The PSI view converts PM2.5 with NEA’s breakpoints, so its
-    24-hour line can differ slightly from the official PSI.
+    Rolling {winLabel} averages. PSI here is converted from PM2.5, so it can differ slightly from NEA’s.
   </p>
 
   <div class="controls">

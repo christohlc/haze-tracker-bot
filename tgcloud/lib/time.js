@@ -16,13 +16,13 @@ export const unixHour = (iso) => Math.floor(Date.parse(iso) / 3_600_000);
 /** unix seconds → "2026-10-16T13:00:00+08:00" (SGT). @param {number} sec */
 export const toSgtIso = (sec) => `${new Date(sec * 1000 + 8 * 3600_000).toISOString().slice(0, 19)}+08:00`;
 
-/** "2026-10-16T13:00:00+08:00" (already SGT) → "1 pm" / "1:30 pm"; `withMinutes` → "1:00 pm". @param {string} iso @param {boolean} [withMinutes] */
-export function sgtHour(iso, withMinutes = false) {
+/** "2026-10-16T13:00:00+08:00" (already SGT) → "1 pm" / "1:30 pm". @param {string} iso */
+export function sgtHour(iso) {
   const h = Number(iso.slice(11, 13));
   const m = iso.slice(14, 16);
   const h12 = h % 12 === 0 ? 12 : h % 12;
   const suffix = h < 12 ? 'am' : 'pm';
-  return withMinutes ? `${h12}:${m} ${suffix}` : `${h12}${m === '00' ? '' : `:${m}`} ${suffix}`;
+  return `${h12}${m === '00' ? '' : `:${m}`} ${suffix}`;
 }
 
 export const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
