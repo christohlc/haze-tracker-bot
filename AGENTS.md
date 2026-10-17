@@ -41,8 +41,9 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   `state('tick_heartbeat')` (`admin` `status` shows it as `lastTick`) and DMs the `ops_chat_id`
   setting about each feed in `source_status` that keeps failing (`failingSources` in
   `lib/ops-rules.js`: NEA after 2 h without a good fetch, news after 6 h, on-demand feeds as soon as
-  their latest fetch failed), at most once per feed per 6 h (claim `ops:<source>`, taken after the
-  send; on-demand feeds once per outage), then once when it works again (`state('ops_notified')`). The tick can't report its own absence, so the Worker
+  their latest fetch failed), again every 6 h while it keeps failing (on-demand feeds once per
+  outage), then once when it works again (`state('ops_notified')`, written after the send). The
+  tick can't report its own absence, so the Worker
   (`cron/worker.js`) DMs `OPS_CHAT_ID` when the last successful tick run is over 45 min old or the
   dispatch failed, only on the hour's first cron (it has no store), so at most hourly. Its secrets
   `TELEGRAM_BOT_TOKEN` / `OPS_CHAT_ID` are optional: without them it only dispatches. The Actions

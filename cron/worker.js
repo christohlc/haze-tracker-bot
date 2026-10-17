@@ -58,10 +58,9 @@ async function tickProblem(env, now, dispatchError) {
     const res = await fetch(LAST_SUCCESS_URL, { headers: githubHeaders(env.GITHUB_TOKEN) });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const run = (await res.json()).workflow_runs?.[0];
-    const at = run ? Date.parse(run.updated_at) : NaN;
-    if (!(now - at <= OVERDUE_MS)) {
-      problems.push(run ? `No successful tick for ${Math.round((now - at) / 60_000)} min (last: ${run.html_url})` : 'No successful tick run found');
-    }
+    const agoMs = run && now - Date.parse(run.updated_at);
+    if (!run) problems.push('No successful tick run found');
+    else if (agoMs > OVERDUE_MS) problems.push(`No successful tick for ${Math.round(agoMs / 60_000)} min (last: ${run.html_url})`);
   } catch (err) {
     console.error('last tick lookup failed', err.message); // a failed dispatch says enough already
   }

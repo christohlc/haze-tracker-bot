@@ -3,7 +3,7 @@
 
 import { toSgtIso } from './time.js';
 
-/** At most one DM per source in this many seconds (ops.js claims `ops:<source>`). */
+/** A source that keeps failing is DM'd again after this many seconds (ops.js). */
 export const OPS_REPEAT_S = 6 * 3600;
 
 // The tick fetches these itself, so one failed fetch is retried within minutes: they count as failing
@@ -23,8 +23,8 @@ function staleAfterS(source) {
 }
 
 /**
- * A feed fetched only when the Mini App asks (cachedFeed): its failure says nothing new until
- * someone asks again, so ops.js tells the operator once per outage, not every 6 hours.
+ * A feed fetched only when the Mini App asks (cachedFeed), which may not be asked for again for hours:
+ * its latest fetch failing is enough to count, and ops.js tells it once per outage.
  * @param {string} source
  */
 export const isOnDemand = (source) => staleAfterS(source) === null;
@@ -33,9 +33,7 @@ export const isOnDemand = (source) => staleAfterS(source) === null;
 const lastFetchFailed = (s) => (s.lastErrorAt ?? 0) > (s.lastOkAt ?? 0);
 
 /**
- * The sources whose latest fetch failed, and, for the ones the tick fetches, that have gone too long
- * without a good one. A feed fetched only when the Mini App asks (cachedFeed) may not be asked for
- * again for hours, so its latest fetch failing is enough.
+ * The sources whose latest fetch failed, and, unless on demand, that have gone too long without a good one.
  * @param {SourceStatus[]} statuses @param {number} now unix seconds @returns {SourceStatus[]}
  */
 export function failingSources(statuses, now) {
@@ -47,8 +45,8 @@ export function failingSources(statuses, now) {
 }
 
 /**
- * Of the sources the operator was told about, the ones whose latest fetch worked. A source with no
- * status row any more is in neither list: ops.js drops it.
+ * Of the sources the operator was told about, the ones whose latest fetch worked (ops.js drops
+ * those with no status row any more).
  * @param {SourceStatus[]} statuses @param {string[]} notified @returns {string[]}
  */
 export function recoveredSources(statuses, notified) {
