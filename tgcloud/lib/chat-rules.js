@@ -18,17 +18,17 @@ export const isGroupChat = (chatId) => chatId < 0;
  * the whole group gets.
  */
 export const COMMANDS = [
-  { command: 'haze', description: 'Current PSI with a regional picture', help: 'current PSI with a regional picture, plus advice', ephemeral: true },
+  { command: 'haze', description: 'Current PSI by region, plus what to do about it', help: 'current PSI with a regional picture, plus advice', ephemeral: true },
   {
     command: 'cigs',
-    description: 'Cigarette equivalent, e.g. /cigs east 30',
+    description: 'How many cigarettes the haze is worth, e.g. /cigs east 30',
     usage: '[region] [% outdoors]',
     help: 'cigarette equivalent, e.g. <code>/cigs east 30</code>',
     ephemeral: true,
   },
   { command: 'forecast', description: 'NEA’s forecast and the next few hours', help: 'NEA’s 24-hr PSI forecast during haze episodes, and the next few hours', ephemeral: true },
-  { command: 'subscribe', description: 'Alerts when the haze band changes', help: 'alerts when the haze band changes, and breaking haze news', ephemeral: false },
-  { command: 'alerts', description: 'Change alerts, breaking news or a daily update', help: 'change alerts, breaking news or a daily update', ephemeral: true },
+  { command: 'subscribe', description: 'Get pinged when the haze band changes', help: 'alerts when the haze band changes, and breaking haze news', ephemeral: false },
+  { command: 'alerts', description: 'Tweak alerts or add a daily update', help: 'change alerts, breaking news or a daily update', ephemeral: true },
   { command: 'unsubscribe', description: 'Stop all alerts', help: 'stop all alerts', ephemeral: false },
   { command: 'help', description: 'What the bot can do', help: null, ephemeral: true },
 ];

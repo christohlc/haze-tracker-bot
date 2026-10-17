@@ -138,10 +138,11 @@ export default async function (input, ctx) {
       return backfill(days);
     }
     case 'commands': {
-      // Private chats: the plain list. Groups: is_ephemeral, so the command and the reply are
-      // seen only by the sender and the bot.
+      // Default (BotFather's list, shown where no scoped list applies) and private chats: the plain
+      // list. Groups: is_ephemeral, so the command and the reply are seen only by the sender and the bot.
       /** @param {boolean} group */
       const commands = (group) => COMMANDS.map(({ command, description, ephemeral }) => ({ command, description, ...(group && ephemeral && { is_ephemeral: true }) }));
+      await api.setMyCommands({ commands: commands(false) });
       await api.setMyCommands({ commands: commands(false), scope: { type: 'all_private_chats' } });
       await api.setMyCommands({ commands: commands(true), scope: { type: 'all_group_chats' } });
       return { ok: true };
