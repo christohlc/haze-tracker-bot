@@ -26,7 +26,7 @@ export const photoFileId = (msg) => msg?.photo?.at(-1)?.file_id ?? null;
  * @param {string} stateKey @param {string} filename
  */
 function cardKind(stateKey, filename) {
-  /** @type {{ key: string, fileId?: string, png?: Uint8Array, failed?: boolean } | null} */
+  /** @type {{ key: string, fileId?: string, png?: Uint8Array, failed?: boolean, reading?: Promise<void> } | null} */
   let card = null;
 
   /**
@@ -37,8 +37,13 @@ function cardKind(stateKey, filename) {
     if (card?.key !== key) card = { key };
     const c = card;
     if (!c.fileId && !c.png && !c.failed) {
-      const saved = (await getState(stateKey))?.value;
-      if (saved?.key === key && saved.fileId) c.fileId ??= saved.fileId;
+      // Sends racing in this isolate share one read.
+      c.reading ??= getState(stateKey)
+        .then((s) => {
+          if (s?.value?.key === key && s.value.fileId) c.fileId = s.value.fileId;
+        })
+        .finally(() => delete c.reading);
+      await c.reading;
     }
     return c;
   }
@@ -49,7 +54,14 @@ function cardKind(stateKey, filename) {
    * @returns {Promise<any>} the sent Message
    */
   async function send(to, key, draw, caption, reply_markup) {
-    const c = await load(key);
+    return sendLoaded(await load(key), to, draw, caption, reply_markup);
+  }
+
+  /**
+   * send() with the card already loaded.
+   * @param {NonNullable<typeof card>} c @param {Target} to @param {() => Uint8Array} draw @param {string} caption @param {any} [reply_markup]
+   */
+  async function sendLoaded(c, to, draw, caption, reply_markup) {
     if (!c.fileId && !c.png) {
       try {
         c.png = draw();
@@ -76,8 +88,9 @@ function cardKind(stateKey, filename) {
 
   /** @param {Target} to @param {string} key @param {() => Uint8Array} draw @param {CardMessage} message */
   async function sendOrText(to, key, draw, { caption, text, reply_markup }) {
-    if ((await load(key)).failed) return sendHtml(to, text, reply_markup);
-    return orText(() => send(to, key, draw, caption, reply_markup), to, text, reply_markup);
+    const c = await load(key);
+    if (c.failed) return sendHtml(to, text, reply_markup);
+    return orText(() => sendLoaded(c, to, draw, caption, reply_markup), to, text, reply_markup);
   }
 
   return { cachedId: async (/** @type {string} */ key) => (await load(key)).fileId ?? null, send, sendOrText };

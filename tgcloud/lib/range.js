@@ -37,8 +37,8 @@ export const nextHours = (rows, nowMs = Date.now()) => currentRange(latestRange(
 export const currentRange = (latest, nowMs = Date.now()) => (latest && nowMs / 3_600_000 - latest.hour <= STALE_H ? latest.range : null);
 
 /**
- * The range from the latest reading, worked out once per NEA hour and stored (currentRange checks
- * its age at read time), or null without enough readings. Moves are ratios of PM2.5, so a quiet
+ * The range from the latest reading, however old (currentRange checks its age), or null without
+ * enough readings. Moves are ratios of PM2.5, so a quiet
  * day at 30 and a hazy one at 150 widen in proportion.
  * @param {Array<{ timestamp: string, readings: Record<string, number> }>} rows oldest first
  * @returns {LatestRange | null}
