@@ -83,11 +83,11 @@ or, outside Telegram, from the OS. A new colour token needs both a light and a d
   The tab bar takes arrow keys, Home and End. Switching keeps the
   header scrolled away if it already was. Away from Now, Telegram’s back arrow returns to Now.
 - Tap targets are at least 44px. Segmented controls switch on `pointerdown` for a mouse, and on
-  lift for a finger, so a scroll that starts on one doesn't change it; `:active` gives the press
+  lift for a finger, so a scroll that starts on one doesn’t change it; `:active` gives the press
   feedback straight away.
 - On/off settings are drawn switches, not checkboxes. Saving one shows the change at once and undoes
-  it if the save fails; the controls lock while it saves but don't dim. “Stop all alerts” asks first
-  (Telegram's own confirm dialog).
+  it if the save fails; the controls lock while it saves but don’t dim. “Stop all alerts” asks first
+  (Telegram’s own confirm dialog).
 
 ## The hero sky
 

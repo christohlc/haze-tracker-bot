@@ -29,7 +29,7 @@
   <h2 id="ahead-title" class="section-title">What’s ahead</h2>
 
   {#if outlook}
-    <h3 class="sub">{day[0].toUpperCase()}{day.slice(1)} · NEA forecast</h3>
+    <h3 class="subhead">{day[0].toUpperCase()}{day.slice(1)} · NEA forecast</h3>
     <p class="bands">
       <BandPill bandId={outlook.from} showLabel size="lg" />
       {#if outlook.to !== outlook.from}
@@ -44,7 +44,7 @@
   {/if}
 
   {#if range}
-    <h3 class="sub">Next few hours</h3>
+    <h3 class="subhead">Next few hours</h3>
     <p class="note">
       Our calculation, not official. The island-wide 1-hour PSI is <span class="num">{range.now}</span> now; each range
       is how far it moved over the same hours in the past two weeks.
@@ -76,10 +76,10 @@
   p {
     margin: 0;
   }
-  .sub {
+  .subhead {
     margin-top: 12px;
   }
-  .sub + .note {
+  .subhead + .note {
     margin-top: 2px;
   }
   .bands {

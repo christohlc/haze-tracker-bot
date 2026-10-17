@@ -29,9 +29,6 @@
     selectionHaptic();
   }
 
-  // A mouse switches on press. A finger switches on lift (click), so a scroll that starts on
-  // the control doesn't change it; :active gives the press feedback straight away.
-
   // One tab stop for the group; arrow keys, Home and End move between options.
   function onKey(e: KeyboardEvent) {
     const last = options.length - 1;
@@ -52,6 +49,7 @@
   <span class="thumb" style:transform="translateX({index * 100}%)" aria-hidden="true"></span>
   {#each options as o, i (o.value)}
     {@const on = o.value === value}
+    <!-- A mouse switches on press; a finger on lift, so a scroll that starts here doesn’t switch. -->
     <button
       bind:this={buttons[i]}
       type="button"

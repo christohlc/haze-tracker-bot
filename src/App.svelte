@@ -242,7 +242,7 @@
     background: var(--card);
   }
   .sk.tall {
-    height: 360px;
+    height: 300px; /* plus the card padding: about the hero’s height on a phone */
   }
   .skeleton .tabs-sk {
     height: 48px;

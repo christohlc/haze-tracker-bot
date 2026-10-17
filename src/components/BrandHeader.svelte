@@ -15,7 +15,7 @@
     <h1><button type="button" class="name" onclick={onsecret}>I’m going hazelnuts!</button></h1>
     <p class="status">
       {#if snapshot}
-        <span class="dot" class:stale={snapshot.stale} aria-hidden="true"></span>
+        <span class="status-dot" class:stale={snapshot.stale} aria-hidden="true"></span>
         NEA · {snapshot.stale ? 'last reading' : 'updated'} {sgtHour(snapshot.asOf, true)} SGT
       {:else}
         Haze in Singapore, hour by hour
@@ -84,18 +84,6 @@
     margin: 2px 0 0;
     font-size: 0.8125rem;
     color: var(--muted);
-  }
-  .dot {
-    --c: var(--status-good);
-    flex: none;
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: var(--c);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 22%, transparent);
-  }
-  .dot.stale {
-    --c: var(--band-unhealthy);
   }
   @media (prefers-reduced-motion: reduce) {
     .logo,

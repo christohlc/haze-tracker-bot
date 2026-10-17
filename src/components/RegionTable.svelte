@@ -28,7 +28,7 @@
         <span class="track" aria-hidden="true">
           {#if r.v != null}
             <!-- Clipped rather than scaled, so the rounded end keeps its shape at any length. -->
-            <span class="bar" style:--fill="{Math.min(1, r.v / max) * 100}%" style:background="var(--band-{r.band?.id})"></span>
+            <span class="bar" style:--fill="{(r.v / max) * 100}%" style:background="var(--band-{r.band?.id})"></span>
           {/if}
         </span>
         <span class="value num"><span class="visually-hidden">{PERIODS[period].adj} PSI </span>{fmt(r.v)}</span>
@@ -72,7 +72,6 @@
     height: 100%;
     border-radius: inherit;
     clip-path: inset(0 calc(100% - var(--fill)) 0 0 round 999px);
-    /* on-screen movement when the period changes */
     transition: clip-path 220ms var(--ease-in-out);
   }
   .value {

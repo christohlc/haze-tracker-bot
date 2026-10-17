@@ -50,12 +50,14 @@ export function notifyHaptic(type: 'success' | 'error' | 'warning') {
   tg?.HapticFeedback?.notificationOccurred?.(type);
 }
 
-/** Ask a yes/no question: Telegram's native dialog (Bot API 6.2+), the browser's outside it. */
+/**
+ * Ask a yes/no question: Telegram's own dialog (Bot API 6.2+), the browser's outside Telegram.
+ * Older Telegram clients may block window.confirm, so there the answer is simply yes.
+ */
 export function confirmAction(message: string): Promise<boolean> {
-  if (inTelegram && tg.showConfirm && tg.isVersionAtLeast?.('6.2')) {
-    return new Promise((resolve) => tg.showConfirm(message, (ok: boolean) => resolve(ok)));
-  }
-  return Promise.resolve(window.confirm(message));
+  if (!inTelegram) return Promise.resolve(window.confirm(message));
+  if (!tg.isVersionAtLeast?.('6.2')) return Promise.resolve(true);
+  return new Promise((resolve) => tg.showConfirm(message, (ok: boolean) => resolve(ok)));
 }
 
 /** Show Telegram's bottom MainButton. Returns a cleanup that hides it and drops the handler. */

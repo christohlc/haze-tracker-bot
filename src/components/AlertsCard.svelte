@@ -29,13 +29,14 @@
 
   $effect(() => setMainButtonBusy(busy));
 
+  // A change shows straight away (all off switches the card to its off state) and is undone if
+  // the save fails. While it saves the controls are locked but not dimmed.
   async function save(next: AlertSettings) {
     if (busy) return;
     busy = true;
     error = null;
-    // A change that keeps alerts on shows straight away and is undone if the save fails.
     const prev = settings;
-    if (settings && isActive(next)) settings = next;
+    settings = isActive(next) ? next : null;
     try {
       settings = await saveAlerts(next);
       notifyHaptic('success');
@@ -63,14 +64,32 @@
     save({ ...settings, dailyHour: h });
   }
 
+  let confirming = false;
   async function stopAll() {
-    if (busy || !(await confirmAction('Stop all haze alerts? You can turn them on again any time.'))) return;
-    save({ bandAlerts: false, dailyHour: null, breakingAlerts: false });
+    if (busy || confirming) return;
+    confirming = true;
+    const ok = await confirmAction('Stop all haze alerts? You can turn them on again any time.');
+    confirming = false;
+    if (ok) save({ bandAlerts: false, dailyHour: null, breakingAlerts: false });
   }
 </script>
 
+{#snippet toggle(key: 'bandAlerts' | 'breakingAlerts', title: string, note: string)}
+  <label class="row">
+    <span>
+      <span class="row-title">{title}</span>
+      <span class="note">{note}</span>
+    </span>
+    <input
+      type="checkbox"
+      role="switch"
+      checked={settings![key]}
+      onchange={(e) => save({ ...settings!, [key]: e.currentTarget.checked })}
+    />
+  </label>
+{/snippet}
+
 <section class="card alerts" aria-labelledby="alerts-title" aria-busy={busy}>
-  <!-- While a save is in flight the controls are locked (busy) but not dimmed: the change already shows. -->
   <div class="head">
     <span class="bell" class:on={settings} aria-hidden="true">
       <svg viewBox="0 0 24 24" width="20" height="20">
@@ -99,36 +118,10 @@
   {/if}
 
   {#if settings}
-    <div class="rows">
-      <label class="row">
-        <span>
-          <span class="row-title">Band changes</span>
-          <span class="note">When the 3-hour PSI moves into another band</span>
-        </span>
-        <input
-          type="checkbox"
-          role="switch"
-          checked={settings.bandAlerts}
-          aria-disabled={busy}
-          onclick={(e) => busy && e.preventDefault()}
-          onchange={(e) => save({ ...settings!, bandAlerts: e.currentTarget.checked })}
-        />
-      </label>
-
-      <label class="row">
-        <span>
-          <span class="row-title">Breaking news</span>
-          <span class="note">School closures, events called off, official 24-hour PSI over 200</span>
-        </span>
-        <input
-          type="checkbox"
-          role="switch"
-          checked={settings.breakingAlerts}
-          aria-disabled={busy}
-          onclick={(e) => busy && e.preventDefault()}
-          onchange={(e) => save({ ...settings!, breakingAlerts: e.currentTarget.checked })}
-        />
-      </label>
+    <!-- One guard for the whole list: while a save is in flight, taps don't change anything. -->
+    <div class="rows" onclickcapture={(e) => busy && e.preventDefault()}>
+      {@render toggle('bandAlerts', 'Band changes', 'When the 3-hour PSI moves into another band')}
+      {@render toggle('breakingAlerts', 'Breaking news', 'School closures, events called off, official 24-hour PSI over 200')}
 
       <div class="row daily">
         <span class="row-title" id="daily-label">Daily update (SGT)</span>
@@ -139,7 +132,6 @@
               role="radio"
               aria-checked={settings.dailyHour === h}
               class:on={settings.dailyHour === h}
-              aria-disabled={busy}
               onclick={() => pickDaily(h)}
             >
               {h == null ? 'Off' : hourLabel(h)}
@@ -149,7 +141,7 @@
       </div>
     </div>
 
-    <button type="button" class="stop" aria-disabled={busy} onclick={stopAll}>
+    <button type="button" class="stop" onclick={stopAll}>
       Stop all alerts
     </button>
   {/if}
@@ -191,10 +183,6 @@
   }
   button:active:not(:disabled) {
     transform: scale(0.97);
-  }
-  button:disabled {
-    opacity: 0.6;
-    cursor: default;
   }
   .rows {
     display: grid;
@@ -239,7 +227,7 @@
     appearance: none;
     -webkit-appearance: none;
     cursor: pointer;
-    transition: background-color 200ms ease;
+    transition: background-color 200ms var(--ease-in-out);
   }
   input[type='checkbox']::before {
     content: '';
@@ -267,7 +255,8 @@
   /* One even row, so “Off” is never left alone on a second line. */
   .chips {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
     gap: 6px;
   }
   .chips button {

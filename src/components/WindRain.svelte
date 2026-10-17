@@ -91,7 +91,7 @@
     {/if}
 
     <p class="note meta">
-      NEA weather stations · {timeAgo(weather.takenAt, result.serverTime)}{#if stale}{' · '}<span class="stale">May be out of date</span>{/if}
+      NEA weather stations · {timeAgo(weather.takenAt, result.serverTime)}{#if stale}{' · '}<span class="stale-note"><span class="status-dot stale" aria-hidden="true"></span>May be out of date</span>{/if}
     </p>
   {/if}
 </section>
@@ -164,21 +164,6 @@
   }
   .meta {
     margin-top: 10px;
-  }
-  /* A warning, not an error: the header's amber stale dot, and the phrase kept on one line. */
-  .stale {
-    color: var(--ink-2);
-    white-space: nowrap;
-  }
-  .stale::before {
-    content: '';
-    display: inline-block;
-    width: 7px;
-    height: 7px;
-    margin-right: 5px;
-    vertical-align: 0.05em;
-    border-radius: 50%;
-    background: var(--band-unhealthy);
   }
   .empty {
     margin-top: 12px;

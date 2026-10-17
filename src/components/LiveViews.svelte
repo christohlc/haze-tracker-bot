@@ -80,7 +80,7 @@
             </div>
             <span class="name">{cam.name}</span>
             <span class="note meta">
-              {cam.region ? `${REGION_NAMES[cam.region]} · ` : ''}{timeAgo(cam.takenAt, result.serverTime)}{#if stale}{' · '}<span class="stale">May be out of date</span>{/if}
+              {cam.region ? `${REGION_NAMES[cam.region]} · ` : ''}{timeAgo(cam.takenAt, result.serverTime)}{#if stale}{' · '}<span class="stale-note"><span class="status-dot stale" aria-hidden="true"></span>May be out of date</span>{/if}
             </span>
           </a>
         </li>
@@ -88,7 +88,7 @@
     </ul>
   {/if}
 
-  <h3 class="sub">From above</h3>
+  <h3 class="subhead">From above</h3>
   <ul class="links">
     {#each SATELLITE as s (s.link)}
       <li>
@@ -181,21 +181,6 @@
     -webkit-line-clamp: 2;
     line-clamp: 2;
     overflow: hidden;
-  }
-  /* A warning, not an error: the header's amber stale dot, and the phrase kept on one line. */
-  .stale {
-    color: var(--ink-2);
-    white-space: nowrap;
-  }
-  .stale::before {
-    content: '';
-    display: inline-block;
-    width: 7px;
-    height: 7px;
-    margin-right: 5px;
-    vertical-align: 0.05em;
-    border-radius: 50%;
-    background: var(--band-unhealthy);
   }
   .links li + li {
     border-top: 1px solid var(--hairline);

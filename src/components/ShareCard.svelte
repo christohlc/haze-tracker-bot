@@ -13,7 +13,7 @@
   let shareError = $state<string | null>(null);
   let attempt = $state(0); // bumped by Try again to redraw
   let expanded = $state(false);
-  // With no readings at all the picture is only dashes, so there's nothing worth sending.
+  // With no readings at all the picture is only dashes, so there’s nothing worth sending.
   const empty = $derived(!snapshot.worst.psi24h && !snapshot.worst.pm25);
 
   const DONE: Record<Exclude<ShareResult, 'cancelled'>, string> = {
@@ -26,6 +26,7 @@
   // the readings change. The old picture stays up until the new one is ready.
   $effect(() => {
     void attempt;
+    if (empty) return;
     const snap = snapshot;
     let cancelled = false;
     const draw = () =>

@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { HourRow, RegionId, Snapshot } from '../lib/api';
   import { fmt, sgtHour } from '../lib/format';
-  import { niceMax, niceTicks, rollingSeries, type Scale, type Window } from '../lib/series';
+  import { niceTicks, rollingSeries, type Scale, type Window } from '../lib/series';
   import Segmented from './Segmented.svelte';
 
   let { snapshot, history }: { snapshot: Snapshot; history: HourRow[] } = $props();
@@ -18,7 +18,7 @@
   const series = $derived(regions.map((r) => ({ ...r, points: rollingSeries(history, r.id, win, scale) })));
   const n = $derived(series[0]?.points.length ?? 0);
   const yTicks = $derived(
-    niceTicks(niceMax(Math.max(scale === 'psi' ? 100 : 55, ...series.flatMap((s) => s.points.map((p) => p.v ?? 0))))),
+    niceTicks(Math.max(scale === 'psi' ? 100 : 55, ...series.flatMap((s) => s.points.map((p) => p.v ?? 0)))),
   );
   const maxV = $derived(yTicks[yTicks.length - 1]);
 
@@ -151,10 +151,8 @@
         <path d={path(s.points)} stroke="var(--region-{s.id})" class="line" />
       {/each}
       <!-- Band names go on top of the lines; their halo keeps them legible where lines cross. -->
-      {#each bandLines as b (b.v)}
-        {#if b.showLabel}
-          <text x={width - pad.r} y={y(b.v) - 4} class="band-label" text-anchor="end">{b.label}</text>
-        {/if}
+      {#each bandLines.filter((b) => b.showLabel) as b (b.v)}
+        <text x={width - pad.r} y={y(b.v) - 4} class="band-label" text-anchor="end">{b.label}</text>
       {/each}
 
       {#if tip}

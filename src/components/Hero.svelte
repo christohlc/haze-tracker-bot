@@ -2,7 +2,7 @@
   import { Tween } from 'svelte/motion';
   import { cubicOut } from 'svelte/easing';
   import { maskCard } from '../../tgcloud/lib/advice.js';
-  import { PSI_BANDS, psiBand } from '../../tgcloud/lib/psi.js';
+  import { bandFloor, psiBand } from '../../tgcloud/lib/psi.js';
   import type { Snapshot } from '../lib/api';
   import { reducedMotion } from '../lib/motion';
   import { PERIODS, psiKey, type Period } from '../lib/period';
@@ -19,10 +19,7 @@
   let first = true;
   $effect(() => {
     const target = worst?.value ?? 0;
-    if (first) {
-      const i = PSI_BANDS.findIndex((b) => b.id === psiBand(target)?.id);
-      shown.set(i > 0 ? PSI_BANDS[i - 1].max + 1 : 0, { duration: 0 });
-    }
+    if (first) shown.set(bandFloor(target), { duration: 0 });
     const duration = reducedMotion() ? 0 : first ? 600 : 220;
     first = false;
     shown.set(target, { duration });
