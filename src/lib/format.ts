@@ -1,6 +1,6 @@
-import { sgtDayMonth, sgtDayName, sgtHour } from '../../tgcloud/lib/time.js';
+import { sgtDayMonth, sgtDayName, sgtHour, sgtWeekday } from '../../tgcloud/lib/time.js';
 
-export { sgtDayMonth, sgtDayName, sgtHour };
+export { sgtDayMonth, sgtDayName, sgtHour, sgtWeekday };
 
 /** unix seconds → "1:05 pm" in SGT */
 export function sgtClock(sec: number): string {
@@ -23,8 +23,5 @@ export function timeAgo(iso: string, nowMs: number): string {
   if (min < 24 * 60) return `${Math.floor(min / 60)} h ago`;
   return sgtDayMonth(sgtIso(t).slice(0, 10));
 }
-
-/** “Thu” for an SGT ISO time like 2026-10-16T00:00:00+08:00. */
-export const sgtWeekday = (iso: string) => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][new Date(`${iso.slice(0, 10)}T12:00:00Z`).getUTCDay()];
 
 export const fmt = (v: number | null | undefined, digits = 0) => (v == null ? '–' : v.toFixed(digits));

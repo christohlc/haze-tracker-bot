@@ -103,8 +103,8 @@
   {#if range}
     <!-- Tapping it opens What’s ahead, where the ranges are explained. -->
     <button type="button" class="ahead" onclick={onahead}>
-      <span class="ahead-title">Next hours · island-wide 1-hr PSI, our estimate<span class="visually-hidden">. Opens What’s ahead.</span></span>
-      <span class="ahead-steps">
+      <span class="ahead-title">Next hours · island-wide 1-hour PSI, our estimate<span class="visually-hidden">. Opens What’s ahead.</span></span>
+      <span class="ahead-steps" style:--steps={range.steps.length}>
         {#each range.steps as s (s.h)}
           <span class="step">
             <span class="step-in">in {s.h} hr</span>
@@ -307,7 +307,7 @@
     transition: transform 120ms var(--ease-out);
   }
   .ahead:active {
-    transform: scale(0.98);
+    transform: scale(0.97);
   }
   .ahead-title {
     font-size: 0.75rem;
@@ -315,7 +315,7 @@
   }
   .ahead-steps {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(var(--steps), minmax(0, 1fr));
     gap: 10px;
   }
   .step {

@@ -79,15 +79,19 @@
   // Back lands where the list was.
   let detail = $state<RegionId | null>(null);
   let listY = 0;
-  function openRegion(id: RegionId) {
+  async function openRegion(id: RegionId) {
     listY = window.scrollY;
     detail = id;
+    await tick(); // the region is shown and the list hidden, so the page is its height
     tabsAnchor?.scrollIntoView({ block: 'start', behavior: 'instant' });
   }
   async function closeRegion() {
+    const was = detail;
     detail = null;
     await tick(); // the Now tab is laid out again
     window.scrollTo({ top: listY, behavior: 'instant' });
+    // Focus goes back to the row that opened it.
+    document.querySelector<HTMLElement>(`[data-region="${was}"]`)?.focus({ preventScroll: true });
   }
   $effect(() => {
     if (tab !== 'now') detail = null;
@@ -172,7 +176,7 @@
       />
     </div>
     {#if detail && tab === 'now'}
-      <div class="sections" role="region" aria-label="Region">
+      <div class="sections" role="region" aria-labelledby="region-title">
         <RegionDetail snapshot={data.snapshot} history={data.history} region={detail} {group} onback={closeRegion} />
       </div>
     {/if}

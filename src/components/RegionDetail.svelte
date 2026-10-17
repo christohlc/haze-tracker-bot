@@ -18,7 +18,11 @@
 
   const r = $derived(snapshot.regions.find((x) => x.id === region));
   const v = $derived(snapshotVerdict(snapshot, group, region));
-  const PERIOD_ORDER: Period[] = ['1h', '3h', '24h'];
+  const PERIOD_ORDER = Object.keys(PERIODS) as Period[];
+
+  // Opening moves focus to the region's name, so a screen reader starts here.
+  let title = $state<HTMLElement>();
+  $effect(() => title?.focus({ preventScroll: true }));
 </script>
 
 <button type="button" class="back" onclick={onback}>
@@ -28,7 +32,7 @@
 
 {#if r}
   <section class="card" aria-labelledby="region-title">
-    <h2 id="region-title" class="section-title">{r.name}</h2>
+    <h2 id="region-title" class="section-title" tabindex="-1" bind:this={title}>{r.name}</h2>
     <dl class="stats" aria-label="PSI">
       {#each PERIOD_ORDER as p (p)}
         {@const value = r[psiKey(p)]}
@@ -48,7 +52,7 @@
     {/if}
   </section>
 
-  <HistoryChart {snapshot} {history} {region} days={7} />
+  <HistoryChart {snapshot} {history} {region} openDays={7} />
 {:else}
   <div class="card"><p class="note">No readings for this region right now.</p></div>
 {/if}
@@ -68,10 +72,13 @@
     font: inherit;
     font-weight: 600;
     cursor: pointer;
-    transition: opacity 100ms var(--ease-out);
+    transition: transform 120ms var(--ease-out);
   }
   .back:active {
-    opacity: 0.6;
+    transform: scale(0.97);
+  }
+  #region-title:focus {
+    outline: none;
   }
   .stats {
     display: grid;

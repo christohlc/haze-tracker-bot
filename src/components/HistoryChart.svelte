@@ -1,17 +1,19 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import type { HourRow, RegionId, Snapshot } from '../lib/api';
   import { fmt, sgtHour, sgtWeekday } from '../lib/format';
   import { niceTicks, rollingSeries, type Scale, type Window } from '../lib/series';
   import Segmented from './Segmented.svelte';
 
   // `region`: one region's line only (the region detail view); otherwise every region.
-  // `days`: the span it opens on; the viewer can switch.
+  // `openDays`: the span it opens on; the viewer can switch.
   let {
     snapshot,
     history,
     region = null,
-    days = $bindable(1),
-  }: { snapshot: Snapshot; history: HourRow[]; region?: RegionId | null; days?: 1 | 7 } = $props();
+    openDays = 1,
+  }: { snapshot: Snapshot; history: HourRow[]; region?: RegionId | null; openDays?: 1 | 7 } = $props();
+  let days = $state(untrack(() => openDays));
 
   let scale = $state<Scale>('pm25');
   let win = $state<Window>(1);
@@ -53,11 +55,15 @@
     (series[0]?.points ?? [])
       .map((p, i) => ({ i, t: p.t, h: Number(p.t.slice(11, 13)) }))
       .filter(({ h }) => (days === 7 ? h === 0 : h % (width < 420 ? 6 : 4) === 0))
-      .map((tk) => ({ ...tk, label: days === 7 ? sgtWeekday(tk.t) : sgtHour(tk.t) })),
+      .map((tk) => ({ ...tk, label: days === 7 ? day(tk.t) : sgtHour(tk.t) })),
   );
+  /** “Thu” for an SGT time. */
+  const day = (t: string) => sgtWeekday(t).slice(0, 3);
   /** “Thu 3 pm” in a week, “3 pm” in a day. */
-  const when = (t: string) => (days === 7 ? `${sgtWeekday(t)} ${sgtHour(t)}` : sgtHour(t));
-  const spanLabel = $derived(days === 7 ? 'past 7 days' : 'past 24 hours');
+  const when = (t: string) => (days === 7 ? `${day(t)} ${sgtHour(t)}` : sgtHour(t));
+  // Only as many days as there are readings (a fresh start, or before a backfill).
+  const shownDays = $derived(Math.max(1, Math.round(n / 24)));
+  const spanLabel = $derived(days === 7 && shownDays > 1 ? `past ${shownDays} days` : 'past 24 hours');
 
   // Band edges: NEA PSI bands, and the matching PM2.5 1-hour bands.
   const BANDS = {
@@ -99,7 +105,7 @@
 </script>
 
 <section class="card" aria-labelledby="hist-title">
-  <h2 id="hist-title" class="section-title">{days === 7 ? 'Past 7 days' : 'Past 24 hours'}</h2>
+  <h2 id="hist-title" class="section-title">{spanLabel[0].toUpperCase()}{spanLabel.slice(1)}</h2>
   <p class="note">
     Rolling {winLabel} averages ending at each hour. The PSI view converts PM2.5 with NEA’s breakpoints, so its
     24-hour line can differ slightly from the official PSI.
@@ -168,7 +174,8 @@
         <line x1={pad.l} x2={width - pad.r} y1={y(b.v)} y2={y(b.v)} class="band" />
       {/each}
       {#each xTicks as tk (tk.t)}
-        <text x={x(tk.i)} y={H - 6} class="tick" text-anchor="middle">{tk.label}</text>
+        <!-- A label near an edge hangs inward, so it isn't cut off. -->
+        <text x={x(tk.i)} y={H - 6} class="tick" text-anchor={x(tk.i) < pad.l + 14 ? 'start' : x(tk.i) > width - pad.r - 14 ? 'end' : 'middle'}>{tk.label}</text>
       {/each}
 
       {#each series as s (s.id)}

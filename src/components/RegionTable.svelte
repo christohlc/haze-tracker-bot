@@ -43,7 +43,7 @@
         aria-current={r.mine ? 'true' : undefined}
         animate:flip={{ duration: reducedMotion() ? 0 : 220, easing: quartInOut }}
       >
-        <button type="button" class="row" onclick={() => select(r.id as RegionId)}>
+        <button type="button" class="row" data-region={r.id} onclick={() => select(r.id as RegionId)}>
         <span class="name">
           {r.name}
           {#if r.mine}<span class="tag">Your area</span>{/if}
@@ -88,10 +88,10 @@
     font: inherit;
     text-align: left;
     cursor: pointer;
-    transition: opacity 100ms var(--ease-out);
+    transition: transform 120ms var(--ease-out);
   }
   .row:active {
-    opacity: 0.6;
+    transform: scale(0.97);
   }
   .chev {
     grid-row: 1;

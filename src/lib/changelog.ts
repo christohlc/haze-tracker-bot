@@ -18,7 +18,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     id: '2026-10-17-hero-ahead',
     date: '2026-10-17',
     title: 'The next few hours up top',
-    body: 'When we can estimate them, the next hours’ PSI ranges now sit right under the reading. Tap them for the details.',
+    body: 'When we can estimate them, our ranges for the next few hours’ PSI now sit right under the reading. They’re our calculation, not NEA’s. Tap them for the details.',
   },
   {
     id: '2026-10-17-one-alert',
