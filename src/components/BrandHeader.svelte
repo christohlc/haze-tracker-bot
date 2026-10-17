@@ -16,7 +16,7 @@
     <p class="status">
       {#if snapshot}
         <span class="status-dot" class:stale={snapshot.stale} aria-hidden="true"></span>
-        NEA · {snapshot.stale ? 'last reading' : 'updated'} {sgtHour(snapshot.asOf, true)} SGT
+        NEA · {snapshot.stale ? 'last reading' : 'updated'} {sgtHour(snapshot.asOf)} SGT
       {:else}
         Haze in Singapore, hour by hour
       {/if}

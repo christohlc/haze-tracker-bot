@@ -119,15 +119,20 @@ messages is the same short form, for the general public.
 ## Copy
 
 - Use sentence case, curly quotes and apostrophes, and en dashes for ranges (“60–80”).
-- Times are in SGT, e.g. “updated 3 pm SGT”.
+- Times are in SGT, e.g. “updated 3 pm SGT”: minutes only when they aren’t :00 (`sgtHour`).
+- Say the answer, then stop. Each fact once per message or card; a number’s label says whose it is
+  (“Our 3-hr PSI”, “Official 24-hr PSI”), and how it’s worked out goes in the Mini App’s notes, not
+  in chat. A note under a section is one or two short sentences.
+- Bot messages, pictures and labels write “3-hr” / “24-hr PSI”; Mini App sentences may spell out
+  “24-hour”.
 - Errors say what happened and what to try next: “Couldn’t load the latest readings.” plus
-  a Try again button.
+  a Try again button (so the text doesn’t also say “try again”).
 - Bot messages use Telegram HTML. Keep them short enough to read in a notification. Commands
   in `/help` follow the pattern “/command: what it does”.
 - Breaking news (`formatBreaking` in `tgcloud/lib/format.js`): “🚨 Breaking:” plus the
   publisher’s headline as it is, the publisher and a “Read the story” link (with the story’s
   large preview above), then the official 24-hour PSI. It says the bot picked the story itself.
-  The PSI version says “Official 24-hour PSI now Hazardous”: only NEA’s 24-hour PSI is ever
+  The PSI version says “Official 24-hr PSI now Hazardous”: only NEA’s 24-hour PSI is ever
   called official.
 - `/haze` and the card caption (`formatHaze`): the band and the chat’s area first (“🟡 Unhealthy ·
   3-hr PSI 170 in East”), then “Our calculation from PM2.5” with the time, then the advice, then
@@ -135,7 +140,7 @@ messages is the same short form, for the general public.
 - Advice lines (`adviceLines`) go in one order in every message, each with its own emoji:
   👉 Outside now, 🧓 Vulnerable people (only when their advice is stricter), 😷 the short form.
 - Band alerts (`formatBandAlert`) name the chat’s area (“Haze in East down to Unhealthy”), say
-  “Our 3-hour PSI” and add NEA’s 24-hour PSI, the number on the picture above them (left out
+  “Our 3-hr PSI” and add the official 24-hr PSI, the number on the picture above them (left out
   when a folded official crossing already gives the same number). An official
   24-hour PSI crossing due to the same chat in the same tick leads that alert instead of going
   as a second message.

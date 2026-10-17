@@ -17,7 +17,7 @@
 
 <section class="card" aria-labelledby="news-title">
   <h2 id="news-title" class="section-title">Haze in the news</h2>
-  <p class="note">The latest haze stories from Singapore newsrooms, checked every hour.</p>
+  <p class="note">From {credit}, checked hourly. Tap to read.</p>
   {#if !news.length}
     <p class="note empty">No haze stories in the past two weeks.</p>
   {:else}
@@ -32,7 +32,6 @@
       {/each}
     </ul>
   {/if}
-  <p class="note credit">Headlines from {credit}. Tap one to read it on their site.</p>
 </section>
 
 <style>
@@ -82,8 +81,7 @@
     color: var(--ink);
     overflow-wrap: anywhere;
   }
-  .empty,
-  .credit {
+  .empty {
     margin-top: 12px;
   }
 </style>

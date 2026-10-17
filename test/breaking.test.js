@@ -158,7 +158,7 @@ test('formatBreaking escapes the headline and says the PSI is NEA’s', () => {
   assert.match(news, /Breaking: Schools &lt;b&gt;close&lt;\/b&gt; &amp; more/);
   assert.match(news, /href="https:\/\/www\.straitstimes\.com\/x\?a=&quot;1&quot;"/);
   assert.match(news, /The Straits Times/);
-  assert.match(news, /Official 24-hour PSI <b>210<\/b>/);
+  assert.match(news, /Official 24-hr PSI <b>210<\/b>/);
   const psi = formatBreaking({ kind: 'psi24', band: 'hazardous', value: 320 }, snap);
-  assert.match(psi, /Official 24-hour PSI now Hazardous/);
+  assert.match(psi, /Official 24-hr PSI now Hazardous/);
 });

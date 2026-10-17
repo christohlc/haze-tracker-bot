@@ -8,7 +8,7 @@
 
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { areaLabel, DAILY_HOURS, hourLabel, isActive, LEVEL_CHOICES, levelLabel, QUIET_HOURS, settingsOf, TURNED_ON } from '../../tgcloud/lib/alert-settings.js';
+  import { areaLabel, BREAKING_WHAT, DAILY_HOURS, hourLabel, isActive, LEVEL_CHOICES, levelLabel, QUIET_HOURS, settingsOf, TURNED_ON } from '../../tgcloud/lib/alert-settings.js';
   import type { Group } from '../../tgcloud/lib/advice.js';
   import type { RegionId } from '../lib/api';
   import { saveAlerts, type AlertSettings } from '../lib/alerts';
@@ -145,7 +145,7 @@
       <p class="note">
         {#if status === 'loading'}Checking your alerts…
         {:else if settings}Messages arrive in this chat. You can also change them with /alerts.
-        {:else}Get a message in this chat when the haze band changes or there’s breaking haze news, plus an optional daily update.{/if}
+        {:else}A message here when the band changes or haze news breaks. Daily update optional.{/if}
       </p>
     </div>
   </div>
@@ -183,7 +183,7 @@
           </span>
         </div>
       {/if}
-      {@render toggle('breakingAlerts', 'Breaking news', 'School closures, events called off, official 24-hour PSI over 200')}
+      {@render toggle('breakingAlerts', 'Breaking news', `${BREAKING_WHAT}.`)}
 
       <div class="row stacked">
         <span class="row-title" id="daily-label">Daily update (SGT)</span>

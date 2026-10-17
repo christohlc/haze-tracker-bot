@@ -42,7 +42,7 @@
       </PsiMeter>
     {/if}
     <p class="note">
-      24-hr PSI{#if outlook.psi}{' '}<span class="num">{psiRangeText(outlook.psi)}</span>{/if}, in NEA’s words “{outlook.text}”{#if span && psi24h != null}; the tick marks today’s official 24-hr PSI{/if}. Issued {sgtDayMonth(outlook.issuedAt)}, {sgtHour(outlook.issuedAt, true)} SGT.
+      NEA’s words: “{outlook.text}”.{#if span && psi24h != null}{' '}Tick: today’s official 24-hr PSI.{/if} Issued {sgtDayMonth(outlook.issuedAt)}, {sgtHour(outlook.issuedAt)} SGT.
       <a href={HAZE_SITE} target="_blank" rel="noopener noreferrer" onclick={open}>More at haze.gov.sg</a>
     </p>
   {/if}
@@ -50,8 +50,8 @@
   {#if range}
     <h3 class="subhead">Next few hours</h3>
     <p class="note">
-      Our calculation, not official. The island-wide 1-hour PSI is <span class="num">{range.now}</span> now; each range
-      is how far it moved over the same hours in the past two weeks.
+      Island-wide 1-hour PSI, <span class="num">{range.now}</span> now. Ranges come from the past two weeks. Our
+      calculation, not official.
     </p>
     <ol class="steps" aria-label="Likely island-wide 1-hour PSI" style:--now="{pct(range.now)}%">
       {#each range.steps as s (s.h)}

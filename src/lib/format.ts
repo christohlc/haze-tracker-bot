@@ -4,7 +4,7 @@ export { sgtDayMonth, sgtDayName, sgtHour, sgtWeekday };
 
 /** unix seconds → "1:05 pm" in SGT */
 export function sgtClock(sec: number): string {
-  return sgtHour(sgtIso(sec * 1000), true);
+  return sgtHour(sgtIso(sec * 1000));
 }
 
 /** ms → an ISO string whose digits read as SGT wall-clock time. */

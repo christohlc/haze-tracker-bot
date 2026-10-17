@@ -58,6 +58,9 @@ export function neaRefetchEveryS(snap, nowMs, revisedEveryS = REVISED_EVERY_S) {
   return awaited ? AWAITED_EVERY_S : revisedEveryS;
 }
 
+/** What /haze, the summary card and the Mini App say when `snap.stale`. */
+export const STALE_NOTE = 'No new NEA reading lately. May be out of date.';
+
 /**
  * @param {Array<{ timestamp: string, readings: Record<string, number> }>} pm25History oldest first
  * @param {{ timestamp: string, readings: Record<string, Record<string, number>> }} psi

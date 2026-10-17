@@ -39,7 +39,6 @@
         {@render status(!failing, failing ? `${failing} of ${known.length} feeds failing` : 'All feeds working')}
         <span class="more" aria-hidden="true"><span class="show">Details</span><span class="hide">Hide</span></span>
       </summary>
-      <p class="note">Which feeds are working right now, and what each one contributes.</p>
       <ul>
         {#each known as s (s.source)}
           {@const meta = NAMES[s.source] ?? { name: s.source, role: '' }}

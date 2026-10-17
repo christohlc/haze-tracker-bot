@@ -16,7 +16,7 @@ const MIN_HOURS = 72;
 const STALE_H = 3;
 
 /** How often it held, from `node scripts/range-backtest.mjs` on NEA's readings for 2022–2026. */
-export const RANGE_RECORD = 'In four years of NEA readings, the actual value landed in this range about 8 times in 10.';
+export const RANGE_RECORD = 'Right about 8 times in 10 on four years of NEA readings.';
 
 /** @typedef {{ now: number, steps: Array<{ h: number, t: string, lo: number, hi: number }> }} Range */
 /** The range as of the latest reading's hour (unix hours), however old that is. @typedef {{ hour: number, range: Range }} LatestRange */

@@ -17,7 +17,7 @@ test('inline results: the picture when Telegram has it, and always the text', ()
   const both = inlineResults(snap, { fileId: 'F1', region: null });
   assert.deepEqual(both.map((r) => r.type), ['photo', 'article']);
   assert.equal(both[0].photo_file_id, 'F1');
-  assert.match(both[0].caption, /24-hour PSI/);
+  assert.match(both[0].caption, /24-hr PSI/);
   assert.match(both[1].title, /^PSI \d+ · /);
   assert.match(both[1].input_message_content.message_text, /PSI/);
 

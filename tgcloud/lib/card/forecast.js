@@ -111,7 +111,7 @@ function outlookPanel(c, top, outlook, today) {
   const words = `In NEA’s words: ${nums ? `${nums}, ${outlook.text}` : outlook.text}`;
   c.text(words, x, top + OUTLOOK_H - 66, c.measure(words, 'body') <= PANEL.w - PANEL.pad * 2 ? 'body' : 'label', C.ink);
   const tick = today != null ? ' · The tick is today’s official 24-hr PSI' : '';
-  c.text(`Issued ${sgtDayMonth(outlook.issuedAt)}, ${sgtHour(outlook.issuedAt, true)} SGT${tick}`, x, top + OUTLOOK_H - 30, 'label', C.muted);
+  c.text(`Issued ${sgtDayMonth(outlook.issuedAt)}, ${sgtHour(outlook.issuedAt)} SGT${tick}`, x, top + OUTLOOK_H - 30, 'label', C.muted);
 }
 
 const ROW_H = 132;
