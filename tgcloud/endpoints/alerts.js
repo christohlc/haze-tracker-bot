@@ -1,17 +1,16 @@
 // @ts-check
 // endpoints/alerts.js — the Mini App's alert settings for the calling user.
 //   { action: 'get' }                                → settings or null
-//   { action: 'save', bandAlerts, dailyHour, breakingAlerts, region } → settings or null (all off = unsubscribe)
+//   { action: 'save', bandAlerts, dailyHour, breakingAlerts, region, minBand, quietNights } → settings or null (all off = unsubscribe)
 // Alerts go to the user's private chat with the bot, whose id is the user id.
 
 import { api, EndpointError } from 'sdk';
-import { parseAlertInput } from '../lib/alert-settings.js';
+import { parseAlertInput, settingsOf } from '../lib/alert-settings.js';
 import { isUnreachable } from '../lib/bot-errors.js';
 import { deleteSubscriber, getSubscriber, saveSubscriber } from '../lib/subscriptions.js';
 
 /** @param {import('../lib/alert-settings.js').AlertSettings | null | undefined} sub */
-const view = (sub) =>
-  sub ? { bandAlerts: Boolean(sub.bandAlerts), dailyHour: sub.dailyHour ?? null, breakingAlerts: Boolean(sub.breakingAlerts), region: sub.region ?? null } : null;
+const view = (sub) => (sub ? settingsOf(sub) : null);
 
 export default async function (input, ctx) {
   const chatId = ctx.initData?.user?.id;

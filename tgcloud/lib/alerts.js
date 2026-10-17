@@ -5,10 +5,9 @@
 // made) and the subscriber's lastBand stays behind, so the next tick catches them up.
 
 import { getAhead } from './ahead.js';
-import { ALERT_SCOPES, advanceBands, bandAlertsFor, dailyDue, dailyForecastDue, runBatched, SEND_INTERVAL_MS, sgtHourOf } from './alert-rules.js';
+import { ALERT_SCOPES, advanceBands, alertTarget, bandAlertsFor, dailyDue, dailyForecastDue, runBatched, SEND_INTERVAL_MS, sgtHourOf } from './alert-rules.js';
 import { dashboardButton } from './buttons.js';
 import { describeError, isRateLimited, isTopicGone, isUnreachable, movedTo } from './bot-errors.js';
-import { subscriberTarget } from './chat-rules.js';
 import { cachedCardId, cachedForecastCardId, sendCardOrText, sendForecastCardOrText } from './card/send.js';
 import { sendBreaking } from './breaking.js';
 import { forecastMessage, formatBandAlert, formatHaze, formatHazeCaption } from './format.js';
@@ -69,9 +68,9 @@ export async function runAlerts(snap, now = Date.now(), breaking = []) {
     if (retryAfterS) retryAfter = Math.max(retryAfter, retryAfterS * 1000);
     return result;
   };
-  /** @param {{ chatId: number, threadId?: number | null }} sub @param {{ caption: string, text: string }} message */
+  /** @param {{ chatId: number, threadId?: number | null, quietNights?: boolean | null }} sub @param {{ caption: string, text: string }} message */
   const card = (sub, message) => async () =>
-    sendCardOrText(subscriberTarget(sub), snap, { ...message, reply_markup: await dashboardButton(sub.chatId) });
+    sendCardOrText(alertTarget(sub, now), snap, { ...message, reply_markup: await dashboardButton(sub.chatId) });
   /** After a phase hit a 429: wait Telegram's retry_after if there's time before `deadline`. @param {string | null} stopped @param {number} deadline */
   const canGoOn = async (stopped, deadline) => {
     if (stopped !== 'limited') return true;
@@ -95,7 +94,7 @@ export async function runAlerts(snap, now = Date.now(), breaking = []) {
   const bands = advanceBands(prev, snap, now);
   const savingBands = ALERT_SCOPES.some((s) => bands[s] !== prev[s]) ? setAlertBands(bands) : null;
   out.band = bands.highest?.id ?? null;
-  const { due: bandDue, unseeded } = bandAlertsFor(bandSubs, bands);
+  const { due: bandDue, silent } = bandAlertsFor(bandSubs, bands);
   const bandDueChats = new Set(bandDue.map(({ sub }) => sub.chatId));
 
   // Breaking news: every event still to send × breaking subscribers who haven't had it and
@@ -116,7 +115,7 @@ export async function runAlerts(snap, now = Date.now(), breaking = []) {
   });
   const breakingRes = await runBatched(
     pending,
-    ({ sub, event }) => sendNoting429(sub.chatId, breakingKey(event.id, sub.chatId), () => sendBreaking(subscriberTarget(sub), event, snap)),
+    ({ sub, event }) => sendNoting429(sub.chatId, breakingKey(event.id, sub.chatId), () => sendBreaking(alertTarget(sub, now), event, snap)),
     { deadline: Math.min(Date.now() + BREAKING_BUDGET_MS, end), sleep },
   );
   const breakingStopped = tally(breakingRes, 'breaking');
@@ -129,8 +128,12 @@ export async function runAlerts(snap, now = Date.now(), breaking = []) {
   // event left unsent stays unclaimed, so the next tick sends it (with the band alert, or alone).
   let bandStopped = breakingStopped === 'limited' ? 'limited' : null;
   if (Object.keys(bands).length && (await canGoOn(breakingStopped, now + BAND_BUDGET_MS))) {
-    // Never told a band (rare: subscribing seeds it): start them at it, without an alert.
-    await Promise.all(unseeded.map(({ sub, band }) => setLastBand(sub.chatId, band.id)));
+    // Never told a band, or a move below the chat's alert level: move them to it, without an
+    // alert. One write per band, not per chat.
+    /** @type {Map<string, number[]>} */
+    const moving = new Map();
+    for (const { sub, band } of silent) moving.set(band.id, [...(moving.get(band.id) ?? []), sub.chatId]);
+    await Promise.all([...moving].map(([band, chatIds]) => setLastBands(chatIds, band)));
     const res = await runBatched(
       bandDue,
       async ({ sub, band, scope }) => {
@@ -181,7 +184,7 @@ export async function runAlerts(snap, now = Date.now(), breaking = []) {
         const message = forecastMessage(ahead);
         const forecastRes = await runBatched(
           owed,
-          (sub) => sendNoting429(sub.chatId, `forecast:${sub.chatId}:${date}`, () => sendForecastCardOrText(subscriberTarget(sub), snap, ahead, message)),
+          (sub) => sendNoting429(sub.chatId, `forecast:${sub.chatId}:${date}`, () => sendForecastCardOrText(alertTarget(sub, now), snap, ahead, message)),
           { deadline, sleep, firstAlone: !(await cachedForecastCardId(snap, ahead)) },
         );
         tally(forecastRes, 'dailyForecast');
