@@ -4,6 +4,7 @@
   "main": "worker.js",
   "compatibility_date": "2026-06-01",
   "workers_dev": false, // no public URL: the Worker only has a scheduled handler
+  "preview_urls": false,
   "triggers": {
     // UTC. The tick at :12, :27, :42, :57 (NEA publishes ~15 min past the hour), and the
     // keepalive on Mondays 11:33 SGT (KEEPALIVE_CRON in worker.js).

@@ -115,7 +115,8 @@ the news cached. To set it up:
 2. Deploy the Worker (free plan; `npx wrangler@4 login` first). On a new Cloudflare account,
    open **Workers & Pages** in the dashboard once before deploying: cron triggers need the
    account's workers.dev subdomain (error 10063), which that page creates, even though this
-   Worker has no public URL.
+   Worker has no public URL. If that error came up anyway, the code is uploaded but the crons
+   aren't: open that page, then deploy again.
 
    ```bash
    npx wrangler@4 deploy --config cron/wrangler.jsonc
@@ -127,7 +128,8 @@ the news cached. To set it up:
    npx wrangler@4 secret put GITHUB_TOKEN --config cron/wrangler.jsonc
    ```
 
-4. In the Cloudflare dashboard, the Worker's **Settings → Trigger events** lists both crons and
+4. In the Cloudflare dashboard, the Worker's **Settings → Trigger events** lists both crons (if it
+   says “No cron triggers configured”, deploy again) and
    **Observability → Logs** shows each run; a failed dispatch is logged as an error with GitHub's
    status (401: the token is wrong or expired; 403/404: wrong permission or repository).
 
