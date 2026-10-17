@@ -62,10 +62,9 @@ export async function uploadCard(snap, started) {
     const [chatId, fileId] = await Promise.all([getSetting('ops_chat_id'), cachedCardId(snap)]);
     const due = cardUploadDue({ chatId, cached: Boolean(fileId), elapsedMs: Date.now() - started });
     if (due !== 'upload') return due;
-    const chat_id = /** @type {any} */ (chatId);
-    const msg = await sendCard({ chat_id, disable_notification: true }, snap, formatShareCaption(snap));
+    const msg = await sendCard({ chat_id: chatId, disable_notification: true }, snap, formatShareCaption(snap));
     // The file id outlives the message: deleted, so a photo an hour doesn't bury the failure DMs.
-    await api.deleteMessage({ chat_id, message_id: msg.message_id }).catch(() => {});
+    await api.deleteMessage({ chat_id: chatId, message_id: msg.message_id }).catch(() => {});
     return 'sent';
   } catch (e) {
     return `failed: ${describeError(e)}`; // code and description only: never the chat (public logs)
