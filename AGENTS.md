@@ -93,6 +93,7 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   bitmaps **generated** by `npm run card:assets` (fonts in `scripts/card/fonts/`, island outline
   in `scripts/card/singapore.svg`). Don't edit them by hand. `card/send` uploads it once per
   snapshot and reuses Telegram's file id (state `card`); if the photo fails, the text goes instead.
+  `/forecast` sends a second picture, `card/forecast.js`, drawn on every call (no cache).
   Check a layout change with `node scripts/card/preview.mjs <dir>`.
 - **The bot works in groups** (`lib/chat-rules.js`, `lib/groups.js`). A group subscribes as one
   chat; only its admins (`getChatMember`) may change alerts. Alerts go to the forum topic `/subscribe`

@@ -8,6 +8,7 @@ import { api, BotApiError, InputFile } from 'sdk';
 import { isRateLimited, isTopicGone, isUnreachable, movedTo } from '../bot-errors.js';
 import { sendHtml } from '../messages.js';
 import { getState, setState } from '../store.js';
+import { forecastCardPng } from './forecast.js';
 import { summaryCardPng } from './summary.js';
 
 /** One card per NEA hour, PSI hour and staleness (the stale banner is drawn in). @param {any} snap */
@@ -77,8 +78,40 @@ export async function sendCard(to, snap, caption, reply_markup) {
  */
 export async function sendCardOrText(to, snap, { caption, text, reply_markup }) {
   if ((await cardFor(snap)).failed) return sendHtml(to, text, reply_markup);
+  return orText(() => sendCard(to, snap, caption, reply_markup), to, text, reply_markup);
+}
+
+/**
+ * The forecast card (forecast.js) with `caption`, or `text` if it fails, as sendCardOrText. Drawn
+ * on every /forecast: it's asked for rarely, and NEA's forecast and our range change on their own
+ * clocks, so there's no one key to cache it by.
+ * @param {import('../chat-rules.js').Target} to @param {any} snap @param {import('../ahead.js').Ahead} ahead
+ * @param {{ caption: string, text: string, reply_markup?: any }} message
+ */
+export function sendForecastCardOrText(to, snap, ahead, { caption, text, reply_markup }) {
+  return orText(
+    () =>
+      api.sendPhoto({
+        ...to,
+        photo: new InputFile(forecastCardPng(snap, ahead), 'forecast.png', { type: 'image/png' }),
+        caption,
+        parse_mode: 'HTML',
+        ...(reply_markup && { reply_markup }),
+      }),
+    to,
+    text,
+    reply_markup,
+  );
+}
+
+/**
+ * `send()`, or `text` as a plain message if it fails for any reason other than the chat or a rate
+ * limit, which are rethrown for the caller.
+ * @param {() => Promise<any>} send @param {import('../chat-rules.js').Target} to @param {string} text @param {any} [reply_markup]
+ */
+async function orText(send, to, text, reply_markup) {
   try {
-    return await sendCard(to, snap, caption, reply_markup);
+    return await send();
   } catch (e) {
     if (isUnreachable(e) || isRateLimited(e) || movedTo(e) || isTopicGone(e)) throw e;
     console.error('card failed, sending text', e instanceof BotApiError ? `${e.code} ${e.description}` : String(e)); // no chat id: logs are public

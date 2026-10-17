@@ -167,6 +167,23 @@ newspaper graphic:
 - The card is always light (it’s shared into other people’s chats), and its colours mirror the
   light-theme tokens. Change one, change both. Check layout changes against the worst-case data.
 
+## Forecast card
+
+The picture `/forecast` sends ([`tgcloud/lib/card/forecast.js`](../tgcloud/lib/card/forecast.js)):
+the Mini App’s What’s ahead, drawn on the summary card’s sky with the same header, palette and
+fonts (`backdrop` in `summary.js`), but no island: the panels would hide nearly all of it.
+
+- **NEA’s forecast** is the half-dial: bands faded, NEA’s range at full colour (its numbers when it
+  gives them, else the span its words cover: `meterSpan`, as in the app), its numbers in the bowl, a tick and “today N” for
+  today’s official 24-hour PSI, and the bands it named as pills underneath. NEA’s words stay in a
+  line of their own.
+- **Next few hours** is one bar per step on one shared scale, the likely span in band colours over
+  a faded track, a “now” line through every bar, and the band names under each bar so colour
+  never stands alone. It always says “our calculation, not official”.
+- Either half can be missing; the height fits what’s there. The caption carries the same facts
+  in text (the range on one line), since a picture has no alt text.
+- Check layout changes with `node scripts/card/preview.mjs`, which writes the forecast cases too.
+
 ## What’s new
 
 User-facing changes are listed in [`src/lib/changelog.ts`](../src/lib/changelog.ts), newest
