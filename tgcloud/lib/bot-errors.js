@@ -27,3 +27,6 @@ export function movedTo(e) {
 export function isTopicGone(e) {
   return isBadRequest(e) && /thread not found/i.test(/** @type {any} */ (e).description);
 }
+
+/** For logs: the Bot API code and description, never the chat. @param {unknown} e */
+export const describeError = (e) => (e instanceof BotApiError ? `${e.code} ${e.description}` : String(e));

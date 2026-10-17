@@ -5,8 +5,8 @@
 // alerts costs one render and one upload per card. If a picture can't be sent, the text goes
 // out instead.
 
-import { api, BotApiError, InputFile } from 'sdk';
-import { isRateLimited, isTopicGone, isUnreachable, movedTo } from '../bot-errors.js';
+import { api, InputFile } from 'sdk';
+import { describeError, isRateLimited, isTopicGone, isUnreachable, movedTo } from '../bot-errors.js';
 import { sendHtml } from '../messages.js';
 import { getState, setState } from '../store.js';
 import { forecastCardPng } from './forecast.js';
@@ -116,14 +116,14 @@ export const sendForecastCardOrText = (to, snap, ahead, message) =>
 /**
  * `send()`, or `text` as a plain message if it fails for any reason other than the chat or a rate
  * limit, which are rethrown for the caller.
- * @param {() => Promise<any>} send @param {import('../chat-rules.js').Target} to @param {string} text @param {any} [reply_markup]
+ * @param {() => Promise<any>} send @param {Target} to @param {string} text @param {any} [reply_markup]
  */
 async function orText(send, to, text, reply_markup) {
   try {
     return await send();
   } catch (e) {
     if (isUnreachable(e) || isRateLimited(e) || movedTo(e) || isTopicGone(e)) throw e;
-    console.error('card failed, sending text', e instanceof BotApiError ? `${e.code} ${e.description}` : String(e)); // no chat id: logs are public
+    console.error('card failed, sending text', describeError(e)); // no chat id: logs are public
     return sendHtml(to, text, reply_markup);
   }
 }

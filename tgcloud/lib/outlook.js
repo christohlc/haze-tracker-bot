@@ -8,8 +8,10 @@ import { isCurrent, OUTLOOK_FEED, parseOutlook } from './outlook-parse.js';
 
 const OUTLOOK_EVERY_S = 30 * 60;
 
-/** Today's or tomorrow's forecast, or null when NEA hasn't issued one (outside haze episodes). Never throws. */
-/** @param {number} [deadline] a caller's time budget (getJson): no retry past it */
+/**
+ * Today's or tomorrow's forecast, or null when NEA hasn't issued one (outside haze episodes). Never throws.
+ * @param {number} [deadline] a caller's time budget (getJson): no retry past it
+ */
 export async function getOutlook(deadline) {
   const outlook = await cachedFeed('outlook', OUTLOOK_EVERY_S, 'nea_outlook', async () => {
     // The last path segment only busts caches, as on haze.gov.sg.
