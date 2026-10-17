@@ -2,7 +2,7 @@
 // Thin DB helpers over schema.js.
 
 import { db } from 'sdk';
-import { and, desc, eq, gte, lt, sql } from 'sdk/db';
+import { and, desc, eq, gte, inArray, lt, sql } from 'sdk/db';
 import { readings, settings, sourceStatus, state } from '../schema.js';
 import { toSgtIso } from './time.js';
 
@@ -11,6 +11,12 @@ const nowSec = () => Math.floor(Date.now() / 1000);
 export async function getState(key) {
   const row = await db.select().from(state).where(eq(state.key, key)).get();
   return row ? { value: row.value, updatedAt: row.updatedAt } : null;
+}
+
+/** Several state rows in one query, by key. @param {string[]} keys @returns {Promise<Map<string, { value: any, updatedAt: number }>>} */
+export async function getStates(keys) {
+  const rows = await db.select().from(state).where(inArray(state.key, keys)).all();
+  return new Map(rows.map((r) => [r.key, { value: r.value, updatedAt: r.updatedAt }]));
 }
 
 export async function setState(key, value) {

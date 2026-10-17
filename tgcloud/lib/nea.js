@@ -25,11 +25,15 @@ export async function getPm25Day(date, deadline) {
 }
 
 /**
- * Hourly PM2.5 for today and yesterday (SGT), so there are always ≥24 hours.
+ * Hourly PM2.5 for today, and yesterday (SGT) when `withYesterday`, so there are ≥24 hours.
+ * @param {number} [deadline] see retryOnce() in fetch-retry.js @param {boolean} [withYesterday]
  * @returns {Promise<Pm25Item[]>} oldest first
  */
-export async function getPm25History() {
-  const [today, yesterday] = await Promise.all([getItems('pm25', sgtDateOf(Date.now())), getItems('pm25', sgtDateOf(Date.now() - 86_400_000))]);
+export async function getPm25History(deadline, withYesterday = true) {
+  const [today, yesterday] = await Promise.all([
+    getItems('pm25', sgtDateOf(Date.now()), deadline),
+    withYesterday ? getItems('pm25', sgtDateOf(Date.now() - 86_400_000), deadline) : [],
+  ]);
   return byTime([...yesterday, ...today]);
 }
 
@@ -40,9 +44,9 @@ function byTime(items) {
   return [...out.values()].sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
 }
 
-/** Latest PSI item (24-hour PSI and sub-indices per region). */
-export async function getLatestPsi() {
-  const items = await getItems('psi');
+/** Latest PSI item (24-hour PSI and sub-indices per region). @param {number} [deadline] see getPm25History */
+export async function getLatestPsi(deadline) {
+  const items = await getItems('psi', null, deadline);
   if (!items.length) throw new Error('NEA psi: no items');
   return { timestamp: items[0].timestamp, readings: items[0].readings };
 }

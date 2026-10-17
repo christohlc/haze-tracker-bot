@@ -37,6 +37,27 @@ export function pm25Trend(rows, region) {
   return d > 0 ? 'rising' : 'easing';
 }
 
+/** NEA can't have published an hour's readings before this many ms past it. */
+const NEA_EARLIEST_MS = 5 * 60_000;
+/** While the current hour is awaited, refetch this often (whoever asks first). */
+export const AWAITED_EVERY_S = 2 * 60;
+/** Once it's in, the tick refetches this often for NEA's revisions (under its 15 min, so every tick)... */
+export const REVISED_EVERY_S = 10 * 60;
+/** ...and a user only after this long, should the tick be late, so few users wait on a refetch. */
+export const USER_REVISED_EVERY_S = 20 * 60;
+
+/**
+ * How often to refetch NEA (seconds), given the stored snapshot: often while NEA's current hour is
+ * due and not in yet for PM2.5 or for the PSI (NEA can publish them minutes apart), `revisedEveryS`
+ * once both are, as NEA revises an hour's readings during it.
+ * @param {{ asOf: string, psiAsOf?: string }} snap @param {number} nowMs @param {number} [revisedEveryS]
+ */
+export function neaRefetchEveryS(snap, nowMs, revisedEveryS = REVISED_EVERY_S) {
+  const latest = Math.min(unixHour(snap.asOf), unixHour(snap.psiAsOf ?? snap.asOf));
+  const awaited = latest < Math.floor(nowMs / 3_600_000) && nowMs % 3_600_000 >= NEA_EARLIEST_MS;
+  return awaited ? AWAITED_EVERY_S : revisedEveryS;
+}
+
 /**
  * @param {Array<{ timestamp: string, readings: Record<string, number> }>} pm25History oldest first
  * @param {{ timestamp: string, readings: Record<string, Record<string, number>> }} psi
@@ -45,6 +66,9 @@ export function buildSnapshot(pm25History, psi) {
   if (!pm25History.length) throw new Error('No PM2.5 readings');
   const history = pm25History.slice(-25);
   const rows = history.map((h) => ({ t: h.timestamp, ...h.readings }));
+  // NEA's own 24-hour PM2.5 averages when its PSI item is for the same hour as the latest reading;
+  // otherwise ours, from the hourly readings.
+  const nea24h = unixHour(psi.timestamp) === unixHour(history[history.length - 1].timestamp) ? psi.readings.pm25_twenty_four_hourly : null;
 
   const regions = REGIONS.map(({ id, name }) => {
     const series = history.map((h) => h.readings?.[id] ?? null);
@@ -56,7 +80,7 @@ export function buildSnapshot(pm25History, psi) {
       psi1h: pm25ToPsi(pm25),
       psi3h: pm25ToPsi(meanOfLast(series, 3)),
       psi24h: psi.readings.psi_twenty_four_hourly?.[id] ?? null,
-      pm25Mean24h: meanOfLast(series, 24),
+      pm25Mean24h: nea24h?.[id] ?? meanOfLast(series, 24),
       trend: pm25Trend(rows, id),
     };
   });

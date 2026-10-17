@@ -6,7 +6,8 @@ import { cachedFeed } from './feed-cache.js';
 import { getJson } from './http.js';
 import { isCurrent, OUTLOOK_FEED, parseOutlook } from './outlook-parse.js';
 
-const OUTLOOK_EVERY_S = 30 * 60;
+// NEA issues it about 6 pm; checked often enough that it shows within minutes.
+const OUTLOOK_EVERY_S = 10 * 60;
 
 /**
  * Today's or tomorrow's forecast, or null when NEA hasn't issued one (outside haze episodes). Never throws.
