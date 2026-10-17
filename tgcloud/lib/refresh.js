@@ -5,7 +5,7 @@
 
 import { getLatestPsi, getPm25History } from './nea.js';
 import { buildSnapshot } from './snapshot.js';
-import { getState, recentReadings, recordSource, setState, upsertReadings } from './store.js';
+import { claimEvery, getState, recentReadings, recordSource, setState, upsertReadings } from './store.js';
 import { unixHour } from './time.js';
 
 const STALE_MS = 80 * 60_000; // NEA publishes ~15 min past the hour
@@ -59,8 +59,8 @@ export async function getSnapshot() {
   const fresh = cached && Date.now() - Date.parse(cached.asOf) < STALE_MS;
   if (fresh) return { ...cached, stale: false };
 
-  const lastAttempt = (await getState('last_fetch_attempt'))?.value ?? 0;
-  if (cached && Date.now() - lastAttempt < RETRY_MS) return { ...cached, stale: true };
+  // Only one of the Mini Apps opened together refetches (data.gov.sg rate-limits); the rest show the stored copy.
+  if (cached && !(await claimEvery('last_fetch_attempt', RETRY_MS / 1000))) return { ...cached, stale: true };
   try {
     const snap = await refreshNea();
     return { ...snap, stale: Date.now() - Date.parse(snap.asOf) >= STALE_MS };
