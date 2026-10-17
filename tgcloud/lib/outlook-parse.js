@@ -4,7 +4,7 @@
 // The feed is the JSON haze.gov.sg itself uses, not a documented API, so nothing here may throw.
 
 import { decodeEntities } from './html.js';
-import { PSI_BANDS } from './psi.js';
+import { bandRanges, PSI_BANDS } from './psi.js';
 import { MONTHS, sgtDateOf, toSgtIso } from './time.js';
 
 export const OUTLOOK_FEED = 'https://www.nea.gov.sg/api/advisory/latesthazesituationupdate';
@@ -42,6 +42,9 @@ function sgtIso(v) {
   return Number.isFinite(ms) ? toSgtIso(Math.floor(ms / 1000)) : null;
 }
 
+/** "Unhealthy to Low Very Unhealthy" → its one or two band phrases. @param {string} text */
+const splitBands = (text) => text.split(/\s+(?:to|–|-)\s+/i);
+
 /**
  * Whether a forecast still applies at `now`: for today or tomorrow (SGT), and not expired.
  * @param {Outlook} o @param {number} [now] ms
@@ -66,7 +69,7 @@ export function parseOutlook(json) {
     body.match(/forecast for [^.]*? is (.+?)\./i)?.[1] ??
     ''
   ).trim();
-  const parts = text.split(/\s+(?:to|–|-)\s+/i);
+  const parts = splitBands(text);
   const from = bandId(parts[0] ?? '');
   const to = bandId(parts.at(-1) ?? '');
   const issuedAt = sgtIso(json?.DateOfArticle);
@@ -74,4 +77,32 @@ export function parseOutlook(json) {
   const expires = sgtIso(json?.ExpiryDateHazeDisplayDt) ?? sgtIso(json?.ExpiryDateHazeDisplay);
   if (!forDate || !from || !to || parts.length > 2 || !issuedAt) return null;
   return { text, from, to, forDate, issuedAt, expires };
+}
+
+/** Where the dial ends: Hazardous runs from 301 to here. */
+export const METER_MAX = 400;
+
+/**
+ * The PSI span NEA's words cover, for drawing: from the start of the first band to the end of the
+ * last, narrowed to a third of a band where NEA says Low, Mid or High ("Unhealthy to Low Very
+ * Unhealthy" → 101–233). NEA's forecast is in bands, so this is a picture of its words, not a
+ * number to quote. Null if the words aren't bands.
+ * @param {string} text NEA's words, as in Outlook.text
+ * @returns {{ lo: number, hi: number } | null}
+ */
+export function outlookSpan(text) {
+  const parts = splitBands(text);
+  /** @param {string} words */
+  const span = (words) => {
+    const band = bandRanges(METER_MAX).find((b) => b.id === bandId(words));
+    if (!band) return null;
+    const third = (band.to - band.from + 1) / 3;
+    const q = ['low', 'mid', 'high'].indexOf(words.trim().split(/\s+/)[0].toLowerCase());
+    return q < 0 ? band : { from: Math.round(band.from + q * third), to: Math.round(band.from + (q + 1) * third - 1) };
+  };
+  const first = span(parts[0] ?? '');
+  const last = span(parts.at(-1) ?? '');
+  if (!first || !last || parts.length > 2) return null;
+  // In whichever order NEA words it.
+  return { lo: Math.min(first.from, last.from), hi: Math.max(first.to, last.to) };
 }

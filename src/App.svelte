@@ -162,7 +162,7 @@
     {/if}
     {#if visited.outlook}
       <div id="panel-outlook" class="sections" class:off={tab !== 'outlook'} role="tabpanel" aria-labelledby="tab-outlook">
-        {#if data.ahead?.outlook || data.ahead?.range}<AheadSection ahead={data.ahead} />{/if}
+        {#if data.ahead?.outlook || data.ahead?.range}<AheadSection ahead={data.ahead} psi24h={data.snapshot.worst.psi24h?.value ?? null} />{/if}
         <WindRain snapshot={data.snapshot} first={weatherFirst} />
         {#await loadHazeMapCard() then m}<m.default />{/await}
         <HistoryChart snapshot={data.snapshot} history={data.history} />

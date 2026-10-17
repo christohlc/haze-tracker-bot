@@ -9,6 +9,12 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-17-ahead-colour',
+    date: '2026-10-17',
+    title: 'See what’s ahead at a glance',
+    body: 'NEA’s forecast is now a colour dial like the one on haze.gov.sg, marked with today’s reading, and each of the next few hours shows its likely range in band colours.',
+  },
+  {
     id: '2026-10-17-my-area',
     date: '2026-10-17',
     title: 'See the haze where you are',
