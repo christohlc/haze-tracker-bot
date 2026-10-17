@@ -11,8 +11,10 @@ camera pictures and the latest haze headlines from The Straits Times, CNA and Mo
 sends alerts to a chat when the haze band changes or there’s breaking haze news (schools closing,
 outdoor activities called off, NEA’s 24-hour PSI turning Very unhealthy or Hazardous).
 
-- **Bot:** `/haze`, `/cigs [region] [% outdoors]`, `/forecast`, `/subscribe`, `/alerts`,
-  `/unsubscribe`
+- **Bot:** `/haze`, `/cigs [region] [% outdoors]`, `/forecast` (a picture), `/subscribe`, `/alerts`,
+  `/unsubscribe`, `/help`. `/alerts` turns band alerts, breaking news and a daily update on or off,
+  and picks the area band alerts follow (one NEA region, or the highest). The daily update comes
+  with a forecast picture while there’s haze.
 - **Mini App:** <https://app8809761337.tgcloud.ai/>, opened from the bot’s button
 
 Readings come from NEA (via data.gov.sg). The 1-hour and 3-hour PSI and the next-hours range are this
@@ -25,8 +27,8 @@ the bot’s own rules and sent without anyone checking it first; the operator ca
 ```
 Cloudflare Worker cron (cron/, every 15 min: :12, :27, :42, :57) ─▶ GitHub Actions workflow_dispatch
   └─ npx tgcloud run endpoints/tick
-       ├─ refresh NEA PM2.5 + PSI  → readings, state(snapshot)
-       ├─ refresh news (every run while there's haze) → state(news), breaking events → state(breaking)
+       ├─ refresh NEA PM2.5 + PSI when due → readings, state(snapshot, psi, range)  ┐ side by side
+       ├─ refresh news (every run while there's haze) → state(news), breaking events  ┘ → state(breaking)
        └─ send breaking news, band-change and daily alerts → subscribers, alerts_sent
 
 Telegram ─ message / callback_query ─▶ tgcloud/handlers/*      (bot commands)
@@ -37,8 +39,9 @@ It runs on Telegram Serverless (tgcloud). There is no server to host: `tgcloud/`
 modules that run in the cloud, and `src/` is the Svelte front-end, built to `dist/` and served
 as the Mini App. Telegram Serverless has no scheduler, so
 [`.github/workflows/tick.yml`](.github/workflows/tick.yml) runs the 15-minute job, started by an
-external cron ([below](#the-15-minute-tick)). If a run is late, `/haze` and the Mini App fetch
-fresh data themselves when the snapshot is stale.
+external cron ([below](#the-15-minute-tick)). `/haze` and the Mini App also refetch NEA
+themselves when it's due (every couple of minutes until the new hour is in, then every 20 minutes
+for NEA's revisions), so a late run doesn't leave them behind.
 
 | Path | What it is |
 |---|---|
@@ -46,13 +49,15 @@ fresh data themselves when the snapshot is stale.
 | `tgcloud/handlers/` | Bot commands and inline buttons |
 | `cron/` | Cloudflare Worker that starts the tick workflow every 15 minutes (deployed separately) |
 | `tgcloud/endpoints/` | `getDashboard`, `getWeather`, `getCameras`, `getHazeMap`, `alerts`, `shareCard` (Mini App), `tick`, `admin` (CLI only) |
-| `tgcloud/lib/` | NEA fetch, PSI maths, alerts, breaking news, formatting, NEA’s outlook and the next-hours range, weather and cameras |
+| `tgcloud/lib/` | NEA fetch and feed cache, PSI maths, alerts, breaking news, formatting, NEA’s outlook and the next-hours range, weather, wind forecast, haze map, cameras, groups, the summary and forecast pictures (`card/`) |
 | `src/` | Mini App (Svelte 5 + Vite + TypeScript) |
 | `scripts/fixture.mjs` | Builds `src/dev/fixture.json` from live data for local UI work |
+| `scripts/hazemap/coast.mjs` | Generates `src/lib/coast.ts` (the map's land) from Natural Earth |
+| `scripts/range-backtest.mjs` | Checks the next-hours range against past NEA readings |
 | `scripts/deploy-guard.mjs` | Run by `npm run deploy`: refuses unless on a clean `main` level with `origin/main` |
 | `scripts/card/` | Builds the summary picture’s glyphs, map and logo (`npm run card:assets`); `preview.mjs` writes sample PNGs |
 | `test/` | `node --test` unit tests for the shared logic |
-| `docs/` | Platform SDK reference, [design notes](docs/design.md), UI audit |
+| `docs/` | Platform SDK reference, [design notes](docs/design.md), UI audit, the forecast decision ([forecast-options.md](docs/forecast-options.md)) |
 
 ## Develop
 
