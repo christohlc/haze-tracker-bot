@@ -26,33 +26,27 @@ function regionTable(snap) {
   return [`${'Region'.padEnd(8)}${pad('PM2.5', 6)}${pad('1h', 5)}${pad('3h', 5)}${pad('24h', 5)}`, ...rows].join('\n');
 }
 
+/** The highest region for `key` if it isn't the chat's area, else null. @param {any} snap @param {any} area @param {'psi3h' | 'psi24h'} key */
+function highestElsewhere(snap, area, key) {
+  const top = snap.worst[key];
+  return area && top && top.region !== area.id ? top : null;
+}
+
 /**
  * Where a reading is from: the chat's area, and the highest region if that's elsewhere, or for a
  * chat without one, the worst region.
  * @param {any} snap @param {any} area @param {'psi3h' | 'psi24h'} key
  */
 function whereOf(snap, area, key) {
-  const top = snap.worst[key];
-  if (!area) return `worst region (${top?.name ?? '–'})`;
-  return `${area.name}${top && top.region !== area.id ? `; highest ${top.name} ${n(top.value)}` : ''}`;
+  if (!area) return `worst region (${snap.worst[key]?.name ?? '–'})`;
+  const top = highestElsewhere(snap, area, key);
+  return `${area.name}${top ? `; highest ${top.name} ${n(top.value)}` : ''}`;
 }
 
-/** " in East": the chat's area, or for a chat without one the highest region (nothing without a reading). @param {any} snap @param {any} area */
-const placeOf = (snap, area) => (area ? ` in ${area.name}` : snap.worst.psi3h ? ` in ${snap.worst.psi3h.name}, the highest` : '');
-
-/** " · West highest at 244" when the highest 3-hour PSI is outside the chat's area. @param {any} snap @param {any} area */
-function highestElsewhere(snap, area) {
-  const top = snap.worst.psi3h;
-  return area && top && top.region !== area.id ? ` · ${top.name} highest at ${n(top.value)}` : '';
-}
-
-/**
- * The readings a chat's messages lead with, and the 3-hour PSI's caption.
- * @param {any} snap @param {string | null | undefined} region
- */
+/** The readings a chat's messages lead with. @param {any} snap @param {string | null | undefined} region */
 function focus(snap, region) {
   const r = readingsFor(snap, region);
-  return { area: r.area, psi3h: r.psi3h?.value ?? null, psi24h: r.psi24h?.value ?? null, pm25: r.pm25?.value ?? null, where: whereOf(snap, r.area, 'psi3h') };
+  return { area: r.area, psi3h: r.psi3h?.value ?? null, psi24h: r.psi24h?.value ?? null, pm25: r.pm25?.value ?? null };
 }
 
 /**
@@ -64,21 +58,30 @@ function focus(snap, region) {
 export function formatHaze(snap, ahead, { table = true, region = null } = {}) {
   const f = focus(snap, region);
   const band = psiBand(f.psi3h);
-  const advice = adviceLines(f.psi24h, f.pm25);
+  const worst = snap.worst.psi3h;
+  // " in East", or for a chat without an area " in West, the highest"; nothing without a reading.
+  const place = f.area ? ` in ${f.area.name}` : worst ? ` in ${worst.name}, the highest` : '';
+  const top = highestElsewhere(snap, f.area, 'psi3h');
 
   const lines = [
-    `${band?.emoji ?? '⚪️'} <b>${band?.label ?? 'No data'}</b> · 3-hr PSI ${n(f.psi3h)}${placeOf(snap, f.area)}`,
-    `<i>Our calculation from PM2.5 · ${sgtTime(snap.asOf)} SGT${highestElsewhere(snap, f.area)}</i>`,
+    `${band?.emoji ?? '⚪️'} <b>${band?.label ?? 'No data'}</b> · 3-hr PSI ${n(f.psi3h)}${place}`,
+    `<i>Our calculation from PM2.5 · ${sgtTime(snap.asOf)} SGT${top ? ` · ${top.name} highest at ${n(top.value)}` : ''}</i>`,
     ...(snap.stale ? ['⚠️ <i>NEA hasn’t updated recently, so this may be out of date.</i>'] : []),
     '',
-    ...advice,
+    ...adviceLines(f.psi24h, f.pm25),
   ];
   const soon = ahead?.range?.steps.find((s) => s.h === 3);
-  if (ahead?.outlook) lines.push(`📅 NEA’s forecast for ${sgtDayName(ahead.outlook.forDate)}: <b>${escapeHtml(ahead.outlook.psi ? psiRangeText(ahead.outlook.psi) : ahead.outlook.text)}</b> · /forecast`);
+  if (ahead?.outlook) lines.push(`📅 ${outlookLine(ahead.outlook, true)} · /forecast`);
   else if (soon) lines.push(`📈 Island-wide 1-hr PSI in 3 hours: likely <b>${soon.lo}–${soon.hi}</b>, our calculation · /forecast`);
   lines.push(`🚬 <b>${n(snap.cigs.past24h, 1)}</b> cigarettes’ worth in 24h, island-wide, outdoors all day`, '');
-  if (table) lines.push(`<pre>${regionTable(snap)}</pre>`, '<i>PM2.5 in µg/m³. 1h/3h PSI computed from PM2.5; 24h PSI is NEA’s.</i>', '');
-  lines.push(table ? '<i>Not official. Check haze.gov.sg for NEA advisories.</i>' : '<i>The picture is NEA’s official 24-hr PSI. Advisories: haze.gov.sg.</i>');
+  if (table)
+    lines.push(
+      `<pre>${regionTable(snap)}</pre>`,
+      '<i>PM2.5 in µg/m³. 1h/3h PSI computed from PM2.5; 24h PSI is NEA’s.</i>',
+      '',
+      '<i>Not official. Check haze.gov.sg for NEA advisories.</i>',
+    );
+  else lines.push('<i>The picture is NEA’s official 24-hr PSI. Advisories: haze.gov.sg.</i>');
   return lines.join('\n');
 }
 
@@ -140,7 +143,7 @@ export function formatBandAlert(snap, fromId, toId, region = null, official = nu
   const lines = [
     ...(official ? [...officialLines(official, snap), ''] : []),
     `${to?.emoji ?? '⚪️'} <b>Haze${f.area ? ` in ${f.area.name}` : ''} ${worse ? 'up' : 'down'} to ${to?.label ?? toId}</b> (was ${from?.label ?? fromId})`,
-    `Our 3-hour PSI <b>${n(f.psi3h)}</b>, ${f.where}${official ? '' : ` · ${sgtTime(snap.asOf)} SGT`}`,
+    `Our 3-hour PSI <b>${n(f.psi3h)}</b>, ${whereOf(snap, f.area, 'psi3h')}${official ? '' : ` · ${sgtTime(snap.asOf)} SGT`}`,
   ];
   // The worst region's 24-hour PSI is already the official lines' number.
   if (f.area || !official) lines.push(`NEA’s 24-hour PSI <b>${n(f.psi24h)}</b>, ${whereOf(snap, f.area, 'psi24h')}`);
@@ -157,8 +160,12 @@ function officialLines(event, snap) {
   ];
 }
 
-/** "NEA’s 24-hr PSI forecast for tomorrow: <b>150–230 (Unhealthy to Very Unhealthy)</b>" @param {import('./outlook-parse.js').Outlook} o */
-const outlookLine = (o) => `NEA’s 24-hr PSI forecast for ${sgtDayName(o.forDate)}: <b>${escapeHtml(outlookLabel(o))}</b>`;
+/**
+ * "NEA’s 24-hr PSI forecast for tomorrow: <b>150–230 (Unhealthy to Very Unhealthy)</b>"; `short`
+ * leaves out NEA's words when it gave numbers.
+ * @param {import('./outlook-parse.js').Outlook} o @param {boolean} [short]
+ */
+const outlookLine = (o, short = false) => `NEA’s 24-hr PSI forecast for ${sgtDayName(o.forDate)}: <b>${escapeHtml(short && o.psi ? psiRangeText(o.psi) : outlookLabel(o))}</b>`;
 
 /**
  * A breaking-news message: a story we picked from the news, or the official 24-hour PSI rising
