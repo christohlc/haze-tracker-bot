@@ -130,6 +130,13 @@ messages is the same short form, for the general public.
   dial streams in the arrow's direction, faster in a stronger wind (4 s to 1.5 s a pass), only
   when the direction is clear; rain falls on the dial while it’s raining anywhere. Reduced
   motion: all of these stay still or hidden.
+- Opening a region from Around the island morphs the row’s name into the region’s title and
+  back (a View Transition, `viewTransition()` in `src/lib/motion.ts`: 280ms `--ease-in-out`,
+  the rest crossfades in 220ms). Without View Transitions, or under reduced motion, it swaps at
+  once. Only one element carries the `region-name` at a time, or the browser skips the morph.
+- Haptics: a selection tick on picks (tabs, rows, the area); a light impact on other taps
+  that move to another view (the Next hours strip, closing a region with either back control);
+  success or error after a save. Never unprompted.
 - Looping animations go on an element with `use:ambient` (`src/lib/motion.ts`), which pauses
   them while it’s off screen, the page is hidden or Telegram has the app in the background.
   Loops animate `transform` and `opacity` only. A steady flow (streaks, rain, shimmer) is `linear`;

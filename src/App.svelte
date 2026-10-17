@@ -20,8 +20,9 @@
   import { cachedDashboard, saveDashboard } from './lib/cache';
   import { LATEST_ID } from './lib/changelog';
   import { readingTime } from './lib/format';
+  import { viewTransition } from './lib/motion';
   import type { Period } from './lib/period';
-  import { getStored, inTelegram, setStored, showBackButton } from './lib/telegram';
+  import { getStored, impactHaptic, inTelegram, setStored, showBackButton } from './lib/telegram';
   import { snapshotVerdict, type Group } from '../tgcloud/lib/advice.js';
   import { STALE_NOTE } from '../tgcloud/lib/snapshot.js';
   import { area } from './lib/area.svelte';
@@ -82,17 +83,31 @@
   // Back lands where the list was.
   let detail = $state<RegionId | null>(null);
   let listY = 0;
+  // The row whose name morphs into the region's title (and back): named only while it's on
+  // screen, since a View Transition name must be unique.
+  let namedRow = $state<RegionId | null>(null);
   async function openRegion(id: RegionId) {
     listY = window.scrollY;
-    detail = id;
-    await tick(); // the region is shown and the list hidden, so the page is its height
-    tabsAnchor?.scrollIntoView({ block: 'start', behavior: 'instant' });
+    namedRow = id;
+    await tick();
+    await viewTransition(async () => {
+      namedRow = null;
+      detail = id;
+      await tick(); // the region is shown and the list hidden, so the page is its height
+      tabsAnchor?.scrollIntoView({ block: 'start', behavior: 'instant' });
+    });
   }
   async function closeRegion() {
     const was = detail;
-    detail = null;
-    await tick(); // the Now tab is laid out again
-    window.scrollTo({ top: listY, behavior: 'instant' });
+    if (!was) return;
+    impactHaptic();
+    await viewTransition(async () => {
+      detail = null;
+      namedRow = was;
+      await tick(); // the Now tab is laid out again
+      window.scrollTo({ top: listY, behavior: 'instant' });
+    });
+    namedRow = null;
     // Focus goes back to the row that opened it.
     document.querySelector<HTMLElement>(`[data-region="${was}"]`)?.focus({ preventScroll: true });
   }
@@ -209,7 +224,7 @@
     {#if visited.now}
       <div id="panel-now" class="sections" class:off={tab !== 'now' || detail != null} role="tabpanel" aria-labelledby="tab-now">
         <Hero snapshot={data.snapshot} bind:period mask={outside?.mask} range={data.ahead?.range ?? null} onahead={() => (tab = 'outlook')} />
-        <RegionTable snapshot={data.snapshot} {period} onselect={openRegion} />
+        <RegionTable snapshot={data.snapshot} {period} morph={namedRow} onselect={openRegion} />
         <Advice snapshot={data.snapshot} v={outside} {group} onpick={pickGroup} />
         <AlertsCard {group} />
         <ShareCard snapshot={data.snapshot} />

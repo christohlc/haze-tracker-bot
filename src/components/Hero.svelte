@@ -9,6 +9,7 @@
   import { area, canLocate, locateArea, pickArea } from '../lib/area.svelte';
   import { ambient, reducedMotion } from '../lib/motion';
   import { PERIOD_ORDER, PERIODS, psiKey, type Period } from '../lib/period';
+  import { impactHaptic, selectionHaptic } from '../lib/telegram';
   import Segmented from './Segmented.svelte';
 
   // `mask` is the short form of What to do's verdict (24-hr PSI and PM2.5, whichever is stricter),
@@ -39,6 +40,7 @@
   let locateFailed = $state(false);
   async function onArea(e: Event & { currentTarget: HTMLSelectElement }) {
     const v = e.currentTarget.value;
+    selectionHaptic();
     locateFailed = false;
     if (v !== 'locate') return pickArea(v === 'highest' ? null : (v as RegionId));
     e.currentTarget.value = area.id ?? 'highest';
@@ -107,7 +109,7 @@
 
   {#if range}
     <!-- Tapping it opens What’s ahead, where the ranges are explained. -->
-    <button type="button" class="ahead" onclick={onahead}>
+    <button type="button" class="ahead" onclick={() => { impactHaptic(); onahead?.(); }}>
       <span class="ahead-title">Next hours · island-wide 1-hour PSI, our estimate<span class="visually-hidden">. Opens What’s ahead.</span></span>
       <span class="ahead-steps" style:--steps={range.steps.length}>
         {#each range.steps as s (s.h)}

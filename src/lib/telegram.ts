@@ -38,6 +38,11 @@ export function selectionHaptic() {
   tg?.HapticFeedback?.selectionChanged?.();
 }
 
+/** A light tap on pressing something that opens a view. No-op outside Telegram. */
+export function impactHaptic() {
+  tg?.HapticFeedback?.impactOccurred?.('light');
+}
+
 /** Open an outside link in Telegram's in-app browser. Returns false outside Telegram. */
 export function openLink(url: string): boolean {
   if (!inTelegram || !tg.openLink) return false;
