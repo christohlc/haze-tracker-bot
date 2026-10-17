@@ -2,7 +2,7 @@
 // Haze headlines from publishers' RSS feeds. Pure (no sdk) so tests and the Mini App
 // can load it; lib/news.js does the fetching and storing.
 
-import { decodeEntities } from './html.js';
+import { decodeEntities, HTTPS_LINK } from './html.js';
 
 /** The one list of news sources: display name and RSS feed. Story links must be on the feed's host. */
 export const PUBLISHERS = {
@@ -10,10 +10,6 @@ export const PUBLISHERS = {
   cna: { name: 'CNA', feed: 'https://www.channelnewsasia.com/api/v1/rss-outbound-feed?_format=xml&category=10416' },
   mothership: { name: 'Mothership', feed: 'https://mothership.sg/feed/' },
 };
-
-// The Serverless runtime has no URL global, so links are split by hand: https only,
-// host (anything before / ? #, so user@host or host:port never match), then path.
-const HTTPS_LINK = /^https:\/\/([^/?#]+)([^?#]*)/i;
 
 /** @type {Record<string, string>} */
 const HOSTS = Object.fromEntries(Object.entries(PUBLISHERS).map(([id, p]) => [id, p.feed.match(HTTPS_LINK)?.[1] ?? '']));

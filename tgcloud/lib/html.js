@@ -20,3 +20,7 @@ export function decodeEntities(s) {
 
 /** Text that's safe inside Telegram HTML, attributes included. @param {string} s */
 export const escapeHtml = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+// The Serverless runtime has no URL global, so links are split by hand: https only,
+// host (anything before / ? #, so user@host or host:port never match), then path.
+export const HTTPS_LINK = /^https:\/\/([^/?#]+)([^?#]*)/i;

@@ -91,14 +91,19 @@ test('reads the wind picture without URL, which the bot’s runtime lacks', () =
   } finally {
     globalThis.URL = saved;
   }
+});
+
+test('resolveUrl agrees with URL on the links NEA writes, and refuses the rest', () => {
   const base = 'https://www.haze.gov.sg/docs/a/b.kml?time=1';
-  for (const href of ['c.png', '/x/c.png', 'https://cdn.example/c.png', '//cdn.example/c.png', 'c.png?v=2']) {
+  for (const href of ['c.png', 'c.png?v=2', '/x/c.png', 'https://cdn.example/c.png']) {
     assert.equal(resolveUrl(href, base), new URL(href, base).href, href);
   }
   assert.equal(resolveUrl('c.png', 'https://www.haze.gov.sg'), 'https://www.haze.gov.sg/c.png');
-  assert.equal(resolveUrl('c.png', 'not a url'), null);
+  for (const href of ['', 'http://x/c.png', 'javascript:alert(1)', '//cdn.example/c.png', '../c.png', './c.png', '?v=2', '#h']) {
+    assert.equal(resolveUrl(href, base), null, href);
+  }
   assert.equal(resolveUrl('c.png', 'http://www.haze.gov.sg/w.kml'), null, 'https only');
-  assert.equal(resolveUrl('javascript:alert(1)', base), null);
+  assert.equal(resolveUrl('c.png', null), null);
 });
 
 test('never throws on what haze.gov.sg might send instead', () => {

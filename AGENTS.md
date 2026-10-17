@@ -217,6 +217,9 @@ itself: the database, the Bot API, secrets.
     but write relative imports.
 - **No filesystem, no npm packages** at runtime. Only `sdk` (and its submodules
   like `sdk/db`) and your own project modules exist.
+- **Not every web global exists.** There is no `URL` (split links with `HTTPS_LINK` in
+  `lib/html.js`), and `setTimeout` may be missing. Node has both, so tests won't catch it: delete
+  the global in the test, as `test/hazemap-parse.test.js` does for the wind picture.
 - A handler module's `export default` is what the platform invokes, with the
   update's **payload** as the first argument — for `handlers/message` that's the
   `Message` (i.e. `update.message`), for `handlers/callback_query` the
