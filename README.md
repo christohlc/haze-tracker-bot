@@ -5,7 +5,7 @@
 A Telegram bot and Mini App for haze in Singapore. It shows current PSI by region (also as a
 shareable picture of the island), a cigarette
 equivalent, NEA’s 24-hour PSI forecast during haze episodes, a likely range for the next few hours,
-NEA’s health advice, wind and rain from NEA’s weather stations, NEA’s regional map of fires and
+NEA’s health advice, wind and rain from NEA’s weather stations, NEA’s wind forecast, NEA’s regional map of fires and
 smoke haze (from haze.gov.sg), LTA’s checkpoint and Sentosa
 camera pictures and the latest haze headlines from The Straits Times, CNA and Mothership, and
 sends alerts to a chat when the haze band changes or there’s breaking haze news (schools closing,

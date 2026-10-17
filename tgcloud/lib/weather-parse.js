@@ -153,6 +153,9 @@ export function windHeadline(wind) {
   return wind.kmh < LIGHT_KMH ? 'Light winds' : 'Shifting winds';
 }
 
+/** Whether a wind from `deg` comes from Sumatra, where most of the fires behind Singapore's haze burn. @param {number} deg */
+export const fromSumatra = (deg) => deg >= 200 && deg <= 290;
+
 /**
  * Whether the wind is coming from where the fires behind Singapore's haze usually are. Our reading, not NEA's.
  * @param {Weather['wind']} wind
@@ -168,7 +171,7 @@ export function smokeLine(wind, psi24h) {
   const from = clearDirection(wind);
   if (from == null) return 'Winds are shifting, so it’s hard to say where the air is coming from.';
   const end = clean ? ', but the air is clean right now.' : '.';
-  if (from >= 200 && from <= 290) return `The wind is coming from Sumatra, where most of the fires behind our haze burn${end}`;
+  if (fromSumatra(from)) return `The wind is coming from Sumatra, where most of the fires behind our haze burn${end}`;
   if (from >= 100 && from <= 160) return `The wind is coming from Borneo, which can carry smoke from fires in Kalimantan${end}`;
   return 'The wind isn’t coming from the usual fire areas in Sumatra or Borneo.';
 }

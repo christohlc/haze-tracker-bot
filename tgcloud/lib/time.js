@@ -27,6 +27,11 @@ export function sgtHour(iso, withMinutes = false) {
 
 export const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
+export const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+/** "2026-10-18" (an SGT date) → "Sunday". No Intl: the runtime may not have time zones. @param {string} ymd */
+export const sgtWeekday = (ymd) => WEEKDAYS[new Date(`${ymd.slice(0, 10)}T00:00:00Z`).getUTCDay()];
+
 /** "2026-10-16" (an SGT date, or an SGT timestamp) → "16 Oct". @param {string} ymd */
 export function sgtDayMonth(ymd) {
   return `${Number(ymd.slice(8, 10))} ${MONTHS[Number(ymd.slice(5, 7)) - 1]}`;
