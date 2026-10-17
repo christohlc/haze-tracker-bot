@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json",
-    "deploy": "npm run build && tgcloud push",
+    "deploy": "node scripts/deploy-guard.mjs && npm run build && tgcloud push",
     "test": "node --test test/",
     "card:assets": "node scripts/card/build-assets.mjs"
   },

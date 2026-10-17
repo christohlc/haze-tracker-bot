@@ -133,7 +133,9 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   `break-ui` for components that show data. Keep the result consistent with docs/design.md.
 - Checks: `npm test` and `npm run check`. Deploy: `npm run deploy` (+ `npx tgcloud
   migrate` after schema changes; + `npx wrangler@4 deploy --config cron/wrangler.jsonc` after
-  changing `cron/`, which `npm run deploy` doesn't touch).
+  changing `cron/`, which `npm run deploy` doesn't touch). `npm run deploy` refuses
+  (`scripts/deploy-guard.mjs`) unless on a clean `main` level with `origin/main`, since `push`
+  uploads whatever is on disk; never run `tgcloud push` directly. Emergency override: `DEPLOY_FORCE=1`.
 
 ## Layout
 

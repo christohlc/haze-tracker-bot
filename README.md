@@ -49,6 +49,7 @@ fresh data themselves when the snapshot is stale.
 | `tgcloud/lib/` | NEA fetch, PSI maths, alerts, breaking news, formatting, NEA’s outlook and the next-hours range, weather and cameras |
 | `src/` | Mini App (Svelte 5 + Vite + TypeScript) |
 | `scripts/fixture.mjs` | Builds `src/dev/fixture.json` from live data for local UI work |
+| `scripts/deploy-guard.mjs` | Run by `npm run deploy`: refuses unless on a clean `main` level with `origin/main` |
 | `scripts/card/` | Builds the summary picture’s glyphs, map and logo (`npm run card:assets`); `preview.mjs` writes sample PNGs |
 | `test/` | `node --test` unit tests for the shared logic |
 | `docs/` | Platform SDK reference, [design notes](docs/design.md), UI audit |
@@ -89,9 +90,10 @@ npm run check
 npm run deploy
 ```
 
-That builds the front-end and runs `tgcloud push`. Deploying never changes the database: after
-editing `tgcloud/schema.js`, run `npx tgcloud migrate` as well. `npx tgcloud status` shows what
-differs from the cloud. It doesn't touch the cron Worker in `cron/`: after changing that, run
+That builds the front-end and runs `tgcloud push`, but only from a clean `main` that matches
+`origin/main` (`DEPLOY_FORCE=1 npm run deploy` overrides it). Deploying never changes the
+database: after editing `tgcloud/schema.js`, run `npx tgcloud migrate` as well.
+`npx tgcloud status` shows what differs from the cloud. It doesn't touch the cron Worker in `cron/`: after changing that, run
 `npx wrangler@4 deploy --config cron/wrangler.jsonc` ([below](#the-15-minute-tick)).
 
 To run a module in the cloud by hand:
