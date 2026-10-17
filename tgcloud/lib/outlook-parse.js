@@ -10,9 +10,10 @@ import { MONTHS, sgtDateOf, toSgtIso } from './time.js';
 export const OUTLOOK_FEED = 'https://www.nea.gov.sg/api/advisory/latesthazesituationupdate';
 
 /**
- * NEA's words, our band ids, the SGT date it's for, and when it was issued and stops showing
- * (SGT timestamps; `expires` is null when NEA set none).
- * @typedef {{ text: string, from: string, to: string, forDate: string, issuedAt: string, expires: string | null }} Outlook
+ * NEA's words, our band ids, NEA's PSI numbers when it gives them (since 16 Oct 2026, "150 - 230
+ * Unhealthy to Very Unhealthy"; null before), the SGT date it's for, and when it was issued and
+ * stops showing (SGT timestamps; `expires` is null when NEA set none).
+ * @typedef {{ text: string, from: string, to: string, psi: { lo: number, hi: number } | null, forDate: string, issuedAt: string, expires: string | null }} Outlook
  */
 
 /** HTML → plain text. @param {unknown} html */
@@ -64,19 +65,23 @@ export function parseOutlook(json) {
   const day = body.match(/forecast for (\d{1,2} [A-Za-z]{3,9} \d{4})/i);
   const forDate = day ? isoDate(day[1]) : null;
   // The short line first; the sentence in the body if NEA changes it.
-  const text = (
-    plain(json?.AirQualityBlurb).match(/24-hr PSI Forecast:\s*(.+)$/i)?.[1] ??
+  const said = (
+    plain(json?.AirQualityBlurb).match(/(?:24-hr )?PSI Forecast:\s*(.+)$/i)?.[1] ??
     body.match(/forecast for [^.]*? is (.+?)\./i)?.[1] ??
     ''
   ).trim();
+  // "150 - 230 Unhealthy to Very Unhealthy", or "150 – 230 (Unhealthy to Very Unhealthy)" in the body.
+  const nums = said.match(/^(\d{1,4})(?:\s*(?:-|–|to)\s*(\d{1,4}))?\s*\(?\s*(.*?)\s*\)?$/i);
+  const text = nums ? nums[3] : said;
+  const psi = nums ? { lo: Number(nums[1]), hi: Number(nums[2] ?? nums[1]) } : null;
   const parts = splitBands(text);
   const from = bandId(parts[0] ?? '');
   const to = bandId(parts.at(-1) ?? '');
   const issuedAt = sgtIso(json?.DateOfArticle);
   // NEA fills one or the other; the site hides the box after it.
   const expires = sgtIso(json?.ExpiryDateHazeDisplayDt) ?? sgtIso(json?.ExpiryDateHazeDisplay);
-  if (!forDate || !from || !to || parts.length > 2 || !issuedAt) return null;
-  return { text, from, to, forDate, issuedAt, expires };
+  if (!forDate || !from || !to || parts.length > 2 || !issuedAt || (psi && psi.lo > psi.hi)) return null;
+  return { text, from, to, psi, forDate, issuedAt, expires };
 }
 
 /** Where the dial ends: Hazardous runs from 301 to here. */

@@ -17,7 +17,10 @@
   const range = $derived(ahead.range);
   const day = $derived(outlook ? sgtDayName(outlook.forDate) : '');
 
-  const span = $derived(outlook ? outlookSpan(outlook.text) : null);
+  const psiRange = ({ lo, hi }: { lo: number; hi: number }) => (lo === hi ? `${lo}` : `${lo}–${hi}`);
+  // NEA's own numbers when it gives them; otherwise the span its band words cover.
+  const span = $derived(outlook ? (outlook.psi ?? outlookSpan(outlook.text)) : null);
+  const said = $derived(outlook ? (outlook.psi ? `${psiRange(outlook.psi)}, ${outlook.text}` : outlook.text) : '');
 
   // The first and last band a range crosses ("Unhealthy to Hazardous" reads as "through").
   const bandsIn = (lo: number, hi: number) => {
@@ -54,13 +57,14 @@
   {#if outlook}
     <h3 class="subhead">{day[0].toUpperCase()}{day.slice(1)} · NEA forecast</h3>
     {#if span}
-      <PsiMeter lo={span.lo} hi={span.hi} words={outlook.text} now={psi24h}>
+      <PsiMeter lo={span.lo} hi={span.hi} words={said} now={psi24h}>
+        {#if outlook.psi}<span class="num forecast">{psiRange(outlook.psi)}</span>{/if}
         <BandPill bandId={outlook.from} showLabel />
         {#if outlook.to !== outlook.from}<span class="to">to</span> <BandPill bandId={outlook.to} showLabel />{/if}
       </PsiMeter>
     {/if}
     <p class="note">
-      24-hr PSI, in NEA’s words “{outlook.text}”{#if span && psi24h != null}; the tick marks today’s official 24-hr PSI{/if}. Issued {sgtDayMonth(outlook.issuedAt)}, {sgtHour(outlook.issuedAt, true)} SGT.
+      24-hr PSI, in NEA’s words “{said}”{#if span && psi24h != null}; the tick marks today’s official 24-hr PSI{/if}. Issued {sgtDayMonth(outlook.issuedAt)}, {sgtHour(outlook.issuedAt, true)} SGT.
       <a href={HAZE_SITE} target="_blank" rel="noopener noreferrer" onclick={open}>More at haze.gov.sg</a>
     </p>
   {/if}
@@ -102,6 +106,10 @@
   }
   .to {
     color: var(--ink-2);
+  }
+  .forecast {
+    font-weight: 650;
+    white-space: nowrap;
   }
   /* An inline link, but with a finger-sized hit area. */
   .note a {

@@ -8,6 +8,8 @@ import { sgtDayName } from '../tgcloud/lib/time.js';
 
 // NEA's haze situation update as fetched on 16 Oct 2026, 6:31 pm SGT.
 const sample = JSON.parse(readFileSync(new URL('./nea-outlook.json', import.meta.url), 'utf8'));
+// NEA's update of 16 Oct 2026 as fetched the next afternoon, after NEA added numbers to its forecast.
+const numbered = JSON.parse(readFileSync(new URL('./nea-outlook-numbers.json', import.meta.url), 'utf8'));
 const at = (iso) => Date.parse(iso);
 const DAY_OF = at('2026-10-16T09:00:00+08:00');
 
@@ -16,12 +18,32 @@ test('reads NEA’s forecast', () => {
     text: 'Unhealthy to Low Very Unhealthy',
     from: 'unhealthy',
     to: 'very_unhealthy',
+    psi: null,
     forDate: '2026-10-16',
     issuedAt: '2026-10-15T18:19:00+08:00',
     expires: null,
   });
   // Times come back in SGT whatever offset NEA uses.
   assert.equal(parseOutlook({ ...sample, DateOfArticle: '2026-10-15T10:19:00Z' })?.issuedAt, '2026-10-15T18:19:00+08:00');
+});
+
+test('reads NEA’s forecast with numbers', () => {
+  const want = {
+    text: 'Unhealthy to Very Unhealthy',
+    from: 'unhealthy',
+    to: 'very_unhealthy',
+    psi: { lo: 150, hi: 230 },
+    forDate: '2026-10-17',
+    issuedAt: '2026-10-16T18:19:00+08:00',
+    expires: null,
+  };
+  assert.deepEqual(parseOutlook(numbered), want);
+  // No short line: "is 150 – 230 (Unhealthy to Very Unhealthy)" in the body.
+  assert.deepEqual(parseOutlook({ ...numbered, AirQualityBlurb: '' }), want);
+  const blurb = (text) => parseOutlook({ ...numbered, AirQualityBlurb: `PSI Forecast: ${text}` });
+  assert.deepEqual(blurb('120 Unhealthy')?.psi, { lo: 120, hi: 120 });
+  assert.deepEqual(blurb('80 &ndash; 140 (Moderate to Unhealthy)')?.psi, { lo: 80, hi: 140 });
+  assert.equal(blurb('230 - 150 Unhealthy to Very Unhealthy'), null, 'backwards');
 });
 
 test('handles NEA’s other wordings', () => {
@@ -100,4 +122,11 @@ test('the span NEA’s words cover, for the meter', async () => {
   assert.deepEqual(outlookSpan('High Very Unhealthy to Hazardous'), { lo: 268, hi: 400 });
   assert.deepEqual(outlookSpan('Unhealthy to Moderate'), { lo: 51, hi: 200 }, 'either order');
   assert.equal(outlookSpan('Smoky'), null);
+});
+
+test('/forecast gives NEA’s numbers when it has them', async () => {
+  const { formatForecast } = await import('../tgcloud/lib/format.js');
+  const line = (json) => formatForecast({ outlook: parseOutlook(json), range: null }).split('\n')[2];
+  assert.match(line(numbered), /<b>150–230 \(Unhealthy to Very Unhealthy\)<\/b>$/);
+  assert.match(line(sample), /<b>Unhealthy to Low Very Unhealthy<\/b>$/);
 });

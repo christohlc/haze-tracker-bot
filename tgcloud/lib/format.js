@@ -130,8 +130,11 @@ export function formatBandAlert(snap, fromId, toId, region = null) {
   return lines.join('\n');
 }
 
-/** "NEA’s 24-hr PSI forecast for tomorrow: <b>Unhealthy to Low Very Unhealthy</b>" @param {import('./outlook-parse.js').Outlook} o */
-const outlookLine = (o) => `NEA’s 24-hr PSI forecast for ${sgtDayName(o.forDate)}: <b>${escapeHtml(o.text)}</b>`;
+/** "NEA’s 24-hr PSI forecast for tomorrow: <b>150–230 (Unhealthy to Very Unhealthy)</b>", numbers when NEA gives them. @param {import('./outlook-parse.js').Outlook} o */
+const outlookLine = (o) => {
+  const nums = o.psi ? (o.psi.lo === o.psi.hi ? `${o.psi.lo}` : `${o.psi.lo}–${o.psi.hi}`) : null;
+  return `NEA’s 24-hr PSI forecast for ${sgtDayName(o.forDate)}: <b>${nums ? `${nums} (${escapeHtml(o.text)})` : escapeHtml(o.text)}</b>`;
+};
 
 /**
  * A breaking-news message: a story we picked from the news, or the official 24-hour PSI rising
