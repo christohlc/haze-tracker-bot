@@ -4,7 +4,7 @@
 // (this repo only, Actions: read and write), set with `wrangler secret put`.
 
 const DISPATCH_URL =
-  'https://api.github.com/repos/christohogc/haze-tracker-bot/actions/workflows/tick.yml/dispatches';
+  'https://api.github.com/repos/christohlc/haze-tracker-bot/actions/workflows/tick.yml/dispatches';
 export const KEEPALIVE_CRON = '33 3 * * MON'; // must match wrangler.jsonc
 
 export function dispatchRequest(cron, token) {
