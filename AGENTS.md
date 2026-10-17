@@ -25,7 +25,7 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   platform has no scheduler). A Cloudflare Worker cron (`cron/`, deployed separately with wrangler,
   README#the-15-minute-tick) starts it through the workflow_dispatch API, because GitHub's
   `schedule` drops most runs; the `schedule` stays as a backstop. Keep the crons in
-  `cron/wrangler.jsonc` and `tick.yml` in step. It refreshes NEA, then the news, then sends alerts.
+  `cron/wrangler.jsonc` and `tick.yml` in step. It refreshes NEA and the news side by side, then sends alerts.
   `tick` and `admin` call `requireCli(ctx)`: they're CLI-only, never Mini App endpoints.
   The repo is public (free Actions minutes); a weekly `keepalive` job in the same workflow
   stops GitHub's 60-day pause of scheduled workflows.
@@ -82,15 +82,16 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   fetched only by /haze, /forecast, the dashboard and a tick with daily updates due). NEA issues it about 6 pm, during haze
   episodes only, so null is the usual answer. The next-hours range (`lib/range.js`) is worked out
   from the last 14 days of `readings` and needs at least 72 hours. It's worked out when NEA is
-  refetched (and after a backfill) and kept in `state('range')`; its age is checked when read. The tick stores only today and
+  refetched (and after a backfill) and kept in `state('range')`; read back, it's dropped once its
+  latest hour is over 3 h old (`STALE_H`). The tick stores only today and
   yesterday, so after a fresh start or a gap fill it with `admin` `{ action: 'backfill', days: 14 }`
   (one NEA request per day, 1 s apart, ~20 s budget; rerun until `remaining` is empty). The runtime
   may lack `setTimeout`: then it waits with `Atomics.wait`, or, if that's missing too, fetches at most
   5 days per run back to back (`paced: false` in the result), so rerun a minute later.
 - **Some `tgcloud/lib/` modules are shared with the front-end and tests**
   (`psi`, `cigs`, `advice`, `alert-settings`, `alert-rules`, `breaking-rules`, `format`, `snapshot`,
-  `outlook-parse`, `range`, `html`, `time`, `news-parse`, `cameras-parse`, `weather-parse`, `hazemap-parse`, `forecast-parse`, `chat-rules`,
-  `card/geometry|png|raster|summary|glyphs|art`). Keep these pure: no `sdk` import, no DB, so
+  `outlook-parse`, `range`, `html`, `time`, `config`, `fetch-retry`, `news-parse`, `cameras-parse`, `weather-parse`, `hazemap-parse`, `forecast-parse`, `chat-rules`,
+  `card/geometry|png|raster|summary|forecast|glyphs|art`). Keep these pure: no `sdk` import, no DB, so
   Vite and `node --test` can load them. Modules that touch `sdk`, directly or via `store`, are
   `store`, `nea`, `refresh`, `alerts`, `breaking`, `subscriptions`, `cli-only`, `outlook`, `ahead`,
   `news`, `cameras`, `weather`, `hazemap`, `forecast`, `bot-errors`, `messages`, `card/send`, `http`, `feed-cache`, `groups`,
@@ -129,7 +130,11 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   pushing** a build that reads `region`.
 - **Secrets live in the `settings` DB table**, set only via `endpoints/admin` from the
   CLI. Never commit or echo a key. `datagov_api_key` (optional, free from data.gov.sg) is sent
-  as `x-api-key` to NEA's v2 API only, for a higher rate limit (`lib/http.js`).
+  as `x-api-key` to NEA's v2 API only, for a higher rate limit (`lib/http.js`). Each isolate rereads it
+  every 10 min (`KEY_READ_MS`), so a new key needs no redeploy; data.gov.sg treats a revoked key
+  like no key. Set it with the `read -rs … | grep -Ev` line at the top of `admin.js`, which keeps it
+  off screen. `admin` `rewind_band` `{ band }` resets every alert band so the next tick announces
+  the real ones (for testing).
 - **Free tiers.** Users only touch the tgcloud platform; the Cloudflare Worker (free: 100k
   requests/day, ~100 used) and GitHub Actions (free for a public repo, ~96 runs/day of ~25 s) only
   start the tick, so their limits can pause alerts but never block /haze or the Mini App. The

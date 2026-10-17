@@ -76,7 +76,8 @@ or, outside Telegram, from the OS. A new colour token needs both a light and a d
   tabs. It sits at the top, not the bottom, because Telegram’s MainButton (“Get haze alerts”)
   owns the bottom edge.
   - **Now:** hero, regions, advice, alerts, share. The hero's area pill (a native select over a
-    pill) picks the region the hero, advice and alerts follow; until someone picks, it's the highest.
+    pill) picks the region the hero, advice and alerts follow, and Around the island lists it first on a
+    tinted row tagged “Your area”; until someone picks, it's the highest.
   - **Outlook:** what’s ahead, wind and rain, where it’s coming from (NEA’s regional haze map), history.
   - **More:** live views, news, cigarettes, what’s new, sources (collapsed).
 - A tab mounts the first time it’s opened and then stays mounted, hidden (laid out at zero
@@ -129,7 +130,8 @@ messages is the same short form, for the general public.
   The PSI version says “Official 24-hour PSI now Hazardous”: only NEA’s 24-hour PSI is ever
   called official.
 - Band alerts (`formatBandAlert`) name the chat’s area (“Haze in East down to Unhealthy”), say
-  “Our 3-hour PSI” and add NEA’s 24-hour PSI, the number on the picture above them. An official
+  “Our 3-hour PSI” and add NEA’s 24-hour PSI, the number on the picture above them (left out
+  when a folded official crossing already gives the same number). An official
   24-hour PSI crossing due to the same chat in the same tick leads that alert instead of going
   as a second message.
 
@@ -138,7 +140,7 @@ messages is the same short form, for the general public.
 Every section handles loading, empty and failed states. To check them outside Telegram, use
 the dev toolbar (`?demo=worst|empty|error|loading`). Those last two hide every card, so a card's
 own states take `?card=<card>:<state>`, comma-separated: `cameras:error|loading` for Live views and
-`weather:error|loading|partial` for Wind and rain, `hazemap:error|loading|none|old` for the haze map, `ahead:range|outlook` for one half of What’s ahead. `?tab=outlook|more` opens on that tab. The
+`weather:error|loading|partial|forecast` for Wind and rain, `hazemap:error|loading|none|old` for the haze map, `ahead:range|outlook` for one half of What’s ahead. `?tab=outlook|more` opens on that tab. The
 worst-case data has long names, missing readings and extreme values, so use it before shipping a
 layout change.
 

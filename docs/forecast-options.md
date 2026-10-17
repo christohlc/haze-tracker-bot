@@ -1,6 +1,7 @@
 # Forecast: keep the model, or use NEA’s outlook?
 
-Status: plan, not implemented. Written 16 Oct 2026.
+Status: decided and shipped (option b): NEA’s outlook plus the range, no model. Written 16 Oct 2026;
+kept for the reasoning. The current design is in [README.md](../README.md#whats-ahead).
 
 **Recommendation: option (b).** Show NEA’s official 24-hr PSI forecast for tomorrow whenever
 NEA has issued one. Replace our model with a plain “likely to stay around X” range for the next
