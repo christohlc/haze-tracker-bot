@@ -16,7 +16,9 @@
   import WhatsNew from './components/WhatsNew.svelte';
   import WindRain from './components/WindRain.svelte';
   import { loadDashboard, loadWeather, type Dashboard, type WeatherResult } from './lib/api';
+  import { cachedDashboard, saveDashboard } from './lib/cache';
   import { LATEST_ID } from './lib/changelog';
+  import { sgtHour } from './lib/format';
   import type { Period } from './lib/period';
   import { getStored, inTelegram, setStored, showBackButton } from './lib/telegram';
   import { snapshotVerdict, type Group } from '../tgcloud/lib/advice.js';
@@ -94,13 +96,24 @@
     });
   });
 
+  // A load that fails keeps what's on screen, or the last readings saved on this device, and
+  // says so (`failed`); the error screen is only for a first load with nothing saved.
+  let failed = $state(false);
+  let retrying = $state(false);
   async function load() {
+    retrying = true;
     try {
       data = await loadDashboard();
       error = null;
+      failed = false;
       loadedAt = Date.now();
+      saveDashboard(data);
     } catch (e) {
       error = e instanceof Error ? e.message : 'Couldn’t load the latest readings.';
+      data ??= cachedDashboard()?.data ?? null;
+      failed = data != null;
+    } finally {
+      retrying = false;
     }
   }
 
@@ -114,7 +127,13 @@
       if (document.visibilityState === 'visible' && Date.now() - loadedAt > 10 * 60_000) load();
     };
     document.addEventListener('visibilitychange', onVisible);
-    return () => document.removeEventListener('visibilitychange', onVisible);
+    // Back online after a failed load: try again straight away.
+    const onOnline = () => failed && load();
+    window.addEventListener('online', onOnline);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('online', onOnline);
+    };
   });
 </script>
 
@@ -135,7 +154,14 @@
       <div class="card sk"></div>
     </div>
   {:else}
-    {#if data.snapshot.stale}
+    {#if failed}
+      <div class="card stale offline" role="status">
+        <span>
+          {navigator.onLine ? 'Couldn’t refresh.' : 'You’re offline.'} Showing NEA’s readings from {sgtHour(data.snapshot.asOf)} SGT.
+        </span>
+        <button type="button" onclick={load} disabled={retrying}>{retrying ? 'Trying…' : 'Try again'}</button>
+      </div>
+    {:else if data.snapshot.stale}
       <div class="card stale" role="status">
         NEA hasn’t published a new reading recently, so these numbers may be out of date.
       </div>
@@ -269,6 +295,28 @@
     font-size: 0.875rem;
     color: var(--ink-2);
     box-shadow: inset 3px 0 0 var(--band-unhealthy);
+  }
+  .offline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .offline button {
+    flex: none;
+    min-height: 44px;
+    padding: 0 14px;
+    border: 1px solid var(--hairline);
+    border-radius: 999px;
+    background: none;
+    color: var(--ink);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 120ms var(--ease-out);
+  }
+  .offline button:active:not(:disabled) {
+    transform: scale(0.97);
   }
   @media (prefers-reduced-motion: reduce) {
     .sections > :global(*) {

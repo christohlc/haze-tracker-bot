@@ -23,10 +23,12 @@ const GROUP = {
 };
 
 /** @param {typeof PRIVATE} copy */
-const help = (copy) =>
+/** @param {{ note: string }} copy @param {string | undefined} username for the inline mode line */
+const help = (copy, username) =>
   [
     '<b>I’m going hazelnuts!</b>',
     ...COMMANDS.filter((c) => c.help).map((c) => `/${c.command}${c.usage ? ` ${c.usage}` : ''}: ${c.help}`),
+    ...(username ? [`In any chat, type @${username} to share the haze, or @${username} west for one region.`] : []),
     '',
     `<i>Privacy: ${copy.note} /stop deletes them.</i>`,
   ].join('\n');
@@ -50,7 +52,7 @@ export default async function (message) {
   switch (cmd) {
     case 'start':
     case 'help':
-      return reply(message, help(copy), await dashboardButton(message.chat.id));
+      return reply(message, help(copy, (await botInfo())?.username), await dashboardButton(message.chat.id));
     case 'haze': {
       const refreshed = getSnapshot();
       const [snap, ahead, reply_markup, sub] = await Promise.all([refreshed, getAhead(refreshed), dashboardButton(message.chat.id), getSubscriber(message.chat.id)]);

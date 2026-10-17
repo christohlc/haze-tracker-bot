@@ -101,7 +101,7 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   5 days per run back to back (`paced: false` in the result), so rerun a minute later.
 - **Some `tgcloud/lib/` modules are shared with the front-end and tests**
   (`psi`, `cigs`, `advice`, `alert-settings`, `alert-rules`, `breaking-rules`, `format`, `snapshot`,
-  `outlook-parse`, `range`, `html`, `time`, `config`, `fetch-retry`, `news-parse`, `cameras-parse`, `weather-parse`, `hazemap-parse`, `forecast-parse`, `chat-rules`, `ops-rules`,
+  `outlook-parse`, `range`, `inline-rules`, `html`, `time`, `config`, `fetch-retry`, `news-parse`, `cameras-parse`, `weather-parse`, `hazemap-parse`, `forecast-parse`, `chat-rules`, `ops-rules`,
   `card/geometry|png|raster|summary|forecast|glyphs|art`). Keep these pure: no `sdk` import, no DB, so
   Vite and `node --test` can load them. Modules that touch `sdk`, directly or via `store`, are
   `store`, `nea`, `refresh`, `alerts`, `breaking`, `subscriptions`, `cli-only`, `outlook`, `ahead`,
@@ -153,6 +153,14 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   requests claimed once across isolates (`claimEvery`), and a failed one falls back to the stored copy.
 - **1-hour and 3-hour PSI and the next-hours range are our own calculations**, not NEA's.
   Copy must keep saying so; only the 24-hour PSI and NEA's forecast are official.
+- **Inline mode** (`handlers/inline_query.js`, `lib/inline-rules.js`): `@bot` in any chat offers
+  the summary card, by the file id `card/send` cached (none yet this hour: text only, since an
+  inline answer can't upload), and a text summary (`@bot west` leads with West). It answers from
+  `storedSnapshot()`, never a refetch. Inline mode is switched on in BotFather (`/setinline`); after
+  the first push with this handler, check `npx tgcloud webhook` lists `inline_query`.
+- **The Mini App keeps the last dashboard** in `localStorage` (`src/lib/cache.ts`, news left out). A
+  failed load shows it with a “Couldn’t refresh / You’re offline” banner and retries on `online`;
+  the error screen is only for a first load with nothing saved.
 - **Outside Telegram**, `npm run dev` serves fixture data (`src/dev/`), with a
   `?demo=worst|empty|error|loading` toggle. Use it to check UI changes in the preview.
 - **User-facing changes get a “What’s new” entry** in `src/lib/changelog.ts`

@@ -9,6 +9,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-17-inline',
+    date: '2026-10-17',
+    title: 'Share the haze in any chat',
+    body: 'Type the bot’s @name in any chat to send the haze picture or a short summary. Add a region, like “west”, for its readings.',
+  },
+  {
+    id: '2026-10-17-offline',
+    date: '2026-10-17',
+    title: 'Readings on a patchy connection',
+    body: 'If the latest readings can’t load, you’ll see the last ones you opened, with the time they’re from, instead of an error.',
+  },
+  {
     id: '2026-10-17-one-alert',
     date: '2026-10-17',
     title: 'Clearer haze alerts',
