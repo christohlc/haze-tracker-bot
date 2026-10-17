@@ -40,13 +40,13 @@ const TOP = Date.parse('2026-10-17T04:12:00Z'); // the first tick cron of an hou
 const OPS_ENV = { GITHUB_TOKEN: 't', TELEGRAM_BOT_TOKEN: 'bot:tok', OPS_CHAT_ID: '-100123' };
 
 /** fetch for GitHub (dispatch status, last success `agoMin` ago or none) and Telegram, logged in `calls`. */
-function fakeApis(t, { dispatch = 204, agoMin = 10, runs = 200 } = {}) {
+function fakeApis(t, { dispatch = 204, agoMin = 10, runs = 200, body = 'bad credentials' } = {}) {
   const calls = [];
   t.mock.method(globalThis, 'setTimeout', (fn) => fn());
   t.mock.method(console, 'error', () => {});
   t.mock.method(globalThis, 'fetch', async (url, init) => {
     calls.push({ url, body: init?.body ? JSON.parse(init.body) : undefined });
-    if (url.endsWith('/dispatches')) return new Response(dispatch === 204 ? null : 'bad credentials', { status: dispatch });
+    if (url.endsWith('/dispatches')) return new Response(dispatch === 204 ? null : body, { status: dispatch });
     if (url.includes('/runs?')) {
       const workflow_runs = agoMin === null ? [] : [{ updated_at: new Date(TOP - agoMin * 60_000).toISOString(), html_url: 'https://gh/run/1' }];
       return new Response(JSON.stringify({ workflow_runs }), { status: runs });
@@ -60,7 +60,7 @@ const dms = (calls) => calls.filter((c) => c.url.startsWith('https://api.telegra
 test('ops DMs only on the first tick cron of the hour', () => {
   assert.equal(opsDue({ cron: 'x', scheduledTime: TOP }), true);
   assert.equal(opsDue({ cron: 'x', scheduledTime: TOP + 15 * 60_000 }), false);
-  assert.equal(opsDue({ cron: KEEPALIVE_CRON, scheduledTime: Date.parse('2026-10-19T03:03:00Z') }), false);
+  assert.equal(opsDue({ cron: KEEPALIVE_CRON, scheduledTime: Date.parse('2026-10-19T03:33:00Z') }), false);
 });
 
 test('a tick overdue by more than 45 minutes is DM’d to OPS_CHAT_ID', async (t) => {
@@ -87,7 +87,11 @@ test('a tick overdue by more than 45 minutes is DM’d to OPS_CHAT_ID', async (t
 test('a failed dispatch is DM’d and still fails the run; a failed lookup alone says nothing', async (t) => {
   let calls = fakeApis(t, { dispatch: 401 });
   await assert.rejects(worker.scheduled({ cron: 'x', scheduledTime: TOP }, OPS_ENV), /HTTP 401/);
-  assert.match(dms(calls)[0].body.text, /Couldn't start the tick: dispatch x: HTTP 401 bad credentials/);
+  assert.match(dms(calls)[0].body.text, /Couldn’t start the tick: dispatch x: HTTP 401 bad credentials/);
+
+  calls = fakeApis(t, { dispatch: 502, body: 'x'.repeat(5000) });
+  await assert.rejects(worker.scheduled({ cron: 'x', scheduledTime: TOP }, OPS_ENV));
+  assert.ok(dms(calls)[0].body.text.length < 400); // GitHub's error page, trimmed under Telegram's limit
 
   calls = fakeApis(t, { runs: 500 });
   await worker.scheduled({ cron: 'x', scheduledTime: TOP }, OPS_ENV);

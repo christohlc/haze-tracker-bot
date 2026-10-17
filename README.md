@@ -155,8 +155,9 @@ Two DMs tell you, and only you, when something is off:
 
 - **A feed keeps failing.** The tick DMs the chat in the `ops_chat_id` setting when NEA has had no
   good fetch for 2 hours, a news feed for 6, or an on-demand feed (weather, cameras, the haze map,
-  the forecasts) failed its latest fetch, at most once per feed every 6 hours, and once more when
-  it works again. Set the chat (your user id, or a group's negative id; message the bot first so it
+  the forecasts, NEA’s PSI forecast) failed its latest fetch, at most once per feed every 6 hours
+  (once per outage for an on-demand feed, which may not be asked for again for hours), and once
+  more when it works again. Set the chat (your user id, or a group's negative id; message the bot first so it
   may write to you). It prompts for the id, which stays off screen and out of the public logs:
 
   ```bash

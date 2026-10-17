@@ -30,11 +30,11 @@ import { allSourceStatus, countReadings, countReadingsBetween, deleteSetting, ge
 // datagov_api_key: data.gov.sg's (free, data.gov.sg sign-in), sent only to its v2 API for a higher rate limit.
 // ops_chat_id: the operator's chat (a user or group id, so maybe negative), for lib/ops.js.
 /** @type {Record<string, (value: string) => boolean>} each key's check of its value */
-const SECRETS = {
+const SETTING_CHECKS = {
   datagov_api_key: (v) => v.length >= 8,
   ops_chat_id: (v) => /^-?[1-9]\d{0,19}$/.test(v),
 };
-const SECRET_KEYS = Object.keys(SECRETS);
+const SECRET_KEYS = Object.keys(SETTING_CHECKS);
 
 // Backfill: one NEA request per SGT day, spaced out for data.gov.sg's rate limit, and stopped
 // before the (undocumented) run limit; days already complete are skipped, so a rerun resumes.
@@ -97,7 +97,7 @@ export default async function (input, ctx) {
   switch (input.action) {
     case 'set': {
       if (!SECRET_KEYS.includes(input.key)) throw new EndpointError(`Unknown key; allowed: ${SECRET_KEYS.join(', ')}`);
-      if (typeof input.value !== 'string' || !SECRETS[input.key](input.value.trim())) throw new EndpointError('value looks wrong');
+      if (typeof input.value !== 'string' || !SETTING_CHECKS[input.key](input.value.trim())) throw new EndpointError('value looks wrong');
       await setSetting(input.key, input.value.trim());
       return { ok: true, key: input.key };
     }

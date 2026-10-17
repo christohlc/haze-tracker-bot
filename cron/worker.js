@@ -26,10 +26,11 @@ export function dispatchRequest(cron, token) {
 }
 
 /**
- * Whether this run may DM: the Worker keeps no state, so only the first tick cron of each hour
- * (:12 UTC) does, which makes it at most once an hour.
+ * Whether this run may DM: the Worker keeps no state, so only the hour's first tick cron (:12 in
+ * wrangler.jsonc; the keepalive's :33 isn't) does, which makes it at most once an hour. A dispatch
+ * that fails at :27 is told at :12 if it still fails then.
  */
-export const opsDue = (event) => event.cron !== KEEPALIVE_CRON && new Date(event.scheduledTime).getUTCMinutes() < 15;
+export const opsDue = (event) => new Date(event.scheduledTime).getUTCMinutes() < 15;
 
 /** Throws unless GitHub took the dispatch. */
 async function dispatch(cron, token) {
@@ -52,7 +53,7 @@ async function dispatch(cron, token) {
 /** What's wrong with the tick, or null when nothing is. Never throws. */
 async function tickProblem(env, now, dispatchError) {
   const problems = [];
-  if (dispatchError) problems.push(`Couldn't start the tick: ${dispatchError.message}`);
+  if (dispatchError) problems.push(`Couldn’t start the tick: ${dispatchError.message.slice(0, 300)}`); // GitHub's 5xx body can be a page of HTML
   try {
     const res = await fetch(LAST_SUCCESS_URL, { headers: githubHeaders(env.GITHUB_TOKEN) });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);

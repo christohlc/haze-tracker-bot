@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { failingSources, opsMessage, recoveredSources } from '../tgcloud/lib/ops-rules.js';
+import { failingSources, isOnDemand, opsMessage, recoveredSources } from '../tgcloud/lib/ops-rules.js';
 
 const NOW = 1_792_000_000;
 const H = 3600;
@@ -22,6 +22,7 @@ test('news fails after 6 hours, on-demand feeds as soon as the latest fetch fail
   assert.deepEqual(names([row('news_st', 5, 0.1), row('news_cna', 7, 0.1)]), ['news_cna']);
   assert.deepEqual(names([row('nea_weather', 0.2, 0.1), row('lta_cameras', 0.1, 0.2)]), ['nea_weather']);
   assert.deepEqual(names([row('nea_hazemap', 0.1, null)]), []);
+  assert.deepEqual(['nea_psi', 'news_st', 'nea_outlook', 'lta_cameras'].map(isOnDemand), [false, false, true, true]);
 });
 
 test('a source DM’d as failing recovers once its latest fetch works', () => {
