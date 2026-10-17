@@ -17,3 +17,5 @@ jobs:
           cache: npm
       - run: npm ci --no-audit --no-fund --ignore-scripts # as the tick installs, so a dependency clash fails here first
       - run: npm test
+      - run: npm run check
+      - run: npm run build
