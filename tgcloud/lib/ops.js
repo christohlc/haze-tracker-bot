@@ -1,10 +1,13 @@
 // @ts-check
 // The tick's own health report: a heartbeat, and a DM to the operator (setting ops_chat_id, set with
 // admin) when a feed keeps failing, then one when it works again. Which feeds: ops-rules.js.
+// Also the summary card, uploaded to the same chat once per snapshot for inline mode.
 
 import { api } from 'sdk';
+import { cachedCardId, sendCard } from './card/send.js';
+import { formatShareCaption } from './format.js';
 import { errorText } from './http.js';
-import { failingSources, isOnDemand, opsMessage, OPS_REPEAT_S, recoveredSources } from './ops-rules.js';
+import { cardUploadDue, failingSources, isOnDemand, opsMessage, OPS_REPEAT_S, recoveredSources } from './ops-rules.js';
 import { allSourceStatus, getSetting, getState, setState } from './store.js';
 
 /**
@@ -43,5 +46,23 @@ export async function reportOps(started) {
     return { failing: names, dm: 'sent' };
   } catch (e) {
     return { error: errorText(e) };
+  }
+}
+
+/**
+ * Upload this snapshot's summary card to the ops chat, silently, unless someone was sent it already:
+ * inline mode can't upload, so on a quiet hour it would have no picture to offer. Once per snapshot,
+ * since card/send caches the file id. Never throws; the result names no chat (public logs).
+ * @param {any} snap @param {number} started ms
+ */
+export async function uploadCard(snap, started) {
+  try {
+    const [chatId, fileId] = await Promise.all([getSetting('ops_chat_id'), cachedCardId(snap)]);
+    const due = cardUploadDue({ chatId, cached: Boolean(fileId), elapsedMs: Date.now() - started });
+    if (due !== 'upload') return due;
+    await sendCard({ chat_id: /** @type {any} */ (chatId), disable_notification: true }, snap, formatShareCaption(snap));
+    return 'sent';
+  } catch (e) {
+    return `failed: ${errorText(e)}`;
   }
 }

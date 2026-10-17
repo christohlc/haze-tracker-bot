@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { failingSources, isOnDemand, opsMessage, recoveredSources } from '../tgcloud/lib/ops-rules.js';
+import { CARD_UPLOAD_BY_MS, cardUploadDue, failingSources, isOnDemand, opsMessage, recoveredSources } from '../tgcloud/lib/ops-rules.js';
 
 const NOW = 1_792_000_000;
 const H = 3600;
@@ -36,4 +36,14 @@ test('the DM lists failures with their last good fetch, then recoveries', () => 
   const text = opsMessage([row('nea_psi', null, 0.1, 'x'.repeat(300))], ['news_st']);
   assert.match(text, /^⚠️ nea_psi failing: x{200} \(last good fetch never\)\n\n✅ Working again: news_st$/);
   assert.match(opsMessage([row('nea_pm25', 3, 0.1)], []), /last good fetch 2026-\d\d-\d\dT\d\d:\d\d:\d\d\+08:00\)$/);
+});
+
+test('the tick uploads the card only with an ops chat, no cached file id and time left', () => {
+  const due = (o) => cardUploadDue({ chatId: '123', cached: false, elapsedMs: 3_000, ...o });
+  assert.equal(due({}), 'upload');
+  assert.equal(due({ chatId: null }), 'no ops_chat_id');
+  assert.equal(due({ chatId: null, cached: true }), 'no ops_chat_id');
+  assert.equal(due({ cached: true }), 'cached');
+  assert.equal(due({ elapsedMs: CARD_UPLOAD_BY_MS - 1 }), 'upload');
+  assert.equal(due({ elapsedMs: CARD_UPLOAD_BY_MS }), 'no time');
 });
