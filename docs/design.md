@@ -74,7 +74,8 @@ or, outside Telegram, from the OS. A new colour token needs both a light and a d
 - Under the header, a sticky tab bar (`Segmented` with `kind="tab"`) splits the cards into three
   tabs. It sits at the top, not the bottom, because Telegram’s MainButton (“Get haze alerts”)
   owns the bottom edge.
-  - **Now:** hero, regions, advice, alerts, share.
+  - **Now:** hero, regions, advice, alerts, share. The hero's area pill (a native select over a
+    pill) picks the region the hero, advice and alerts follow; until someone picks, it's the highest.
   - **Outlook:** what’s ahead, wind and rain, history.
   - **More:** live views, news, cigarettes, what’s new, sources (collapsed).
 - A tab mounts the first time it’s opened and then stays mounted, hidden (laid out at zero

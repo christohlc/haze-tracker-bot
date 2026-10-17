@@ -1,7 +1,8 @@
 // @ts-check
 // When to alert. Pure, so it can be unit-tested.
 
-import { PSI_BANDS } from './psi.js';
+import { REGIONS } from './config.js';
+import { PSI_BANDS, psiBand } from './psi.js';
 
 /** A drop to a lower band waits this long after the last change, so a PSI hovering on a
  *  boundary doesn't ping people every hour. A rise is always announced straight away. */
@@ -72,4 +73,51 @@ export async function runBatched(items, task, { deadline, size = SEND_BATCH, int
     if (sleep && took < intervalMs && i < items.length) await sleep(intervalMs - took);
   }
   return { results, stopped: null };
+}
+
+// Band alerts per area. A chat follows one NEA region, or 'highest' (the highest region's 3-hour
+// PSI, as before regions). Each scope keeps its own alert band, moved by nextAlertBand.
+
+/** @typedef {{ id: string, at: number }} AlertBand */
+
+export const ALERT_SCOPES = ['highest', ...REGIONS.map((r) => r.id)];
+
+/** The scope a subscriber's band alerts follow; an unknown region falls back to 'highest'. @param {string | null | undefined} region */
+export const scopeOf = (region) => (REGIONS.some((r) => r.id === region) ? /** @type {string} */ (region) : 'highest');
+
+/**
+ * Every scope's alert band after this reading.
+ * @param {Record<string, AlertBand>} prev @param {any} snap @param {number} now ms
+ * @returns {Record<string, AlertBand>}
+ */
+export function advanceBands(prev, snap, now) {
+  /** @type {Record<string, AlertBand>} */
+  const next = {};
+  for (const scope of ALERT_SCOPES) {
+    const value = scope === 'highest' ? snap.worst.psi3h?.value : snap.regions.find((/** @type {any} */ r) => r.id === scope)?.psi3h;
+    const band = nextAlertBand(prev[scope] ?? null, psiBand(value)?.id ?? null, now);
+    if (band) next[scope] = band;
+  }
+  return next;
+}
+
+/**
+ * Band subscribers with their scope's band: `due` were told another band and get an alert;
+ * `unseeded` were never told one and just start at it.
+ * @template {{ region?: string | null, lastBand?: string | null }} S
+ * @param {S[]} subs @param {Record<string, AlertBand>} bands
+ */
+export function bandAlertsFor(subs, bands) {
+  /** @type {Array<{ sub: S, band: AlertBand, scope: string }>} */
+  const due = [];
+  /** @type {Array<{ sub: S, band: AlertBand, scope: string }>} */
+  const unseeded = [];
+  for (const sub of subs) {
+    const scope = scopeOf(sub.region);
+    const band = bands[scope];
+    if (!band) continue;
+    if (!sub.lastBand) unseeded.push({ sub, band, scope });
+    else if (sub.lastBand !== band.id) due.push({ sub, band, scope });
+  }
+  return { due, unseeded };
 }

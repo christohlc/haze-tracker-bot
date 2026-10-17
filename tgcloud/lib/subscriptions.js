@@ -2,9 +2,10 @@
 // Subscriber storage.
 
 import { db } from 'sdk';
-import { and, eq, isNotNull, isNull, like, lt } from 'sdk/db';
+import { eq, isNotNull, like, lt } from 'sdk/db';
 import { alertsSent, subscribers } from '../schema.js';
-import { getState } from './store.js';
+import { scopeOf } from './alert-rules.js';
+import { getAlertBands } from './store.js';
 
 const nowSec = () => Math.floor(Date.now() / 1000);
 
@@ -13,20 +14,25 @@ export async function getSubscriber(chatId) {
   return db.select().from(subscribers).where(eq(subscribers.chatId, chatId)).get();
 }
 
+/** @param {string | null | undefined} region */
+const currentBand = async (region) => (await getAlertBands())[scopeOf(region)]?.id ?? null;
+
 /**
- * Create or update. A new subscriber starts at the current alert band, so subscribing never
- * triggers an immediate "band changed" alert.
+ * Create or update. A new subscriber, or one moving to another region, starts at that region's
+ * current alert band, so neither triggers an immediate "band changed" alert.
  * @param {number} chatId
- * @param {{ bandAlerts?: boolean, dailyHour?: number | null, breakingAlerts?: boolean, threadId?: number | null }} patch
+ * @param {{ bandAlerts?: boolean, dailyHour?: number | null, breakingAlerts?: boolean, threadId?: number | null, region?: string | null }} patch
  */
 export async function saveSubscriber(chatId, patch) {
   const existing = await getSubscriber(chatId);
   if (existing) {
-    await db.update(subscribers).set(patch).where(eq(subscribers.chatId, chatId)).run();
-    return { sub: { ...existing, ...patch }, created: false };
+    const moved = patch.region !== undefined && patch.region !== existing.region;
+    const set = moved ? { ...patch, lastBand: await currentBand(patch.region) } : patch;
+    await db.update(subscribers).set(set).where(eq(subscribers.chatId, chatId)).run();
+    return { sub: { ...existing, ...set }, created: false };
   }
-  const lastBand = (await getState('alert_band'))?.value?.id ?? null;
-  const sub = { chatId, bandAlerts: true, dailyHour: null, breakingAlerts: true, ...patch, lastBand, createdAt: nowSec() };
+  const lastBand = await currentBand(patch.region);
+  const sub = { chatId, bandAlerts: true, dailyHour: null, breakingAlerts: true, region: null, ...patch, lastBand, createdAt: nowSec() };
   await db.insert(subscribers).values(sub).run();
   return { sub, created: true };
 }
@@ -68,15 +74,6 @@ export async function dailySubscribers() {
 /** @param {number} chatId @param {string} band */
 export async function setLastBand(chatId, band) {
   await db.update(subscribers).set({ lastBand: band }).where(eq(subscribers.chatId, chatId)).run();
-}
-
-/** Subscribers who have never been told a band start at `band`, without an alert. @param {string} band */
-export async function seedLastBand(band) {
-  await db
-    .update(subscribers)
-    .set({ lastBand: band })
-    .where(and(eq(subscribers.bandAlerts, true), isNull(subscribers.lastBand)))
-    .run();
 }
 
 /** Chats with an alert claimed under a key matching `pattern` (SQL LIKE). @param {string} pattern */

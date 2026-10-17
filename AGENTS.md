@@ -91,6 +91,14 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   Telegram refuses an ephemeral send. web_app buttons don't work in groups, so the dashboard
   button there is a t.me link (main Mini App if set in BotFather; getMe is cached per isolate). **Run `npx tgcloud migrate` before pushing**
   a build that reads `thread_id`.
+- **Areas.** A chat can follow one NEA region (`subscribers.region`; null = the highest region,
+  as before). Band alerts keep an alert band per area (`ALERT_SCOPES` in `lib/alert-rules.js`) in
+  one `state('alert_bands')` row, which replaces `alert_band`; picking another region resets the
+  chat's `lastBand` to that region's band, so it doesn't fire at once. /haze, band alerts and daily
+  updates lead with the chat's region (`readingsFor` in `lib/snapshot.js`, shared with the Mini
+  App). In the Mini App the area is per user (`src/lib/area.svelte.ts`, CloudStorage); while alerts
+  are on, picking an area saves it to the subscription. **Run `npx tgcloud migrate` before
+  pushing** a build that reads `region`.
 - **Secrets live in the `settings` DB table**, set only via `endpoints/admin` from the
   CLI. Never commit or echo a key.
 - **1-hour and 3-hour PSI and the next-hours range are our own calculations**, not NEA's.

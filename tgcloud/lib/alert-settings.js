@@ -1,12 +1,21 @@
 // @ts-check
 // The /alerts settings message: text + inline keyboard. Pure.
 
+import { REGIONS, REGION_NAMES } from './config.js';
+
 export const DAILY_HOURS = [7, 8, 12, 18];
 
 /** @param {number} h */
 export const hourLabel = (h) => `${h % 12 === 0 ? 12 : h % 12} ${h < 12 ? 'am' : 'pm'}`;
 
-/** @typedef {{ bandAlerts: boolean, dailyHour: number | null, breakingAlerts: boolean }} AlertSettings */
+/** `region`: band alerts follow this region's 3-hour PSI; null follows the highest region.
+    @typedef {{ bandAlerts: boolean, dailyHour: number | null, breakingAlerts: boolean, region: string | null }} AlertSettings */
+
+/** "Central", or "the highest region" for island-wide. @param {string | null | undefined} region */
+export const areaLabel = (region) => (regionOrNull(region) ? REGION_NAMES[/** @type {string} */ (region)] : 'the highest region');
+
+/** A region id we know, or null for island-wide. @param {unknown} v */
+export const regionOrNull = (v) => (REGIONS.some((r) => r.id === v) ? /** @type {string} */ (v) : null);
 
 /** @param {AlertSettings | null} sub */
 export function renderAlertSettings(sub) {
@@ -18,17 +27,21 @@ export function renderAlertSettings(sub) {
   }
   const text = [
     '<b>Haze alerts</b>',
-    `Band changes: <b>${sub.bandAlerts ? 'on' : 'off'}</b>. A message when the 3-hour PSI moves into another band (rises straight away, drops after 3 hours).`,
+    `Band changes: <b>${sub.bandAlerts ? 'on' : 'off'}</b>. A message when the 3-hour PSI in <b>${areaLabel(sub.region)}</b> moves into another band (rises straight away, drops after 3 hours).`,
     `Breaking news: <b>${sub.breakingAlerts ? 'on' : 'off'}</b>. School closures, halted outdoor activities, and the official 24-hour PSI turning Very unhealthy or Hazardous.`,
     `Daily update: <b>${sub.dailyHour == null ? 'off' : `${hourLabel(sub.dailyHour)} SGT`}</b>`,
   ].join('\n');
   /** @param {boolean} on @param {string} label */
   const mark = (on, label) => `${on ? '● ' : ''}${label}`;
+  /** @param {{ id: string, name: string }} r */
+  const areaButton = (r) => ({ text: mark(sub.region === r.id, r.name), callback_data: `a:region:${r.id}` });
   return {
     text,
     reply_markup: {
       inline_keyboard: [
         [{ text: `${sub.bandAlerts ? '✅' : '⬜️'} Band change alerts`, callback_data: 'a:band' }],
+        [{ text: mark(sub.region == null, 'Highest region'), callback_data: 'a:region:all' }, ...REGIONS.slice(0, 2).map(areaButton)],
+        REGIONS.slice(2).map(areaButton),
         [{ text: `${sub.breakingAlerts ? '✅' : '⬜️'} Breaking news`, callback_data: 'a:breaking' }],
         DAILY_HOURS.map((h) => ({ text: mark(sub.dailyHour === h, hourLabel(h)), callback_data: `a:daily:${h}` })),
         [{ text: mark(sub.dailyHour == null, 'No daily update'), callback_data: 'a:daily:off' }],
@@ -47,8 +60,9 @@ export function renderAlertSettings(sub) {
 export function applyAlertAction(sub, data) {
   if (data === 'a:stop') return null;
   // From "off" entirely, "Turn on alerts" (a:band) turns on band alerts and breaking news.
-  if (!sub && data === 'a:band') return { bandAlerts: true, dailyHour: null, breakingAlerts: true };
-  const cur = { bandAlerts: Boolean(sub?.bandAlerts), dailyHour: sub?.dailyHour ?? null, breakingAlerts: Boolean(sub?.breakingAlerts) };
+  if (!sub && data === 'a:band') return { bandAlerts: true, dailyHour: null, breakingAlerts: true, region: null };
+  const cur = { bandAlerts: Boolean(sub?.bandAlerts), dailyHour: sub?.dailyHour ?? null, breakingAlerts: Boolean(sub?.breakingAlerts), region: sub?.region ?? null };
+  if (data.startsWith('a:region:')) return { ...cur, region: regionOrNull(data.slice(9)) };
   if (data === 'a:band') return { ...cur, bandAlerts: !cur.bandAlerts };
   if (data === 'a:breaking') return { ...cur, breakingAlerts: !cur.breakingAlerts };
   const m = /^a:daily:(off|\d{1,2})$/.exec(data);
@@ -65,8 +79,9 @@ export function applyAlertAction(sub, data) {
  * (unsubscribe). Throws an Error with a user-facing message on bad input. Builds from before
  * breaking news don't send `breakingAlerts`: it then stays as `current` has it, or is on for a
  * new subscriber, and an older build's "Stop all alerts" (both others off) still stops it.
+ * Builds from before regions don't send `region`: it stays as `current` has it.
  * @param {unknown} input
- * @param {{ breakingAlerts: boolean } | null} [current] the saved settings
+ * @param {{ breakingAlerts: boolean, region?: string | null } | null} [current] the saved settings
  * @returns {AlertSettings | null}
  */
 export function parseAlertInput(input, current = null) {
@@ -77,9 +92,11 @@ export function parseAlertInput(input, current = null) {
     throw new Error(`dailyHour must be one of ${DAILY_HOURS.join(', ')} or null`);
   }
   if (o.breakingAlerts !== undefined && typeof o.breakingAlerts !== 'boolean') throw new Error('breakingAlerts must be true or false');
+  const region = o.region === undefined ? (current?.region ?? null) : regionOrNull(o.region);
+  if (o.region != null && !region) throw new Error(`region must be one of ${REGIONS.map((r) => r.id).join(', ')} or null`);
   const others = o.bandAlerts || dailyHour !== null;
   const breakingAlerts = /** @type {boolean | undefined} */ (o.breakingAlerts) ?? (others && (current ? Boolean(current.breakingAlerts) : true));
-  const settings = { bandAlerts: o.bandAlerts, dailyHour: /** @type {number | null} */ (dailyHour), breakingAlerts };
+  const settings = { bandAlerts: o.bandAlerts, dailyHour: /** @type {number | null} */ (dailyHour), breakingAlerts, region };
   return isActive(settings) ? settings : null;
 }
 

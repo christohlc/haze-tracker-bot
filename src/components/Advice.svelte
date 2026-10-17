@@ -1,7 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { verdict } from '../../tgcloud/lib/advice.js';
+  import { readingsFor } from '../../tgcloud/lib/snapshot.js';
   import type { Snapshot } from '../lib/api';
+  import { area } from '../lib/area.svelte';
   import { reducedMotion } from '../lib/motion';
   import { getStored, setStored } from '../lib/telegram';
   import BandPill from './BandPill.svelte';
@@ -16,9 +18,12 @@
   const GROUP_KEY = 'advice_group';
 
   let { snapshot }: { snapshot: Snapshot } = $props();
-  const psi24 = $derived(snapshot.worst.psi24h);
-  const pm = $derived(snapshot.worst.pm25);
-  const trend = $derived(pm?.trend ?? null);
+  // The user's area if they picked one, else the highest region for each reading.
+  const readings = $derived(readingsFor(snapshot, area.id));
+  const mine = $derived(readings.area);
+  const psi24 = $derived(readings.psi24h);
+  const pm = $derived(readings.pm25);
+  const trend = $derived(readings.trend as keyof typeof TREND | null);
 
   let group = $state<Group>('general');
   const v = $derived(verdict(psi24?.value ?? null, pm?.value ?? null, group));
@@ -55,13 +60,15 @@
         <p class="note">The elderly, pregnant women, children, and people with chronic lung or heart disease.</p>
       {/if}
       <p class="note">
-        The stricter of NEA’s advice for the last hour’s PM2.5{#if pm}&nbsp;({pm.value} µg/m³ in {pm.name}, the highest){/if}
+        The stricter of NEA’s advice for the last hour’s PM2.5{#if pm}&nbsp;({pm.value} µg/m³ in {pm.name}{mine ? '' : ', the highest'}){/if}
         and the official 24-hour PSI{#if psi24}&nbsp;<BandPill value={psi24.value} />{/if}, simplified; haze.gov.sg is
         official.{#if trend}&nbsp;Rising or easing compares the last hour with three hours before: our calculation.{/if}
       </p>
     </div>
   {:else}
-    <p class="note empty">No readings from NEA right now, so no advice from us. Check haze.gov.sg.</p>
+    <p class="note empty">
+      {mine ? `No readings for ${mine.name} right now, so no advice from us. Pick another area at the top, or check haze.gov.sg.` : 'No readings from NEA right now, so no advice from us. Check haze.gov.sg.'}
+    </p>
   {/if}
 
   <ul>

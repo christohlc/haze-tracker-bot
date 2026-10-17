@@ -3,7 +3,9 @@
   import { cubicOut } from 'svelte/easing';
   import { maskCard } from '../../tgcloud/lib/advice.js';
   import { bandFloor, psiBand } from '../../tgcloud/lib/psi.js';
-  import type { Snapshot } from '../lib/api';
+  import { readingsFor } from '../../tgcloud/lib/snapshot.js';
+  import type { RegionId, Snapshot } from '../lib/api';
+  import { area, canLocate, locateArea, pickArea } from '../lib/area.svelte';
   import { reducedMotion } from '../lib/motion';
   import { PERIODS, psiKey, type Period } from '../lib/period';
   import Segmented from './Segmented.svelte';
@@ -11,14 +13,32 @@
   let { snapshot, period = $bindable('3h') }: { snapshot: Snapshot; period?: Period } = $props();
 
   const worst = $derived(snapshot.worst[psiKey(period)]);
-  const band = $derived(psiBand(worst?.value ?? null));
-  const mask = $derived(maskCard(worst?.value ?? null));
+  // The user's area if they picked one, else the highest region.
+  const readings = $derived(readingsFor(snapshot, area.id));
+  const mine = $derived(readings.area);
+  const head = $derived(readings[psiKey(period)]);
+  const band = $derived(psiBand(head?.value ?? null));
+  const mask = $derived(maskCard(head?.value ?? null));
+
+  let locating = $state(false);
+  let locateFailed = $state(false);
+  async function onArea(e: Event & { currentTarget: HTMLSelectElement }) {
+    const v = e.currentTarget.value;
+    locateFailed = false;
+    if (v !== 'locate') return pickArea(v === 'highest' ? null : (v as RegionId));
+    e.currentTarget.value = area.id ?? 'highest';
+    locating = true;
+    const id = await locateArea();
+    locating = false;
+    if (id) pickArea(id);
+    else locateFailed = true;
+  }
   // First open counts up once (rare, so it can take a little longer); period switches retarget quickly.
   // The count starts at the bottom of the band, so the number never reads lower than the band shown.
   const shown = new Tween(0, { easing: cubicOut });
   let first = true;
   $effect(() => {
-    const target = worst?.value ?? 0;
+    const target = head?.value ?? 0;
     if (first) shown.set(bandFloor(target), { duration: 0 });
     const duration = reducedMotion() ? 0 : first ? 600 : 220;
     first = false;
@@ -28,22 +48,41 @@
 </script>
 
 <section class="hero sky-{band?.id ?? 'none'}" aria-labelledby="hero-title">
-  <h2 id="hero-title" class="eyebrow">
-    {PERIODS[period].eyebrow}{#if worst}<span class="where">&nbsp;· highest in {worst.name}</span>{/if}
-  </h2>
+  <div class="top">
+    <h2 id="hero-title" class="eyebrow">{PERIODS[period].eyebrow}</h2>
+    <label class="area" class:busy={locating}>
+      {#if mine}
+        <svg class="pin" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5Z" fill="currentColor" /></svg>
+      {/if}
+      <span>{locating ? 'Finding you…' : mine ? mine.name : `Highest${worst ? `: ${worst.name}` : ''}`}</span>
+      <svg viewBox="0 0 12 12" width="10" height="10" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg>
+      <select aria-label="Area to show" value={area.id ?? 'highest'} onchange={onArea} disabled={locating}>
+        <option value="highest">Highest region</option>
+        {#each snapshot.regions as r (r.id)}<option value={r.id}>{r.name}</option>{/each}
+        {#if canLocate}<option value="locate">Use my location</option>{/if}
+      </select>
+    </label>
+  </div>
+  {#if locateFailed}
+    <p class="aside" role="status">Couldn’t get your location. Pick your area from the list instead.</p>
+  {:else if mine && worst && worst.region !== mine.id}
+    <p class="aside">Highest: {worst.name} <span class="num">{worst.value}</span></p>
+  {/if}
 
-  {#if worst}
+  {#if head}
     <div class="figure">
       <span class="value" aria-hidden="true">{Math.round(shown.current)}</span>
       <span class="unit" aria-hidden="true">PSI</span>
-      <span class="visually-hidden" aria-live="polite">PSI {worst.value}, {band?.label}</span>
+      <span class="visually-hidden" aria-live="polite">PSI {head.value}{mine ? ` in ${mine.name}` : ''}, {band?.label}</span>
     </div>
     {#if band}
       <p class="band"><span class="dot" style:background="var(--band-{band.id})"></span>{band.label}</p>
     {/if}
   {:else}
     <div class="figure"><span class="value empty">–</span></div>
-    <p class="missing">No reading from NEA for this period yet.</p>
+    <p class="missing">
+      {mine ? `No reading for ${mine.name} for this period yet. Pick another area, or the highest.` : 'No reading from NEA for this period yet.'}
+    </p>
   {/if}
 
   {#if mask}
@@ -112,8 +151,72 @@
     font-weight: 650;
     color: var(--ink-2);
   }
-  .where {
-    font-weight: 500;
+  .top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    column-gap: 8px;
+    /* The pill's 44px hit area overlaps the line above and below rather than spacing them out. */
+    margin: -8px 0;
+  }
+  .area {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-height: 44px;
+    padding: 0 12px;
+    font-size: 0.8125rem;
+    font-weight: 650;
+    color: var(--ink);
+    max-width: 100%;
+    white-space: nowrap;
+    user-select: none;
+    -webkit-user-select: none;
+    transition: transform 120ms var(--ease-out);
+  }
+  /* The visible pill is 30px tall, centred in the 44px hit area. */
+  .area::before {
+    content: '';
+    position: absolute;
+    inset: 7px 0;
+    z-index: -1;
+    border-radius: 999px;
+    background: var(--control);
+  }
+  .area:active:not(.busy) {
+    transform: scale(0.97);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .area {
+      transition: none;
+    }
+  }
+  .area select {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    opacity: 0;
+    cursor: pointer;
+  }
+  .area:has(select:focus-visible)::before {
+    outline: 2px solid var(--ink);
+    outline-offset: 1px;
+  }
+  .area > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .pin,
+  .area > svg {
+    flex: none;
+  }
+  .aside {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--ink-2);
   }
   .figure {
     display: flex;
