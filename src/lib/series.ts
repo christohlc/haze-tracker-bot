@@ -22,8 +22,10 @@ export function rollingSeries(history: HourRow[], region: RegionId, window: Wind
   });
 }
 
-/** Round an axis max up to a clean step. */
-export function niceMax(v: number) {
-  const step = v <= 60 ? 20 : v <= 150 ? 50 : 100;
-  return Math.max(step, Math.ceil(v / step) * step);
+/** Axis ticks from 0 at a clean step, at most five; the last one, the axis max, is at or above `v`. */
+export function niceTicks(v: number) {
+  let step = v <= 60 ? 20 : v <= 150 ? 50 : 100;
+  while (Math.ceil(v / step) > 4) step *= 2;
+  const top = Math.max(1, Math.ceil(v / step));
+  return Array.from({ length: top + 1 }, (_, i) => i * step);
 }

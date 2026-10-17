@@ -80,7 +80,7 @@
             </div>
             <span class="name">{cam.name}</span>
             <span class="note meta">
-              {cam.region ? `${REGION_NAMES[cam.region]} · ` : ''}{timeAgo(cam.takenAt, result.serverTime)}{#if stale}{' · '}<span class="stale">May be out of date</span>{/if}
+              {cam.region ? `${REGION_NAMES[cam.region]} · ` : ''}{timeAgo(cam.takenAt, result.serverTime)}{#if stale}{' · '}<span class="stale-note"><span class="status-dot stale" aria-hidden="true"></span>May be out of date</span>{/if}
             </span>
           </a>
         </li>
@@ -88,7 +88,7 @@
     </ul>
   {/if}
 
-  <h3 class="sub">From above</h3>
+  <h3 class="subhead">From above</h3>
   <ul class="links">
     {#each SATELLITE as s (s.link)}
       <li>
@@ -181,9 +181,6 @@
     -webkit-line-clamp: 2;
     line-clamp: 2;
     overflow: hidden;
-  }
-  .stale {
-    color: var(--status-critical);
   }
   .links li + li {
     border-top: 1px solid var(--hairline);

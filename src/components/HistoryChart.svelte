@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { HourRow, RegionId, Snapshot } from '../lib/api';
   import { fmt, sgtHour } from '../lib/format';
-  import { niceMax, rollingSeries, type Scale, type Window } from '../lib/series';
+  import { niceTicks, rollingSeries, type Scale, type Window } from '../lib/series';
   import Segmented from './Segmented.svelte';
 
   let { snapshot, history }: { snapshot: Snapshot; history: HourRow[] } = $props();
@@ -17,9 +17,10 @@
   const regions = $derived(snapshot.regions.map((r) => ({ id: r.id as RegionId, name: r.name })));
   const series = $derived(regions.map((r) => ({ ...r, points: rollingSeries(history, r.id, win, scale) })));
   const n = $derived(series[0]?.points.length ?? 0);
-  const maxV = $derived(
-    niceMax(Math.max(scale === 'psi' ? 100 : 55, ...series.flatMap((s) => s.points.map((p) => p.v ?? 0)))),
+  const yTicks = $derived(
+    niceTicks(Math.max(scale === 'psi' ? 100 : 55, ...series.flatMap((s) => s.points.map((p) => p.v ?? 0)))),
   );
+  const maxV = $derived(yTicks[yTicks.length - 1]);
 
   const x = (i: number) => pad.l + (n <= 1 ? 0 : (i / (n - 1)) * (width - pad.l - pad.r));
   const y = (v: number) => pad.t + (1 - v / maxV) * (H - pad.t - pad.b);
@@ -38,7 +39,6 @@
     return d;
   }
 
-  const yTicks = $derived([0, 0.25, 0.5, 0.75, 1].map((f) => Math.round(maxV * f)));
   const xTicks = $derived(
     (series[0]?.points ?? [])
       .map((p, i) => ({ i, t: p.t }))
@@ -142,9 +142,6 @@
       {/each}
       {#each bandLines as b (b.v)}
         <line x1={pad.l} x2={width - pad.r} y1={y(b.v)} y2={y(b.v)} class="band" />
-        {#if b.showLabel}
-          <text x={width - pad.r} y={y(b.v) - 4} class="band-label" text-anchor="end">{b.label}</text>
-        {/if}
       {/each}
       {#each xTicks as tk (tk.t)}
         <text x={x(tk.i)} y={H - 6} class="tick" text-anchor="middle">{sgtHour(tk.t)}</text>
@@ -152,6 +149,10 @@
 
       {#each series as s (s.id)}
         <path d={path(s.points)} stroke="var(--region-{s.id})" class="line" />
+      {/each}
+      <!-- Band names go on top of the lines; their halo keeps them legible where lines cross. -->
+      {#each bandLines.filter((b) => b.showLabel) as b (b.v)}
+        <text x={width - pad.r} y={y(b.v) - 4} class="band-label" text-anchor="end">{b.label}</text>
       {/each}
 
       {#if tip}
@@ -194,11 +195,17 @@
 </section>
 
 <style>
+  /* Side by side, each as wide as its share of options; stacked full width on the narrowest phones. */
   .controls {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
     gap: 8px;
     margin: 14px 0 10px;
+  }
+  @media (max-width: 359px) {
+    .controls {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
   .readout {
     margin: 0 0 6px;

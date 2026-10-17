@@ -49,6 +49,15 @@ export function psiBand(psi) {
   return PSI_BANDS.find((b) => psi <= b.max) ?? null;
 }
 
+/**
+ * The lowest PSI in the band `psi` falls in (0 for Good).
+ * @param {number | null | undefined} psi
+ */
+export function bandFloor(psi) {
+  const i = PSI_BANDS.findIndex((b) => psi != null && psi <= b.max);
+  return i > 0 ? PSI_BANDS[i - 1].max + 1 : 0;
+}
+
 /** NEA 1-hour PM2.5 bands, used for "what to do right now". */
 export const PM25_BANDS = [
   { id: 'I', label: 'Normal', max: 55 },

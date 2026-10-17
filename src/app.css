@@ -13,6 +13,7 @@
   --axis: #c3c2b7;
   --control: rgba(11, 11, 11, 0.06);
   --control-thumb: var(--card);
+  --switch-thumb: #fff;
   --accent: var(--tg-theme-button-color, #8a5a2e);
   --accent-ink: var(--tg-theme-button-text-color, #fff);
   --link: var(--tg-theme-link-color, #2a78d6);
@@ -71,6 +72,7 @@
   --control-thumb: rgba(255, 255, 255, 0.16);
   --accent: var(--tg-theme-button-color, #c88b4f);
   --accent-ink: var(--tg-theme-button-text-color, #0b0b0b);
+  --switch-thumb: #fff;
   --brand-shell: #c88b4f;
 
   --band-good: #0ca30c;           --band-good-ink: #0b0b0b;
@@ -137,7 +139,7 @@ select {
 }
 
 /* A heading inside a card, under its section title. */
-.sub {
+.subhead {
   margin: 16px 0 0;
   font-size: 0.9375rem;
   font-weight: 650;
@@ -191,6 +193,30 @@ summary {
 
 .num {
   font-variant-numeric: tabular-nums;
+}
+
+/* Feed status: green when fresh, amber when stale (the header, and “May be out of date” notes). */
+.status-dot {
+  --c: var(--status-good);
+  display: inline-block;
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--c);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 22%, transparent);
+}
+.status-dot.stale {
+  --c: var(--band-unhealthy);
+}
+/* A warning, not an error, kept on one line. */
+.stale-note {
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.stale-note .status-dot {
+  margin: 0 6px 0 3px;
+  vertical-align: 0.05em;
 }
 
 .visually-hidden {

@@ -49,6 +49,7 @@
   <span class="thumb" style:transform="translateX({index * 100}%)" aria-hidden="true"></span>
   {#each options as o, i (o.value)}
     {@const on = o.value === value}
+    <!-- A mouse switches on press; a finger on lift, so a scroll that starts here doesn’t switch. -->
     <button
       bind:this={buttons[i]}
       type="button"
@@ -59,7 +60,7 @@
       aria-controls={controls?.(o.value)}
       tabindex={on ? 0 : -1}
       class:on
-      onpointerdown={() => pick(o.value)}
+      onpointerdown={(e) => e.pointerType !== 'touch' && pick(o.value)}
       onclick={() => pick(o.value)}
     >
       {o.label}{#if o.dot}<span class="dot" aria-hidden="true"></span><span class="visually-hidden">{` (${o.dot})`}</span>{/if}

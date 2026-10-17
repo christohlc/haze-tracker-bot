@@ -13,7 +13,7 @@
     return r ? { now: r.pm25, mean24h: r.pm25Mean24h } : snapshot.island;
   });
   const c = $derived(cigarettes(pm, outdoorPct / 100));
-  const placeName = $derived(snapshot.regions.find((x) => x.id === place)?.name ?? 'island-wide average');
+  const placeName = $derived(snapshot.regions.find((x) => x.id === place)?.name ?? 'Island-wide average');
 </script>
 
 <section class="card" aria-labelledby="cigs-title">
@@ -40,17 +40,17 @@
   </div>
 
   <div class="result">
-    <p class="big"><span class="num-big">{fmt(c.past24h, 1)}</span> cigarettes over the past 24 hours</p>
+    <p class="big"><span class="num-big num">{fmt(c.past24h, 1)}</span> cigarettes over the past 24 hours</p>
     <p class="note">{placeName}, {outdoorPct}% of the time outdoors</p>
   </div>
 
   <div class="tiles">
     <div class="tile">
-      <span class="tile-value">{fmt(c.lastHour, 2)}</span>
+      <span class="tile-value num">{fmt(c.lastHour, 2)}</span>
       <span class="tile-label">in the last hour</span>
     </div>
     <div class="tile">
-      <span class="tile-value">{fmt(c.perDayAtCurrent, 1)}</span>
+      <span class="tile-value num">{fmt(c.perDayAtCurrent, 1)}</span>
       <span class="tile-label">per day if this hour’s level continued</span>
     </div>
   </div>
@@ -78,7 +78,7 @@
     font-weight: 600;
   }
   select {
-    min-height: 40px;
+    min-height: 44px;
     padding: 0 10px;
     border: 0;
     border-radius: 10px;
@@ -99,6 +99,11 @@
     font-size: 1rem;
     color: var(--ink-2);
   }
+  /* Big numbers in the display face; .num keeps them from jittering as the slider moves. */
+  .num-big,
+  .tile-value {
+    font-family: var(--font-display);
+  }
   .num-big {
     display: block;
     font-size: 3rem;
@@ -115,6 +120,7 @@
   }
   .tile {
     display: grid;
+    align-content: start;
     gap: 2px;
     padding: 12px;
     border-radius: 12px;

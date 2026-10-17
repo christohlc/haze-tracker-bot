@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { meanOfLast, pm25Band, pm25ToPsi, psiBand } from '../tgcloud/lib/psi.js';
+import { bandFloor, meanOfLast, pm25Band, pm25ToPsi, psiBand } from '../tgcloud/lib/psi.js';
 
 test('pm25ToPsi hits NEA breakpoints', () => {
   assert.equal(pm25ToPsi(0), 0);
@@ -50,4 +50,12 @@ test('meanOfLast ignores nulls', () => {
   assert.equal(meanOfLast([1, 2, 3, 4], 2), 3.5);
   assert.equal(meanOfLast([1, null, 3], 3), 2);
   assert.equal(meanOfLast([], 3), null);
+});
+
+test('bandFloor is the lowest PSI in the band', () => {
+  assert.equal(bandFloor(null), 0);
+  assert.equal(bandFloor(30), 0);
+  assert.equal(bandFloor(51), 51);
+  assert.equal(bandFloor(221), 201);
+  assert.equal(bandFloor(833), 301);
 });

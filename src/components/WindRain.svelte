@@ -91,7 +91,7 @@
     {/if}
 
     <p class="note meta">
-      NEA weather stations · {timeAgo(weather.takenAt, result.serverTime)}{#if stale}{' · '}<span class="stale">May be out of date</span>{/if}
+      NEA weather stations · {timeAgo(weather.takenAt, result.serverTime)}{#if stale}{' · '}<span class="stale-note"><span class="status-dot stale" aria-hidden="true"></span>May be out of date</span>{/if}
     </p>
   {/if}
 </section>
@@ -164,9 +164,6 @@
   }
   .meta {
     margin-top: 10px;
-  }
-  .stale {
-    color: var(--status-critical);
   }
   .empty {
     margin-top: 12px;

@@ -9,6 +9,12 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-17-polish',
+    date: '2026-10-17',
+    title: 'Clearer alert settings',
+    body: 'Alerts now have proper on/off switches that change the moment you tap them, and “Stop all alerts” checks with you first. The region list, chart and cigarette count are also easier to read.',
+  },
+  {
     id: '2026-10-16-groups',
     date: '2026-10-16',
     title: 'Get haze alerts in your group',

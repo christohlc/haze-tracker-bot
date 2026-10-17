@@ -13,6 +13,8 @@
   let shareError = $state<string | null>(null);
   let attempt = $state(0); // bumped by Try again to redraw
   let expanded = $state(false);
+  // With no readings at all the picture is only dashes, so there’s nothing worth sending.
+  const empty = $derived(!snapshot.worst.psi24h && !snapshot.worst.pm25);
 
   const DONE: Record<Exclude<ShareResult, 'cancelled'>, string> = {
     shared: 'Shared.',
@@ -24,6 +26,7 @@
   // the readings change. The old picture stays up until the new one is ready.
   $effect(() => {
     void attempt;
+    if (empty) return;
     const snap = snapshot;
     let cancelled = false;
     const draw = () =>
@@ -85,11 +88,15 @@
     <div class="body">
       <h2 id="share-title" class="section-title">Share the haze picture</h2>
       <p class="note">Every region on one image, the same one the bot sends. Both numbers are NEA’s.</p>
-      <button type="button" class="primary" onclick={share} disabled={!url || busy} aria-busy={busy}>
-        <!-- Both labels share one grid cell, so the button keeps its width while busy. -->
-        <span class:hidden={busy}>{inTelegram ? 'Share' : 'Download'}</span>
-        <span class:hidden={!busy} aria-hidden={!busy}>Preparing…</span>
-      </button>
+      {#if empty}
+        <p class="note">You can share it once NEA publishes a reading.</p>
+      {:else}
+        <button type="button" class="primary" onclick={share} disabled={!url || busy} aria-busy={busy}>
+          <!-- Both labels share one grid cell, so the button keeps its width while busy. -->
+          <span class:hidden={busy}>{inTelegram ? 'Share' : 'Download'}</span>
+          <span class:hidden={!busy} aria-hidden={!busy}>Preparing…</span>
+        </button>
+      {/if}
       {#if status}<p class="note" role="status">{status}</p>{/if}
       {#if drawError}
         <p class="error" role="alert">

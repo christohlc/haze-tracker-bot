@@ -114,7 +114,9 @@
       <button type="button" class="primary" onclick={load}>Try again</button>
     </div>
   {:else if !data}
+    <!-- Shaped like the loaded page (tab bar, then a hero-sized card), so nothing jumps when it arrives. -->
     <div class="skeleton" aria-busy="true" aria-label="Loading">
+      <div class="sk tabs-sk"></div>
       <div class="card sk tall"></div>
       <div class="card sk"></div>
       <div class="card sk"></div>
@@ -240,7 +242,13 @@
     background: var(--card);
   }
   .sk.tall {
-    height: 220px;
+    height: 300px; /* plus the card padding: about the hero’s height on a phone */
+  }
+  .skeleton .tabs-sk {
+    height: 48px;
+    margin: 6px 0;
+    border-radius: 10px;
+    background: var(--control);
   }
   .stale {
     margin-bottom: 12px;
