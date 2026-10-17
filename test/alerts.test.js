@@ -273,14 +273,14 @@ test('a band alert gives NEA’s 24-hour PSI too, and folds in an official cross
   const east = formatBandAlert(snap, 'very_unhealthy', 'unhealthy', 'east');
   assert.match(east, /Haze in East down to Unhealthy<\/b> \(was Very unhealthy\)/);
   assert.match(east, /Our 3-hour PSI <b>187<\/b>, East; highest West 245 · 8:00 pm SGT/);
-  assert.match(east, /NEA’s 24-hour PSI <b>178<\/b>, East; up to 202 in West/);
-  assert.match(formatBandAlert(snap, 'unhealthy', 'very_unhealthy'), /NEA’s 24-hour PSI up to <b>202<\/b>, West/, 'the highest, as on the picture');
+  assert.match(east, /NEA’s 24-hour PSI <b>178<\/b>, East; highest West 202/);
+  assert.match(formatBandAlert(snap, 'unhealthy', 'very_unhealthy'), /NEA’s 24-hour PSI <b>202<\/b>, worst region \(West\)/, 'the highest, as on the picture');
 
   const official = { id: 'pvery_unhealthy2026-10-17', kind: 'psi24', band: 'very_unhealthy', value: 202, at: 0 };
   const both = formatBandAlert(snap, 'very_unhealthy', 'unhealthy', 'east', official);
   assert.match(both, /^🟠 <b>Official 24-hour PSI now Very unhealthy<\/b>\nNEA’s 24-hour PSI is <b>202<\/b>, worst in West · 8:00 pm SGT\n\n/);
-  assert.match(both, /Our 3-hour PSI <b>187<\/b>, East; highest West 245\nNEA’s 24-hour PSI <b>178<\/b>, East\n/, 'time and highest said once');
+  assert.match(both, /Our 3-hour PSI <b>187<\/b>, East; highest West 245\nNEA’s 24-hour PSI <b>178<\/b>, East; highest West 202\n/, 'time said once');
   assert.equal(both.match(/\/alerts/g)?.length, 1);
   const highest = formatBandAlert(snap, 'unhealthy', 'very_unhealthy', null, official);
-  assert.doesNotMatch(highest, /up to <b>202/, 'no second line for the same 24-hour PSI');
+  assert.doesNotMatch(highest, /NEA’s 24-hour PSI <b>202<\/b>, worst region/, 'no second line for the same 24-hour PSI');
 });

@@ -27,16 +27,23 @@ function regionTable(snap) {
 }
 
 /**
+ * Where a reading is from: the chat's area, and the highest region if that's elsewhere, or for a
+ * chat without one, the worst region.
+ * @param {any} snap @param {any} area @param {'psi3h' | 'psi24h'} key
+ */
+function whereOf(snap, area, key) {
+  const top = snap.worst[key];
+  if (!area) return `worst region (${top?.name ?? '–'})`;
+  return `${area.name}${top && top.region !== area.id ? `; highest ${top.name} ${n(top.value)}` : ''}`;
+}
+
+/**
  * The readings a chat's messages lead with, and the 3-hour PSI's caption.
  * @param {any} snap @param {string | null | undefined} region
  */
 function focus(snap, region) {
   const r = readingsFor(snap, region);
-  const top = snap.worst.psi3h;
-  const where = !r.area
-    ? `worst region (${top?.name ?? '–'})`
-    : `${r.area.name}${top && top.region !== r.area.id ? `; highest ${top.name} ${n(top.value)}` : ''}`;
-  return { psi3h: r.psi3h?.value ?? null, psi24h: r.psi24h?.value ?? null, pm25: r.pm25?.value ?? null, where };
+  return { area: r.area, psi3h: r.psi3h?.value ?? null, psi24h: r.psi24h?.value ?? null, pm25: r.pm25?.value ?? null, where: whereOf(snap, r.area, 'psi3h') };
 }
 
 /**
@@ -123,22 +130,15 @@ export function formatBandAlert(snap, fromId, toId, region = null, official = nu
   const to = bandById(toId);
   const from = bandById(fromId);
   const f = focus(snap, region);
-  const r = readingsFor(snap, region);
   const worse = PSI_BANDS.indexOf(/** @type {any} */ (to)) > PSI_BANDS.indexOf(/** @type {any} */ (from));
   const { mask, outside } = adviceLines(f.psi24h, f.pm25);
-  const top24 = snap.worst.psi24h;
-  // With `official` leading, the highest 24-hour PSI and the time are already in its lines.
-  const nea24 = r.area
-    ? `NEA’s 24-hour PSI <b>${n(f.psi24h)}</b>, ${r.area.name}${!official && top24 && top24.region !== r.area.id ? `; up to ${n(top24.value)} in ${top24.name}` : ''}`
-    : official
-      ? null
-      : `NEA’s 24-hour PSI up to <b>${n(top24?.value)}</b>, ${top24?.name ?? '–'}`;
   const lines = [
     ...(official ? [...officialLines(official, snap), ''] : []),
-    `${to?.emoji ?? '⚪️'} <b>Haze${r.area ? ` in ${r.area.name}` : ''} ${worse ? 'up' : 'down'} to ${to?.label ?? toId}</b> (was ${from?.label ?? fromId})`,
+    `${to?.emoji ?? '⚪️'} <b>Haze${f.area ? ` in ${f.area.name}` : ''} ${worse ? 'up' : 'down'} to ${to?.label ?? toId}</b> (was ${from?.label ?? fromId})`,
     `Our 3-hour PSI <b>${n(f.psi3h)}</b>, ${f.where}${official ? '' : ` · ${sgtTime(snap.asOf)} SGT`}`,
-    ...(nea24 ? [nea24] : []),
   ];
+  // The worst region's 24-hour PSI is already the official lines' number.
+  if (f.area || !official) lines.push(`NEA’s 24-hour PSI <b>${n(f.psi24h)}</b>, ${whereOf(snap, f.area, 'psi24h')}`);
   if (mask) lines.push(mask);
   if (outside) lines.push(outside);
   lines.push('', '<i>/alerts to change or stop these.</i>');
