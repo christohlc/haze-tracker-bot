@@ -1,6 +1,6 @@
 <script lang="ts">
   import { flip } from 'svelte/animate';
-  import { cubicInOut } from 'svelte/easing';
+  import { quartInOut } from 'svelte/easing';
   import { psiBand } from '../../tgcloud/lib/psi.js';
   import type { Snapshot } from '../lib/api';
   import { area } from '../lib/area.svelte';
@@ -16,12 +16,10 @@
     snapshot.regions
       .map((r) => {
         const v = r[key];
-        return { ...r, v, band: psiBand(v) };
+        return { ...r, v, band: psiBand(v), mine: r.id === area.id };
       })
-      .sort((a, b) => Number(b.id === area.id) - Number(a.id === area.id)),
+      .sort((a, b) => Number(b.mine) - Number(a.mine)),
   );
-  // When the area changes, rows slide to their new places, so the move up reads as one.
-  const slide = { duration: reducedMotion() ? 0 : 220, easing: cubicInOut };
   // Bars share one scale: at least 200 so a moderate day doesn't look alarming.
   const max = $derived(Math.max(200, ...rows.map((r) => r.v ?? 0)));
 </script>
@@ -32,9 +30,15 @@
 
   <ul>
     {#each rows as r (r.id)}
-      {@const mine = area.id === r.id}
-      <li class:mine aria-current={mine ? 'true' : undefined} animate:flip={slide}>
-        <span class="name">{r.name}{#if mine}<span class="tag">Your area</span>{/if}</span>
+      <!-- When the area changes, rows slide to their new places (quartInOut is --ease-in-out). -->
+      <li
+        class:mine={r.mine}
+        aria-current={r.mine ? 'true' : undefined}
+        animate:flip={{ duration: reducedMotion() ? 0 : 220, easing: quartInOut }}
+      >
+        <span class="name"
+          >{r.name}{#if r.mine}<span class="tag"><span class="visually-hidden">, </span>Your area</span>{/if}</span
+        >
         <span class="track" aria-hidden="true">
           {#if r.v != null}
             <!-- Clipped rather than scaled, so the rounded end keeps its shape at any length. -->
@@ -78,11 +82,15 @@
   li.mine + li {
     border-top: 0;
   }
+  /* The empty track would vanish into the panel's tint. */
+  li.mine .track {
+    background: var(--card);
+  }
   .tag {
     display: block;
     font-size: 0.75rem;
     font-weight: 650;
-    color: var(--accent);
+    color: var(--ink-2);
   }
   .name {
     font-weight: 600;
