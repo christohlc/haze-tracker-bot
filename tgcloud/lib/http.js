@@ -20,27 +20,24 @@ export const errorText = (e) => (e instanceof Error ? e.message : String(e));
  */
 async function get(url, what = 'HTTP', deadline) {
   const key = url.startsWith(NEA_API) ? await datagovKey() : null;
-  const headers = { 'user-agent': USER_AGENT };
-  let res = await retryOnce(() => fetch(url, { headers: { ...headers, ...(key && { 'x-api-key': key }) } }), deadline);
-  if (key && (res.status === 401 || res.status === 403)) {
-    // The key was revoked or replaced: go without it now, and read the setting again next time.
-    keyRead = null;
-    res = await fetch(url, { headers });
-  }
+  const headers = { 'user-agent': USER_AGENT, ...(key && { 'x-api-key': key }) };
+  const res = await retryOnce(() => fetch(url, { headers }), deadline);
   if (!res.ok) throw new Error(`${what} ${res.status}`);
   return res;
 }
 
-/** @type {Promise<string | null> | null} */
+/** How long an isolate keeps the key before reading the setting again, so a new key needs no redeploy. */
+const KEY_READ_MS = 10 * 60_000;
+/** @type {{ key: Promise<string | null>, at: number } | null} */
 let keyRead = null;
 /**
  * data.gov.sg's API key, if one is set (admin `datagov_api_key`): it raises the rate limit that
- * NEA's readings sit behind. Read once per isolate, and again once data.gov.sg rejects it (get()),
- * so rotating it (set the new one, revoke the old) needs no redeploy.
+ * NEA's readings sit behind. data.gov.sg answers an unknown or revoked key like no key (17 Oct
+ * 2026), so revoking the old one never breaks a fetch.
  */
 function datagovKey() {
-  keyRead ??= getSetting('datagov_api_key').catch(() => null);
-  return keyRead;
+  if (!keyRead || Date.now() - keyRead.at > KEY_READ_MS) keyRead = { key: getSetting('datagov_api_key').catch(() => null), at: Date.now() };
+  return keyRead.key;
 }
 
 /** @param {string} url @param {string} [what] @param {number} [deadline] see get() */
