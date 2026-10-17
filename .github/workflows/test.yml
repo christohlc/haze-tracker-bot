@@ -14,4 +14,6 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --no-audit --no-fund --ignore-scripts # as the tick installs, so a dependency clash fails here first
       - run: npm test
