@@ -22,7 +22,7 @@ the bot’s own rules and sent without anyone checking it first; the operator ca
 ## How it fits together
 
 ```
-cron-job.org (every 15 min: :12, :27, :42, :57) ─▶ GitHub Actions workflow_dispatch
+Cloudflare Worker cron (cron/, every 15 min: :12, :27, :42, :57) ─▶ GitHub Actions workflow_dispatch
   └─ npx tgcloud run endpoints/tick
        ├─ refresh NEA PM2.5 + PSI  → readings, state(snapshot)
        ├─ refresh news (every run while there's haze) → state(news), breaking events → state(breaking)
@@ -43,6 +43,7 @@ fresh data themselves when the snapshot is stale.
 |---|---|
 | `tgcloud/schema.js` | Database tables |
 | `tgcloud/handlers/` | Bot commands and inline buttons |
+| `cron/` | Cloudflare Worker that starts the tick workflow every 15 minutes (deployed separately) |
 | `tgcloud/endpoints/` | `getDashboard`, `getWeather`, `getCameras`, `alerts`, `shareCard` (Mini App), `tick`, `admin` (CLI only) |
 | `tgcloud/lib/` | NEA fetch, PSI maths, alerts, breaking news, formatting, NEA’s outlook and the next-hours range, weather and cameras |
 | `src/` | Mini App (Svelte 5 + Vite + TypeScript) |
@@ -102,24 +103,32 @@ The tick workflow needs the repository secret `TGCLOUD_TOKEN`.
 ### The 15-minute tick
 
 GitHub's own `schedule` trigger is best effort and drops most runs (on 16 Oct 2026 it fired 1 of
-31 slots), so an external cron starts the workflow through the API. The `schedule` in the
-workflow stays as a backstop. To set it up:
+31 slots), so a Cloudflare Worker ([`cron/`](cron/)) starts the workflow through the API at :12,
+:27, :42 and :57, plus the keepalive on Mondays. The `schedule` in the workflow stays as a
+backstop; when both fire in the same slot, the second run waits for the first and finds NEA and
+the news cached. To set it up:
 
 1. GitHub → Settings → Developer settings → Fine-grained tokens → new token with access to this
    repository only and the single permission **Actions: Read and write**. Set an expiry and a
-   reminder to renew it; nothing else can start the tick once it lapses.
-2. On [cron-job.org](https://cron-job.org) (free), create a job:
-   - URL `https://api.github.com/repos/christohogc/haze-tracker-bot/actions/workflows/tick.yml/dispatches`
-   - Schedule: custom, minutes `12,27,42,57`, every hour
-   - Advanced: method `POST`, request body `{"ref":"main"}`, headers
-     `Accept: application/vnd.github+json`, `X-GitHub-Api-Version: 2022-11-28` and
-     `Authorization: Bearer <the token>`
-   - Turn on the failure notification. Success is HTTP 204.
-3. Optionally, a second weekly job with body `{"ref":"main","inputs":{"keepalive":"true"}}`, in
-   case GitHub drops the scheduled keepalive.
+   reminder to renew it; once it lapses only the unreliable `schedule` is left.
+2. Deploy the Worker (free plan; opens a browser to log in to Cloudflare the first time):
 
-The token lives only on cron-job.org (paste it there, not into this repo or a chat). It can start,
-re-run and cancel Actions runs in this repository and nothing else. Check that runs are coming in with:
+   ```bash
+   npx wrangler@4 deploy --config cron/wrangler.jsonc
+   ```
+
+3. Store the token. It prompts for the value, so paste it there, not into this repo or a chat:
+
+   ```bash
+   npx wrangler@4 secret put GITHUB_TOKEN --config cron/wrangler.jsonc
+   ```
+
+4. In the Cloudflare dashboard, the Worker's **Settings → Trigger events** lists both crons and
+   **Observability → Logs** shows each run; a failed dispatch is logged as an error with GitHub's
+   status (401: the token is wrong or expired; 403/404: wrong permission or repository).
+
+The token can start, re-run and cancel Actions runs in this repository and nothing else. Check
+that runs are coming in with:
 
 ```bash
 gh run list --workflow tick.yml -L 12

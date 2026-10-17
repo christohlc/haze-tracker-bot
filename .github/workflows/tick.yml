@@ -3,7 +3,7 @@
 #
 # Needs the repo secret TGCLOUD_TOKEN (the CLI access token from @BotFather).
 #
-# What starts it: an external cron (cron-job.org) calls the workflow_dispatch API at :12, :27,
+# What starts it: a Cloudflare Worker cron (cron/) calls the workflow_dispatch API at :12, :27,
 # :42 and :57; setup in README.md#the-15-minute-tick. GitHub's own `schedule` is best effort and
 # drops most runs: on 16 Oct 2026 it fired 1 of 31 slots. It stays below as a backstop for when
 # the external cron is down. A dispatch and a scheduled run in the same slot just queue (the
@@ -17,8 +17,8 @@
 # GitHub pauses scheduled workflows in a public repo after 60 days without repo activity, and a
 # paused workflow can't be dispatched either. The weekly keepalive job re-enables this workflow
 # through the API, which counts as activity (the approach of the keepalive-workflow action,
-# without the third-party dependency). It runs on a dispatch with keepalive=true too, so the
-# external cron can call it weekly in case GitHub drops the scheduled one.
+# without the third-party dependency). It runs on a dispatch with keepalive=true too, which the
+# Worker sends weekly in case GitHub drops the scheduled one.
 name: tick
 
 on:
