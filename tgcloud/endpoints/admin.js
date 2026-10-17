@@ -147,6 +147,8 @@ export default async function (input, ctx) {
       await api.setMyCommands({ commands: commands(false) });
       await api.setMyCommands({ commands: commands(false), scope: { type: 'all_private_chats' } });
       await api.setMyCommands({ commands: commands(true), scope: { type: 'all_group_chats' } });
+      // A list set for group admins (once, by hand in BotFather) wins over the group one; clear it.
+      await api.deleteMyCommands({ scope: { type: 'all_chat_administrators' } });
       return { ok: true };
     }
     case 'breaking_pause': {
