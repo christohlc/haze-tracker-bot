@@ -182,6 +182,9 @@ fonts (`backdrop` in `summary.js`), but no island: the panels would hide nearly 
   never stands alone. It always says “our calculation, not official”.
 - Either half can be missing; the height fits what’s there. The caption carries the same facts
   in text (the range on one line), since a picture has no alt text.
+- `/forecast` sends it, and so does the daily update, as a second message after the haze card
+  (only while NEA has a forecast out or our range reaches past Moderate, not on clear days). If
+  haze starts later in a chat’s 3-hour daily window, the picture can follow on its own.
 - Check layout changes with `node scripts/card/preview.mjs`, which writes the forecast cases too.
 
 ## What’s new

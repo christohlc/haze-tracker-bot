@@ -4,14 +4,14 @@
 // rate-limited or unreached send isn't retried in-process: its claim is released (or never
 // made) and the subscriber's lastBand stays behind, so the next tick catches them up.
 
-import { BotApiError } from 'sdk';
-import { ALERT_SCOPES, advanceBands, bandAlertsFor, dailyDue, runBatched, SEND_INTERVAL_MS, sgtHourOf } from './alert-rules.js';
+import { getAhead } from './ahead.js';
+import { ALERT_SCOPES, advanceBands, bandAlertsFor, dailyDue, dailyForecastDue, runBatched, SEND_INTERVAL_MS, sgtHourOf } from './alert-rules.js';
 import { dashboardButton } from './buttons.js';
-import { isRateLimited, isTopicGone, isUnreachable, movedTo } from './bot-errors.js';
+import { describeError, isRateLimited, isTopicGone, isUnreachable, movedTo } from './bot-errors.js';
 import { subscriberTarget } from './chat-rules.js';
-import { cachedCardId, sendCardOrText } from './card/send.js';
+import { cachedCardId, cachedForecastCardId, sendCardOrText, sendForecastCardOrText } from './card/send.js';
 import { sendBreaking } from './breaking.js';
-import { formatBandAlert, formatHaze, formatHazeCaption } from './format.js';
+import { forecastMessage, formatBandAlert, formatHaze, formatHazeCaption } from './format.js';
 import { getAlertBands, setAlertBands } from './store.js';
 import { sgtDateOf } from './time.js';
 import {
@@ -21,6 +21,7 @@ import {
   claimAlert,
   clearThread,
   dailyClaimedChats,
+  dailyForecastClaimedChats,
   dailySubscribers,
   deleteSubscriber,
   moveSubscriber,
@@ -38,6 +39,10 @@ const BUDGET_MS = 20_000;
 const BREAKING_BUDGET_MS = 6_000;
 const BAND_BUDGET_MS = 12_000;
 
+/** Budget for fetching NEA's forecast for the daily forecast: one try (the platform gives up on a
+ *  fetch after ~5 s), no retry past it. */
+const AHEAD_WAIT_MS = 4_000;
+
 const DAILY_HEADER = '☀️ <b>Daily haze update</b>\n\n';
 
 const sleep = typeof setTimeout === 'function' ? (/** @type {number} */ ms) => new Promise((r) => setTimeout(r, ms)) : null;
@@ -48,9 +53,9 @@ const sleep = typeof setTimeout === 'function' ? (/** @type {number} */ ms) => n
  */
 export async function runAlerts(snap, now = Date.now(), breaking = []) {
   const end = now + BUDGET_MS;
-  const out = { breaking: 0, band: null, sent: 0, daily: 0, removed: 0, deferred: false, paced: Boolean(sleep) };
+  const out = { breaking: 0, band: null, sent: 0, daily: 0, dailyForecast: 0, removed: 0, deferred: false, paced: Boolean(sleep) };
   let retryAfter = SEND_INTERVAL_MS;
-  /** @param {{ results: string[], stopped: string | null }} res @param {'breaking' | 'sent' | 'daily'} field */
+  /** @param {{ results: string[], stopped: string | null }} res @param {'breaking' | 'sent' | 'daily' | 'dailyForecast'} field */
   const tally = ({ results, stopped }, field) => {
     out[field] += results.filter((r) => r === 'sent').length;
     out.removed += results.filter((r) => r === 'removed').length;
@@ -142,7 +147,25 @@ export async function runAlerts(snap, now = Date.now(), breaking = []) {
       (sub) => sendNoting429(sub.chatId, `daily:${sub.chatId}:${date}`, card(sub, dailyFor(sub.region ?? null))),
       { deadline, sleep, firstAlone: await firstAlone() },
     );
-    tally(res, 'daily');
+    const dailyStopped = tally(res, 'daily');
+
+    // What's ahead follows each daily as a picture of its own (claim `forecast:<chat>:<date>`),
+    // while there's haze to talk about (dailyForecastDue), so a 429 or a cut-off run resumes it
+    // like any alert, without sending the haze card twice.
+    if (await canGoOn(dailyStopped, deadline)) {
+      const [sent, had] = await Promise.all([dailyClaimedChats(date), dailyForecastClaimedChats(date)]);
+      const owed = subs.filter((s) => dailyDue(s.dailyHour, hour) && sent.has(s.chatId) && !had.has(s.chatId));
+      const ahead = owed.length ? await getAhead(Promise.resolve(snap), Date.now() + AHEAD_WAIT_MS).catch(() => null) : null;
+      if (ahead && dailyForecastDue(ahead)) {
+        const message = forecastMessage(ahead);
+        const forecastRes = await runBatched(
+          owed,
+          (sub) => sendNoting429(sub.chatId, `forecast:${sub.chatId}:${date}`, () => sendForecastCardOrText(subscriberTarget(sub), snap, ahead, message)),
+          { deadline, sleep, firstAlone: !(await cachedForecastCardId(snap, ahead)) },
+        );
+        tally(forecastRes, 'dailyForecast');
+      }
+    }
   }
 
   await pruneAlerts();
@@ -175,7 +198,7 @@ async function send(chatId, key, deliver) {
       return { result: 'failed' };
     }
     if (isRateLimited(e)) return { result: 'limited', retryAfterS: /** @type {any} */ (e).parameters?.retry_after };
-    console.error('alert send failed', e instanceof BotApiError ? `${e.code} ${e.description}` : String(e)); // no chat id: tick output lands in public Actions logs
+    console.error('alert send failed', describeError(e)); // no chat id: tick output lands in public Actions logs
     return { result: 'failed' };
   }
 }

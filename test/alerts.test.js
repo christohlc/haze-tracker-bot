@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { DEESCALATE_HOLD_MS, dailyDue, nextAlertBand, runBatched, sgtHourOf } from '../tgcloud/lib/alert-rules.js';
+import { DEESCALATE_HOLD_MS, dailyDue, dailyForecastDue, nextAlertBand, runBatched, sgtHourOf } from '../tgcloud/lib/alert-rules.js';
 import { applyAlertAction, isActive, parseAlertInput, renderAlertSettings } from '../tgcloud/lib/alert-settings.js';
 import { formatBandAlert, formatHaze } from '../tgcloud/lib/format.js';
 
@@ -248,4 +248,14 @@ test('readings for an area, or the highest for each reading', async () => {
   assert.equal(top.area, null);
   assert.equal(top.pm25?.name, 'Central');
   assert.equal(top.trend, 'rising');
+});
+
+test('the daily update brings the forecast on hazy days only', () => {
+  const range = (hi) => ({ now: 60, steps: [{ h: 1, t: '2026-10-17T14:00:00+08:00', lo: 40, hi }] });
+  const outlook = { text: 'Moderate', from: 'moderate', to: 'moderate', psi: null, forDate: '2026-10-18', issuedAt: '2026-10-17T18:00:00+08:00', expires: null };
+  assert.equal(dailyForecastDue(null), false);
+  assert.equal(dailyForecastDue({ outlook: null, range: null }), false);
+  assert.equal(dailyForecastDue({ outlook: null, range: range(100) }), false, 'clear day: Moderate at most');
+  assert.equal(dailyForecastDue({ outlook: null, range: range(101) }), true);
+  assert.equal(dailyForecastDue({ outlook, range: null }), true, 'NEA issues it only during haze episodes');
 });

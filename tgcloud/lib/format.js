@@ -165,6 +165,9 @@ export function formatBreaking(event, snap) {
 }
 
 
+/** The forecast card's caption, and the text sent if the picture fails. @param {import('./ahead.js').Ahead} ahead */
+export const forecastMessage = (ahead) => ({ caption: formatForecast(ahead, { table: false }), text: formatForecast(ahead) });
+
 /**
  * /forecast: NEA's outlook when there is one, then our range for the next few hours. With
  * `table: false` it's the caption under the forecast card, so the range fits on one line.

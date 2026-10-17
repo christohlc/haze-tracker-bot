@@ -9,6 +9,12 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-17-daily-forecast',
+    date: '2026-10-17',
+    title: 'The forecast in your daily update',
+    body: 'On hazy days, the daily haze update now comes with the forecast picture too.',
+  },
+  {
     id: '2026-10-17-forecast-picture',
     date: '2026-10-17',
     title: 'The forecast as a picture',

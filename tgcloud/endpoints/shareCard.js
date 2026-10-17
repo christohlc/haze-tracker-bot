@@ -5,8 +5,8 @@
 // A prepared message needs the photo's file id, so if nothing has uploaded this hour's card yet,
 // it goes to the user's own chat first (`sentToChat` says so).
 
-import { api, BotApiError, EndpointError } from 'sdk';
-import { isUnreachable } from '../lib/bot-errors.js';
+import { api, EndpointError } from 'sdk';
+import { describeError, isUnreachable } from '../lib/bot-errors.js';
 import { dashboardButton } from '../lib/buttons.js';
 import { cachedCardId, photoFileId, sendCard } from '../lib/card/send.js';
 import { formatHazeCaption, formatShareCaption } from '../lib/format.js';
@@ -51,7 +51,7 @@ export default async function (input, ctx) {
     });
     return { preparedId: prepared.id, sentToChat };
   } catch (e) {
-    console.error('savePreparedInlineMessage failed', e instanceof BotApiError ? `${e.code} ${e.description}` : String(e));
+    console.error('savePreparedInlineMessage failed', describeError(e));
     throw new EndpointError('Couldn’t prepare the picture to share. Try again.', { code: 'PREPARE_FAILED' });
   }
 }

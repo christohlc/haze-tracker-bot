@@ -85,6 +85,9 @@ async function claimedChats(pattern) {
 /** Chats whose daily update for `date` (YYYY-MM-DD) is already claimed. @param {string} date */
 export const dailyClaimedChats = (date) => claimedChats(`daily:%:${date}`);
 
+/** Chats whose daily forecast picture for `date` is already claimed. @param {string} date */
+export const dailyForecastClaimedChats = (date) => claimedChats(`forecast:%:${date}`);
+
 /** Chats that already have (or are being sent) breaking event `id`; keys are `breaking:<id>:<chat>`. @param {string} id */
 export const breakingClaimedChats = (id) => claimedChats(`breaking:${id}:%`);
 
