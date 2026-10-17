@@ -17,6 +17,7 @@ import { sgtDateOf } from './time.js';
 import {
   bandSubscribers,
   breakingClaimedChats,
+  breakingKey,
   breakingSubscribers,
   claimAlert,
   clearThread,
@@ -82,44 +83,64 @@ export async function runAlerts(snap, now = Date.now(), breaking = []) {
     return true;
   };
 
+  // Each area's alert band moves with its own 3-hour PSI (rises at once, drops after a hold);
+  // subscribers without a region follow the highest region's.
+  // Read band and breaking state together: band alerts decide which crossings are folded.
+  const [prev, bandSubs, breakingSubs, ...claimed] = await Promise.all([
+    getAlertBands(),
+    bandSubscribers(),
+    breaking.length ? breakingSubscribers() : [],
+    ...breaking.map((e) => breakingClaimedChats(e.id)),
+  ]);
+  const bands = advanceBands(prev, snap, now);
+  const savingBands = ALERT_SCOPES.some((s) => bands[s] !== prev[s]) ? setAlertBands(bands) : null;
+  out.band = bands.highest?.id ?? null;
+  const { due: bandDue, unseeded } = bandAlertsFor(bandSubs, bands);
+  const bandDueChats = new Set(bandDue.map(({ sub }) => sub.chatId));
+
   // Breaking news: every event still to send × breaking subscribers who haven't had it and
-  // subscribed before it happened (so a new subscriber doesn't get an old story).
+  // subscribed before it happened (so a new subscriber doesn't get an old story). An official
+  // 24-hour PSI crossing for a chat that's also due a band alert leads that alert instead of
+  // going on its own (`folded`), so the chat gets one message, under the picture it describes.
   /** @type {Array<{ sub: any, event: any }>} */
   const pending = [];
-  if (breaking.length) {
-    const [subs, ...claimed] = await Promise.all([breakingSubscribers(), ...breaking.map((e) => breakingClaimedChats(e.id))]);
-    breaking.forEach((event, i) => {
-      for (const s of subs) if (s.createdAt * 1000 <= event.at && !claimed[i].has(s.chatId)) pending.push({ sub: s, event });
-    });
-  }
+  /** @type {Map<number, any[]>} oldest first; the latest leads, all are claimed */
+  const folded = new Map();
+  breaking.forEach((event, i) => {
+    for (const s of breakingSubs) {
+      if (s.createdAt * 1000 > event.at || claimed[i].has(s.chatId)) continue;
+      if (event.kind !== 'psi24' || !bandDueChats.has(s.chatId)) pending.push({ sub: s, event });
+      else if (folded.has(s.chatId)) folded.get(s.chatId)?.push(event);
+      else folded.set(s.chatId, [event]);
+    }
+  });
   const breakingRes = await runBatched(
     pending,
-    ({ sub, event }) => sendNoting429(sub.chatId, `breaking:${event.id}:${sub.chatId}`, () => sendBreaking(subscriberTarget(sub), event, snap)),
+    ({ sub, event }) => sendNoting429(sub.chatId, breakingKey(event.id, sub.chatId), () => sendBreaking(subscriberTarget(sub), event, snap)),
     { deadline: Math.min(Date.now() + BREAKING_BUDGET_MS, end), sleep },
   );
   const breakingStopped = tally(breakingRes, 'breaking');
+  await savingBands;
 
-  // Each area's alert band moves with its own 3-hour PSI (rises at once, drops after a hold);
-  // subscribers without a region follow the highest region's.
-  const prev = await getAlertBands();
-  const bands = advanceBands(prev, snap, now);
-  if (ALERT_SCOPES.some((s) => bands[s] !== prev[s])) await setAlertBands(bands);
   // Until the summary card is uploaded, send to one chat first so the rest reuse its file id.
   const firstAlone = async () => !(await cachedCardId(snap));
-  out.band = bands.highest?.id ?? null;
 
-  // Still 'limited' if breaking news hit a 429 and band alerts couldn't wait it out.
+  // Still 'limited' if breaking news hit a 429 and band alerts couldn't wait it out. A folded
+  // event left unsent stays unclaimed, so the next tick sends it (with the band alert, or alone).
   let bandStopped = breakingStopped === 'limited' ? 'limited' : null;
   if (Object.keys(bands).length && (await canGoOn(breakingStopped, now + BAND_BUDGET_MS))) {
-    const { due, unseeded } = bandAlertsFor(await bandSubscribers(), bands);
     // Never told a band (rare: subscribing seeds it): start them at it, without an alert.
     await Promise.all(unseeded.map(({ sub, band }) => setLastBand(sub.chatId, band.id)));
     const res = await runBatched(
-      due,
+      bandDue,
       async ({ sub, band, scope }) => {
-        const text = formatBandAlert(snap, /** @type {string} */ (sub.lastBand), band.id, sub.region);
+        const official = folded.get(sub.chatId) ?? [];
+        const text = formatBandAlert(snap, /** @type {string} */ (sub.lastBand), band.id, sub.region, official.at(-1));
         const r = await sendNoting429(sub.chatId, `band:${sub.chatId}:${scope}:${band.id}:${band.at}`, card(sub, { caption: text, text }));
-        if (r === 'sent' || r === 'duplicate') await setLastBand(sub.chatId, band.id);
+        if (r !== 'sent' && r !== 'duplicate') return r;
+        // A duplicate was sent by another run, folded events with it.
+        const [, ...claims] = await Promise.all([setLastBand(sub.chatId, band.id), ...official.map((e) => claimAlert(breakingKey(e.id, sub.chatId), sub.chatId))]);
+        if (r === 'sent' && claims.some(Boolean)) out.breaking++;
         return r;
       },
       { deadline: now + BAND_BUDGET_MS, sleep, firstAlone: await firstAlone() },

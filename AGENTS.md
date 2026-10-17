@@ -54,7 +54,8 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   old, and has no denial, maybe (“if”, “could”, “considering”), reopening, question mark,
   feature/explainer word (“what to know”, “takes a toll”, “commentary”) or other country in it. Only while some PSI is above 100, one event per topic per SGT day, at most 3 a
   day. The official 24-hour PSI rising into Very unhealthy or Hazardous is an event too, once per
-  band per SGT day. Events live in `state('breaking')` for 48 h and are sent for 12 h (claims
+  band per SGT day; for a chat also due a band alert that tick, it leads the band alert (one
+  message, claimed under both keys) instead of going alone. Events live in `state('breaking')` for 48 h and are sent for 12 h (claims
   `breaking:<id>:<chat>`). Kill switch: `admin` `breaking_pause` / `breaking_cancel` (a cancel
   can lose a race with a running tick's write; check `status`); `breaking_test` sends one to a
   single chat. When a misfire is reported, add the headline to `test/breaking.test.js` and

@@ -128,6 +128,10 @@ messages is the same short form, for the general public.
   large preview above), then the official 24-hour PSI. It says the bot picked the story itself.
   The PSI version says “Official 24-hour PSI now Hazardous”: only NEA’s 24-hour PSI is ever
   called official.
+- Band alerts (`formatBandAlert`) name the chat’s area (“Haze in East down to Unhealthy”), say
+  “Our 3-hour PSI” and add NEA’s 24-hour PSI, the number on the picture above them. An official
+  24-hour PSI crossing due to the same chat in the same tick leads that alert instead of going
+  as a second message.
 
 ## States
 

@@ -88,6 +88,9 @@ export const dailyClaimedChats = (date) => claimedChats(`daily:%:${date}`);
 /** Chats whose daily forecast picture for `date` is already claimed. @param {string} date */
 export const dailyForecastClaimedChats = (date) => claimedChats(`forecast:%:${date}`);
 
+/** Claim key for breaking event `id` to `chatId`. @param {string} id @param {number} chatId */
+export const breakingKey = (id, chatId) => `breaking:${id}:${chatId}`;
+
 /** Chats that already have (or are being sent) breaking event `id`; keys are `breaking:<id>:<chat>`. @param {string} id */
 export const breakingClaimedChats = (id) => claimedChats(`breaking:${id}:%`);
 

@@ -27,16 +27,23 @@ function regionTable(snap) {
 }
 
 /**
+ * Where a reading is from: the chat's area, and the highest region if that's elsewhere, or for a
+ * chat without one, the worst region.
+ * @param {any} snap @param {any} area @param {'psi3h' | 'psi24h'} key
+ */
+function whereOf(snap, area, key) {
+  const top = snap.worst[key];
+  if (!area) return `worst region (${top?.name ?? '–'})`;
+  return `${area.name}${top && top.region !== area.id ? `; highest ${top.name} ${n(top.value)}` : ''}`;
+}
+
+/**
  * The readings a chat's messages lead with, and the 3-hour PSI's caption.
  * @param {any} snap @param {string | null | undefined} region
  */
 function focus(snap, region) {
   const r = readingsFor(snap, region);
-  const top = snap.worst.psi3h;
-  const where = !r.area
-    ? `worst region (${top?.name ?? '–'})`
-    : `${r.area.name}${top && top.region !== r.area.id ? `; highest ${top.name} ${n(top.value)}` : ''}`;
-  return { psi3h: r.psi3h?.value ?? null, psi24h: r.psi24h?.value ?? null, pm25: r.pm25?.value ?? null, where };
+  return { area: r.area, psi3h: r.psi3h?.value ?? null, psi24h: r.psi24h?.value ?? null, pm25: r.pm25?.value ?? null, where: whereOf(snap, r.area, 'psi3h') };
 }
 
 /**
@@ -110,25 +117,41 @@ export function formatCigs(c, { place, outdoorPct }) {
 
 /**
  * Short alert when the band the chat follows changes: its region's, or the highest region's.
+ * The band is our 3-hour PSI's, so it also gives NEA's 24-hour PSI, which the picture above it
+ * shows. `official` is an official 24-hour PSI crossing (breaking news) due to the same chat in
+ * the same tick: it leads the message instead of going as a message of its own.
  * @param {any} snap
  * @param {string} fromId previous band id
  * @param {string} toId new band id
  * @param {string | null} [region]
+ * @param {any} [official] a PsiEvent (breaking-rules.js)
  */
-export function formatBandAlert(snap, fromId, toId, region = null) {
+export function formatBandAlert(snap, fromId, toId, region = null, official = null) {
   const to = bandById(toId);
   const from = bandById(fromId);
   const f = focus(snap, region);
   const worse = PSI_BANDS.indexOf(/** @type {any} */ (to)) > PSI_BANDS.indexOf(/** @type {any} */ (from));
   const { mask, outside } = adviceLines(f.psi24h, f.pm25);
   const lines = [
-    `${to?.emoji ?? '⚪️'} <b>Haze ${worse ? 'up' : 'down'} to ${to?.label ?? toId}</b> (was ${from?.label ?? fromId})`,
-    `3-hour PSI <b>${n(f.psi3h)}</b>, ${f.where} · ${sgtTime(snap.asOf)} SGT`,
+    ...(official ? [...officialLines(official, snap), ''] : []),
+    `${to?.emoji ?? '⚪️'} <b>Haze${f.area ? ` in ${f.area.name}` : ''} ${worse ? 'up' : 'down'} to ${to?.label ?? toId}</b> (was ${from?.label ?? fromId})`,
+    `Our 3-hour PSI <b>${n(f.psi3h)}</b>, ${f.where}${official ? '' : ` · ${sgtTime(snap.asOf)} SGT`}`,
   ];
+  // The worst region's 24-hour PSI is already the official lines' number.
+  if (f.area || !official) lines.push(`NEA’s 24-hour PSI <b>${n(f.psi24h)}</b>, ${whereOf(snap, f.area, 'psi24h')}`);
   if (mask) lines.push(mask);
   if (outside) lines.push(outside);
   lines.push('', '<i>/alerts to change or stop these.</i>');
   return lines.join('\n');
+}
+
+/** The headline of an official 24-hour PSI crossing. @param {any} event a PsiEvent @param {any} snap */
+function officialLines(event, snap) {
+  const band = bandById(event.band);
+  return [
+    `${band?.emoji ?? '⚪️'} <b>Official 24-hour PSI now ${band?.label ?? event.band}</b>`,
+    `NEA’s 24-hour PSI is <b>${n(event.value)}</b>, worst in ${snap.worst.psi24h?.name ?? '–'} · ${sgtTime(snap.asOf)} SGT`,
+  ];
 }
 
 /** "NEA’s 24-hr PSI forecast for tomorrow: <b>150–230 (Unhealthy to Very Unhealthy)</b>" @param {import('./outlook-parse.js').Outlook} o */
@@ -143,12 +166,8 @@ export function formatBreaking(event, snap) {
   const psi = snap.worst.psi24h;
   const footer = ['', '<i>/alerts to change or stop these.</i>'];
   if (event.kind === 'psi24') {
-    const band = bandById(event.band);
     const { mask, outside } = adviceLines(event.value, snap.worst.pm25?.value ?? null);
-    const lines = [
-      `${band?.emoji ?? '⚪️'} <b>Official 24-hour PSI now ${band?.label ?? event.band}</b>`,
-      `NEA’s 24-hour PSI is <b>${n(event.value)}</b>, worst in ${psi?.name ?? '–'} · ${sgtTime(snap.asOf)} SGT`,
-    ];
+    const lines = officialLines(event, snap);
     if (mask) lines.push(mask);
     if (outside) lines.push(outside);
     return [...lines, ...footer].join('\n');

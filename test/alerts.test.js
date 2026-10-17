@@ -259,3 +259,28 @@ test('the daily update brings the forecast on hazy days only', () => {
   assert.equal(dailyForecastDue({ outlook: null, range: range(101) }), true);
   assert.equal(dailyForecastDue({ outlook, range: null }), true, 'NEA issues it only during haze episodes');
 });
+
+test('a band alert gives NEA’s 24-hour PSI too, and folds in an official crossing sent with it', () => {
+  // 17 Oct, 8 pm: West's official 24-hour PSI rose into Very unhealthy while East's 3-hour PSI eased.
+  const snap = {
+    asOf: '2026-10-17T20:00:00+08:00',
+    regions: [
+      { id: 'west', name: 'West', psi3h: 245, psi24h: 202, pm25: 187 },
+      { id: 'east', name: 'East', psi3h: 187, psi24h: 178, pm25: 116 },
+    ],
+    worst: { psi3h: { region: 'west', name: 'West', value: 245 }, psi24h: { region: 'west', name: 'West', value: 202 }, pm25: { value: 187 } },
+  };
+  const east = formatBandAlert(snap, 'very_unhealthy', 'unhealthy', 'east');
+  assert.match(east, /Haze in East down to Unhealthy<\/b> \(was Very unhealthy\)/);
+  assert.match(east, /Our 3-hour PSI <b>187<\/b>, East; highest West 245 · 8:00 pm SGT/);
+  assert.match(east, /NEA’s 24-hour PSI <b>178<\/b>, East; highest West 202/);
+  assert.match(formatBandAlert(snap, 'unhealthy', 'very_unhealthy'), /NEA’s 24-hour PSI <b>202<\/b>, worst region \(West\)/, 'the highest, as on the picture');
+
+  const official = { id: 'pvery_unhealthy2026-10-17', kind: 'psi24', band: 'very_unhealthy', value: 202, at: 0 };
+  const both = formatBandAlert(snap, 'very_unhealthy', 'unhealthy', 'east', official);
+  assert.match(both, /^🟠 <b>Official 24-hour PSI now Very unhealthy<\/b>\nNEA’s 24-hour PSI is <b>202<\/b>, worst in West · 8:00 pm SGT\n\n/);
+  assert.match(both, /Our 3-hour PSI <b>187<\/b>, East; highest West 245\nNEA’s 24-hour PSI <b>178<\/b>, East; highest West 202\n/, 'time said once');
+  assert.equal(both.match(/\/alerts/g)?.length, 1);
+  const highest = formatBandAlert(snap, 'unhealthy', 'very_unhealthy', null, official);
+  assert.doesNotMatch(highest, /NEA’s 24-hour PSI <b>202<\/b>, worst region/, 'no second line for the same 24-hour PSI');
+});
