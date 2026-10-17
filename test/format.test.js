@@ -51,3 +51,22 @@ test('NEA is refetched often while the current hour is awaited, then for revisio
   assert.equal(neaRefetchEveryS(psiBehind, at('2026-10-17T16:20:00+08:00')), AWAITED_EVERY_S, 'PM2.5 in, PSI not yet');
   assert.ok(REVISED_EVERY_S < 15 * 60, 'every 15-minute tick refetches');
 });
+
+test('the card caption: answer first, each advice line with its own emoji, no table', async () => {
+  const { formatHazeCaption } = await import('../tgcloud/lib/format.js');
+  const east = { id: 'east', name: 'East', pm25: 111, psi1h: 175, psi3h: 170, psi24h: 182 };
+  const west = { id: 'west', name: 'West', pm25: 199, psi1h: 250, psi3h: 244, psi24h: 215 };
+  const snap = {
+    asOf: '2026-10-18T00:00:00+08:00',
+    regions: [east, west],
+    cigs: { past24h: 5.8 },
+    worst: { psi3h: { region: 'west', name: 'West', value: 244 }, psi24h: { region: 'west', name: 'West', value: 215 }, pm25: { region: 'west', name: 'West', value: 199 } },
+  };
+  const lines = formatHazeCaption(snap, null, 'east').split('\n');
+  assert.equal(lines[0], '🟡 <b>Unhealthy</b> · PSI 170 in East');
+  assert.match(lines[1], /West highest at 244/);
+  assert.ok(lines.filter((l) => l).every((l) => /^(\p{Extended_Pictographic}|<i>)/u.test(l)), 'every line starts with an emoji or is a note');
+  assert.ok(lines.some((l) => l.startsWith('🧓 <b>Vulnerable people:</b>')));
+  assert.doesNotMatch(lines.join('\n'), /<pre>/);
+  assert.match(formatHazeCaption(snap, null, null).split('\n')[0], /PSI 244 in West, the highest/);
+});

@@ -9,6 +9,12 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-18-haze-message',
+    date: '2026-10-18',
+    title: 'A shorter /haze message',
+    body: 'The band and your area come first, then what to do, with advice for vulnerable people on a line of its own.',
+  },
+  {
     id: '2026-10-17-inline',
     date: '2026-10-17',
     title: 'Share the haze in any chat',

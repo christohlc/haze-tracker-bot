@@ -37,6 +37,15 @@ function whereOf(snap, area, key) {
   return `${area.name}${top && top.region !== area.id ? `; highest ${top.name} ${n(top.value)}` : ''}`;
 }
 
+/** The chat's area, or for a chat without one the worst region. @param {any} snap @param {any} area */
+const placeOf = (snap, area) => area?.name ?? `${snap.worst.psi3h?.name ?? '–'}, the highest`;
+
+/** " · West highest at 244" when the highest 3-hour PSI is outside the chat's area. @param {any} snap @param {any} area */
+function highestElsewhere(snap, area) {
+  const top = snap.worst.psi3h;
+  return area && top && top.region !== area.id ? ` · ${top.name} highest at ${n(top.value)}` : '';
+}
+
 /**
  * The readings a chat's messages lead with, and the 3-hour PSI's caption.
  * @param {any} snap @param {string | null | undefined} region
@@ -58,22 +67,19 @@ export function formatHaze(snap, ahead, { table = true, region = null } = {}) {
   const { mask, outside } = adviceLines(f.psi24h, f.pm25);
 
   const lines = [
-    `${band?.emoji ?? '⚪️'} <b>PSI ${n(f.psi3h)}</b> · ${band?.label ?? 'No data'}`,
-    `<i>3-hour PSI, ${f.where} · ${sgtTime(snap.asOf)} SGT</i>`,
+    `${band?.emoji ?? '⚪️'} <b>${band?.label ?? 'No data'}</b> · PSI ${n(f.psi3h)} in ${placeOf(snap, f.area)}`,
+    `<i>Our 3-hour PSI, from PM2.5 · ${sgtTime(snap.asOf)} SGT${highestElsewhere(snap, f.area)}</i>`,
     ...(snap.stale ? ['⚠️ <i>NEA hasn’t updated recently, so this may be out of date.</i>'] : []),
+    '',
     ...(outside ? [outside] : []),
-    '',
-    ...(table
-      ? [`<pre>${regionTable(snap)}</pre>`, '<i>PM2.5 in µg/m³. 1h/3h PSI computed from PM2.5; 24h PSI is NEA’s.</i>']
-      : ['<i>3-hour PSI is our calculation from PM2.5. The picture shows NEA’s readings.</i>']),
-    '',
-    `🚬 <b>${n(snap.cigs.past24h, 1)}</b> cigarettes over the past 24h (island-wide, outdoors all day)`,
+    ...(mask ? [mask] : []),
   ];
-  if (mask) lines.push(mask);
   const soon = ahead?.range?.steps.find((s) => s.h === 3);
-  if (ahead?.outlook) lines.push(`📅 ${outlookLine(ahead.outlook)} (/forecast)`);
-  else if (soon) lines.push(`📈 Island-wide 1-hour PSI in 3 hours: likely <b>${soon.lo}–${soon.hi}</b>, our calculation (/forecast)`);
-  lines.push('', '<i>Not official. Check haze.gov.sg for NEA advisories.</i>');
+  if (ahead?.outlook) lines.push(`📅 ${outlookLine(ahead.outlook)} · /forecast`);
+  else if (soon) lines.push(`📈 In 3 hours: likely <b>${soon.lo}–${soon.hi}</b> island-wide, our calculation · /forecast`);
+  lines.push(`🚬 <b>${n(snap.cigs.past24h, 1)}</b> cigarettes’ worth in 24h, outdoors all day`, '');
+  if (table) lines.push(`<pre>${regionTable(snap)}</pre>`, '<i>PM2.5 in µg/m³. 1h/3h PSI computed from PM2.5; 24h PSI is NEA’s.</i>', '');
+  lines.push(table ? '<i>Not official. Check haze.gov.sg for NEA advisories.</i>' : '<i>The picture is NEA’s 24-hr PSI. Not official: check haze.gov.sg.</i>');
   return lines.join('\n');
 }
 
@@ -89,7 +95,7 @@ function adviceLines(psi24h, pm25Now) {
   const outside = `👉 <b>Outside now:</b> ${all.headline}`;
   return {
     mask: `😷 <b>${all.mask.title}.</b> ${all.mask.text}`,
-    outside: vul && vul.rank > all.rank ? `${outside}\n      Vulnerable people: ${vul.headline}` : outside,
+    outside: vul && vul.rank > all.rank ? `${outside}\n🧓 <b>Vulnerable people:</b> ${vul.headline}` : outside,
   };
 }
 
