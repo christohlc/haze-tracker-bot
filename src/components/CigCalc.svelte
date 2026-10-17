@@ -13,7 +13,7 @@
     return r ? { now: r.pm25, mean24h: r.pm25Mean24h } : snapshot.island;
   });
   const c = $derived(cigarettes(pm, outdoorPct / 100));
-  const placeName = $derived(snapshot.regions.find((x) => x.id === place)?.name ?? 'island-wide average');
+  const placeName = $derived(snapshot.regions.find((x) => x.id === place)?.name ?? 'Island-wide average');
 </script>
 
 <section class="card" aria-labelledby="cigs-title">
@@ -78,7 +78,7 @@
     font-weight: 600;
   }
   select {
-    min-height: 40px;
+    min-height: 44px;
     padding: 0 10px;
     border: 0;
     border-radius: 10px;
@@ -99,6 +99,12 @@
     font-size: 1rem;
     color: var(--ink-2);
   }
+  /* Big numbers in the display face, with tabular figures so they don't jitter as the slider moves. */
+  .num-big,
+  .tile-value {
+    font-family: var(--font-display);
+    font-variant-numeric: tabular-nums;
+  }
   .num-big {
     display: block;
     font-size: 3rem;
@@ -115,6 +121,7 @@
   }
   .tile {
     display: grid;
+    align-content: start;
     gap: 2px;
     padding: 12px;
     border-radius: 12px;

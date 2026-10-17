@@ -27,12 +27,15 @@
         <span class="name">{r.name}</span>
         <span class="track" aria-hidden="true">
           {#if r.v != null}
-            <span class="bar" style:transform="scaleX({r.v / max})" style:background="var(--band-{r.band?.id})"></span>
+            <!-- Clipped rather than scaled, so the rounded end keeps its shape at any length. -->
+            <span class="bar" style:--fill="{Math.min(1, r.v / max) * 100}%" style:background="var(--band-{r.band?.id})"></span>
           {/if}
         </span>
         <span class="value num"><span class="visually-hidden">{PERIODS[period].adj} PSI </span>{fmt(r.v)}</span>
-        <span class="sub">
-          {r.band?.label ?? 'No reading'} · PM2.5 <span class="num">{fmt(r.pm25)}</span> µg/m³
+        <span class="detail">
+          {r.band?.label ?? 'No reading'} ·
+          <!-- The reading and its unit stay on one line. -->
+          <span class="pm">PM2.5 <span class="num">{fmt(r.pm25)}</span>{#if r.pm25 != null}&nbsp;µg/m³{/if}</span>
         </span>
       </li>
     {/each}
@@ -68,8 +71,9 @@
     display: block;
     height: 100%;
     border-radius: inherit;
-    transform-origin: left;
-    transition: transform 300ms var(--ease-out);
+    clip-path: inset(0 calc(100% - var(--fill)) 0 0 round 999px);
+    /* on-screen movement when the period changes */
+    transition: clip-path 220ms var(--ease-in-out);
   }
   .value {
     font-family: var(--font-display);
@@ -77,10 +81,13 @@
     font-weight: 750;
     text-align: right;
   }
-  .sub {
+  .detail {
     grid-column: 2 / -1;
     font-size: 0.8125rem;
     color: var(--muted);
+  }
+  .pm {
+    white-space: nowrap;
   }
   @media (prefers-reduced-motion: reduce) {
     .bar {

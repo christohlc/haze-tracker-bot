@@ -13,6 +13,7 @@
   --axis: #c3c2b7;
   --control: rgba(11, 11, 11, 0.06);
   --control-thumb: var(--card);
+  --switch-thumb: #fff; /* the same in both schemes, like iOS */
   --accent: var(--tg-theme-button-color, #8a5a2e);
   --accent-ink: var(--tg-theme-button-text-color, #fff);
   --link: var(--tg-theme-link-color, #2a78d6);

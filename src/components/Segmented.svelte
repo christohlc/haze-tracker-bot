@@ -29,6 +29,9 @@
     selectionHaptic();
   }
 
+  // A mouse switches on press. A finger switches on lift (click), so a scroll that starts on
+  // the control doesn't change it; :active gives the press feedback straight away.
+
   // One tab stop for the group; arrow keys, Home and End move between options.
   function onKey(e: KeyboardEvent) {
     const last = options.length - 1;
@@ -59,7 +62,7 @@
       aria-controls={controls?.(o.value)}
       tabindex={on ? 0 : -1}
       class:on
-      onpointerdown={() => pick(o.value)}
+      onpointerdown={(e) => e.pointerType !== 'touch' && pick(o.value)}
       onclick={() => pick(o.value)}
     >
       {o.label}{#if o.dot}<span class="dot" aria-hidden="true"></span><span class="visually-hidden">{` (${o.dot})`}</span>{/if}

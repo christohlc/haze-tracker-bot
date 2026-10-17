@@ -8,9 +8,9 @@
 
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { DAILY_HOURS, hourLabel } from '../../tgcloud/lib/alert-settings.js';
+  import { DAILY_HOURS, hourLabel, isActive } from '../../tgcloud/lib/alert-settings.js';
   import { saveAlerts, type AlertSettings } from '../lib/alerts';
-  import { inTelegram, notifyHaptic, selectionHaptic, setMainButtonBusy, showMainButton } from '../lib/telegram';
+  import { confirmAction, inTelegram, notifyHaptic, setMainButtonBusy, showMainButton } from '../lib/telegram';
 
   let settings = $state<AlertSettings | null>(null);
   let status = $state<'loading' | 'failed' | 'ready'>('loading');
@@ -33,10 +33,14 @@
     if (busy) return;
     busy = true;
     error = null;
+    // A change that keeps alerts on shows straight away and is undone if the save fails.
+    const prev = settings;
+    if (settings && isActive(next)) settings = next;
     try {
       settings = await saveAlerts(next);
       notifyHaptic('success');
     } catch (e) {
+      settings = prev;
       error = e instanceof Error ? e.message : 'Couldn’t save your alerts.';
       notifyHaptic('error');
     } finally {
@@ -53,14 +57,20 @@
     return showMainButton('🔔 Get haze alerts', turnOn);
   });
 
+  // The success buzz after saving is the haptic; no extra selection tick.
   function pickDaily(h: number | null) {
     if (!settings || settings.dailyHour === h) return;
-    selectionHaptic();
     save({ ...settings, dailyHour: h });
+  }
+
+  async function stopAll() {
+    if (busy || !(await confirmAction('Stop all haze alerts? You can turn them on again any time.'))) return;
+    save({ bandAlerts: false, dailyHour: null, breakingAlerts: false });
   }
 </script>
 
 <section class="card alerts" aria-labelledby="alerts-title" aria-busy={busy}>
+  <!-- While a save is in flight the controls are locked (busy) but not dimmed: the change already shows. -->
   <div class="head">
     <span class="bell" class:on={settings} aria-hidden="true">
       <svg viewBox="0 0 24 24" width="20" height="20">
@@ -99,7 +109,8 @@
           type="checkbox"
           role="switch"
           checked={settings.bandAlerts}
-          disabled={busy}
+          aria-disabled={busy}
+          onclick={(e) => busy && e.preventDefault()}
           onchange={(e) => save({ ...settings!, bandAlerts: e.currentTarget.checked })}
         />
       </label>
@@ -113,7 +124,8 @@
           type="checkbox"
           role="switch"
           checked={settings.breakingAlerts}
-          disabled={busy}
+          aria-disabled={busy}
+          onclick={(e) => busy && e.preventDefault()}
           onchange={(e) => save({ ...settings!, breakingAlerts: e.currentTarget.checked })}
         />
       </label>
@@ -127,7 +139,7 @@
               role="radio"
               aria-checked={settings.dailyHour === h}
               class:on={settings.dailyHour === h}
-              disabled={busy}
+              aria-disabled={busy}
               onclick={() => pickDaily(h)}
             >
               {h == null ? 'Off' : hourLabel(h)}
@@ -137,7 +149,7 @@
       </div>
     </div>
 
-    <button type="button" class="stop" disabled={busy} onclick={() => save({ bandAlerts: false, dailyHour: null, breakingAlerts: false })}>
+    <button type="button" class="stop" aria-disabled={busy} onclick={stopAll}>
       Stop all alerts
     </button>
   {/if}
@@ -214,22 +226,54 @@
     align-items: stretch;
     gap: 8px;
   }
+  /* A drawn switch: a plain checkbox here reads as a tick box, not on/off. */
   input[type='checkbox'] {
     flex: none;
-    width: 44px;
-    height: 26px;
+    position: relative;
+    width: 46px;
+    height: 28px;
     margin: 0;
-    accent-color: var(--accent);
+    border-radius: 999px;
+    background: var(--control);
+    box-shadow: inset 0 0 0 1px var(--hairline);
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    transition: background-color 200ms ease;
   }
+  input[type='checkbox']::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--switch-thumb);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+    transition: transform 200ms var(--ease-in-out);
+  }
+  input[type='checkbox']:checked {
+    background: var(--accent);
+    box-shadow: none;
+  }
+  input[type='checkbox']:checked::before {
+    transform: translateX(18px);
+  }
+  input[type='checkbox']:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  /* One even row, so “Off” is never left alone on a second line. */
   .chips {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 6px;
   }
   .chips button {
     min-height: 44px;
-    min-width: 56px;
-    padding: 0 12px;
+    padding: 0 4px;
+    white-space: nowrap;
     border: 1px solid var(--hairline);
     border-radius: 999px;
     background: none;
@@ -253,7 +297,9 @@
     font-weight: 600;
   }
   @media (prefers-reduced-motion: reduce) {
-    button {
+    button,
+    input[type='checkbox'],
+    input[type='checkbox']::before {
       transition: none;
     }
   }

@@ -82,8 +82,12 @@ or, outside Telegram, from the OS. A new colour token needs both a light and a d
   once, charts keep their width, and Live views loads its pictures only once More is opened.
   The tab bar takes arrow keys, Home and End. Switching keeps the
   header scrolled away if it already was. Away from Now, Telegram’s back arrow returns to Now.
-- Tap targets are at least 44px. Segmented controls and chips switch on `pointerdown` so they
-  respond straight away.
+- Tap targets are at least 44px. Segmented controls switch on `pointerdown` for a mouse, and on
+  lift for a finger, so a scroll that starts on one doesn't change it; `:active` gives the press
+  feedback straight away.
+- On/off settings are drawn switches, not checkboxes. Saving one shows the change at once and undoes
+  it if the save fails; the controls lock while it saves but don't dim. “Stop all alerts” asks first
+  (Telegram's own confirm dialog).
 
 ## The hero sky
 
@@ -97,7 +101,7 @@ of the sky and the haze. Check that again whenever a sky colour changes.
 
 - Short and purposeful: cards rise 8px over 280ms with a small stagger, the first time a tab is
   shown; showing a tab fades it in (150ms). The hero number counts
-  up once on first load (600ms) and moves quickly when the period changes (220ms). Buttons
+  up once on first load (600ms, from the bottom of its band, so it never reads lower than the band shown) and moves quickly when the period changes (220ms). Buttons
   scale to 0.97 when pressed.
 - Use `--ease-out` for things entering and `--ease-in-out` for things moving on screen.
 - Every animation has a `prefers-reduced-motion` fallback, either a plain fade or nothing. In

@@ -182,8 +182,20 @@
     line-clamp: 2;
     overflow: hidden;
   }
+  /* A warning, not an error: the header's amber stale dot, and the phrase kept on one line. */
   .stale {
-    color: var(--status-critical);
+    color: var(--ink-2);
+    white-space: nowrap;
+  }
+  .stale::before {
+    content: '';
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    margin-right: 5px;
+    vertical-align: 0.05em;
+    border-radius: 50%;
+    background: var(--band-unhealthy);
   }
   .links li + li {
     border-top: 1px solid var(--hairline);

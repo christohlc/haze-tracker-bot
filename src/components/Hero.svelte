@@ -2,7 +2,7 @@
   import { Tween } from 'svelte/motion';
   import { cubicOut } from 'svelte/easing';
   import { maskCard } from '../../tgcloud/lib/advice.js';
-  import { psiBand } from '../../tgcloud/lib/psi.js';
+  import { PSI_BANDS, psiBand } from '../../tgcloud/lib/psi.js';
   import type { Snapshot } from '../lib/api';
   import { reducedMotion } from '../lib/motion';
   import { PERIODS, psiKey, type Period } from '../lib/period';
@@ -14,10 +14,15 @@
   const band = $derived(psiBand(worst?.value ?? null));
   const mask = $derived(maskCard(worst?.value ?? null));
   // First open counts up once (rare, so it can take a little longer); period switches retarget quickly.
+  // The count starts at the bottom of the band, so the number never reads lower than the band shown.
   const shown = new Tween(0, { easing: cubicOut });
   let first = true;
   $effect(() => {
     const target = worst?.value ?? 0;
+    if (first) {
+      const i = PSI_BANDS.findIndex((b) => b.id === psiBand(target)?.id);
+      shown.set(i > 0 ? PSI_BANDS[i - 1].max + 1 : 0, { duration: 0 });
+    }
     const duration = reducedMotion() ? 0 : first ? 600 : 220;
     first = false;
     shown.set(target, { duration });

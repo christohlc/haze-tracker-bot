@@ -50,6 +50,14 @@ export function notifyHaptic(type: 'success' | 'error' | 'warning') {
   tg?.HapticFeedback?.notificationOccurred?.(type);
 }
 
+/** Ask a yes/no question: Telegram's native dialog (Bot API 6.2+), the browser's outside it. */
+export function confirmAction(message: string): Promise<boolean> {
+  if (inTelegram && tg.showConfirm && tg.isVersionAtLeast?.('6.2')) {
+    return new Promise((resolve) => tg.showConfirm(message, (ok: boolean) => resolve(ok)));
+  }
+  return Promise.resolve(window.confirm(message));
+}
+
 /** Show Telegram's bottom MainButton. Returns a cleanup that hides it and drops the handler. */
 export function showMainButton(text: string, onClick: () => void): () => void {
   const mb = tg?.MainButton;

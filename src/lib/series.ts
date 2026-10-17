@@ -27,3 +27,12 @@ export function niceMax(v: number) {
   const step = v <= 60 ? 20 : v <= 150 ? 50 : 100;
   return Math.max(step, Math.ceil(v / step) * step);
 }
+
+/** Axis ticks from 0 at round steps, at most five; the last one is at or above `max`. */
+export function niceTicks(max: number) {
+  let step = max <= 60 ? 20 : max <= 150 ? 50 : 100;
+  while (max / step > 4) step *= 2;
+  const ticks = [];
+  for (let t = 0; t - step < max; t += step) ticks.push(t);
+  return ticks;
+}
