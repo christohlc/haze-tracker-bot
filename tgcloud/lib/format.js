@@ -165,16 +165,21 @@ export function formatBreaking(event, snap) {
 }
 
 
-/** /forecast: NEA's outlook when there is one, then our range for the next few hours. @param {import('./ahead.js').Ahead} ahead */
-export function formatForecast({ outlook, range }) {
+/**
+ * /forecast: NEA's outlook when there is one, then our range for the next few hours. With
+ * `table: false` it's the caption under the forecast card, so the range fits on one line.
+ * @param {import('./ahead.js').Ahead} ahead @param {{ table?: boolean }} [opts]
+ */
+export function formatForecast({ outlook, range }, { table = true } = {}) {
   const lines = ['📈 <b>What’s ahead</b>', ''];
   if (outlook) lines.push(`📅 ${outlookLine(outlook)}`, `<i>Issued by NEA ${sgtDayMonth(outlook.issuedAt)}, ${sgtTime(outlook.issuedAt)} SGT.</i>`, '');
   else lines.push('<i>NEA hasn’t issued a 24-hr PSI forecast. It does daily during haze episodes, at haze.gov.sg.</i>', '');
   if (range) {
     const rows = range.steps.map((s) => `${`+${s.h}h`.padEnd(5)}${sgtTime(s.t).padStart(9)}  ${`${s.lo}–${s.hi}`}`);
+    const likely = range.steps.map((s) => `${s.h} h <b>${s.lo === s.hi ? s.lo : `${s.lo}–${s.hi}`}</b>`).join(' · ');
     lines.push(
       `<b>Next few hours</b> · island-wide 1-hour PSI, now ${range.now}`,
-      `<pre>${[`${'In'.padEnd(5)}${'SGT'.padStart(9)}  Likely`, ...rows].join('\n')}</pre>`,
+      table ? `<pre>${[`${'In'.padEnd(5)}${'SGT'.padStart(9)}  Likely`, ...rows].join('\n')}</pre>` : `Likely in ${likely}`,
       `<i>Our calculation, not official: how much the reading moved over the same hours in the past two weeks. ${RANGE_RECORD}</i>`,
     );
   }

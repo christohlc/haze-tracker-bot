@@ -9,6 +9,12 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-17-forecast-picture',
+    date: '2026-10-17',
+    title: 'The forecast as a picture',
+    body: 'Send /forecast to the bot and it now answers with a picture of NEA’s forecast dial and the next few hours, ready to share.',
+  },
+  {
     id: '2026-10-17-ahead-colour',
     date: '2026-10-17',
     title: 'See what’s ahead at a glance',

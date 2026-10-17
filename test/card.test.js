@@ -136,3 +136,26 @@ test('runBatched can send the first item on its own', async () => {
   );
   assert.deepEqual(sizes, [1, 4, 3, 2, 1, 1]);
 });
+
+test('the forecast card draws either half, fits what’s there, and keeps the caption short', async () => {
+  const { drawForecastCard, forecastCardPng } = await import('../tgcloud/lib/card/forecast.js');
+  const { demoAhead, worstAhead } = await import('../src/dev/ahead.ts');
+  const { formatForecast } = await import('../tgcloud/lib/format.js');
+  const demo = demoAhead({ snapshot: fixture, history: JSON.parse(readFileSync(new URL('../src/dev/fixture.json', import.meta.url), 'utf8')).history }, null);
+  const both = drawForecastCard(fixture, demo);
+  const outlookOnly = drawForecastCard(fixture, { ...demo, range: null });
+  const rangeOnly = drawForecastCard(fixture, { ...demo, outlook: null });
+  assert.equal(both.width, CARD_W);
+  assert.ok(outlookOnly.height < both.height && rangeOnly.height < both.height);
+  // Band words only (NEA's older wording), a reading past the dial, and a range past the scale.
+  drawForecastCard(worst, { ...worstAhead(), outlook: { ...worstAhead().outlook, psi: null } });
+  const png = forecastCardPng(worst, worstAhead());
+  assert.equal(decodePng(png).height, drawForecastCard(worst, worstAhead()).height);
+  // The summary card's sky, for the same snapshot.
+  assert.deepEqual([...both.data.subarray(0, 3)], [...drawSummaryCard(fixture).data.subarray(0, 3)]);
+  for (const ahead of [demo, worstAhead()]) {
+    const caption = formatForecast(ahead, { table: false });
+    assert.ok(caption.length < 1024, 'fits a photo caption');
+    assert.ok(!caption.includes('<pre>'));
+  }
+});

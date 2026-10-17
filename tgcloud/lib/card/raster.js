@@ -156,6 +156,49 @@ export class Canvas {
     }
   }
 
+  /**
+   * A line from (x0, y0) to (x1, y1), `width` thick with round ends, anti-aliased. `color` may
+   * be a function of x, for bars whose colour changes along their length.
+   * @param {number} x0 @param {number} y0 @param {number} x1 @param {number} y1 @param {number} width
+   * @param {Rgb | ((x: number) => Rgb)} color
+   */
+  fillSegment(x0, y0, x1, y1, width, color) {
+    const r = width / 2;
+    const dx = x1 - x0;
+    const dy = y1 - y0;
+    const len2 = dx * dx + dy * dy || 1;
+    const colorAt = typeof color === 'function' ? color : () => color;
+    for (let y = Math.floor(Math.min(y0, y1) - r); y < Math.ceil(Math.max(y0, y1) + r); y++) {
+      for (let x = Math.floor(Math.min(x0, x1) - r); x < Math.ceil(Math.max(x0, x1) + r); x++) {
+        const px = x + 0.5;
+        const py = y + 0.5;
+        const t = Math.max(0, Math.min(1, ((px - x0) * dx + (py - y0) * dy) / len2));
+        const cover = r - Math.hypot(px - x0 - t * dx, py - y0 - t * dy) + 0.5;
+        if (cover > 0) this.blend(x, y, colorAt(px), Math.round(Math.min(1, cover) * 255));
+      }
+    }
+  }
+
+  /**
+   * A stretch of a ring around (cx, cy), anti-aliased, with square ends. Angles in radians,
+   * counter-clockwise from 3 o'clock (y up), `a0` < `a1`, within the top half plus a little.
+   * @param {number} cx @param {number} cy @param {number} rIn @param {number} rOut @param {number} a0 @param {number} a1 @param {Rgb} color
+   */
+  fillArc(cx, cy, rIn, rOut, a0, a1, color) {
+    for (let y = Math.floor(cy - rOut); y < Math.ceil(cy + rOut * 0.2); y++) {
+      for (let x = Math.floor(cx - rOut); x < Math.ceil(cx + rOut); x++) {
+        const dx = x + 0.5 - cx;
+        const dy = cy - (y + 0.5);
+        const r = Math.hypot(dx, dy);
+        let a = Math.atan2(dy, dx);
+        if (a < -Math.PI / 2) a += 2 * Math.PI;
+        const clamp = (/** @type {number} */ v) => Math.max(0, Math.min(1, v + 0.5));
+        const cover = clamp(r - rIn) * clamp(rOut - r) * clamp((a - a0) * r) * clamp((a1 - a) * r);
+        if (cover > 0) this.blend(x, y, color, Math.round(cover * 255));
+      }
+    }
+  }
+
   /** Fill the whole canvas with a top-to-bottom gradient. @param {Rgb} top @param {Rgb} bottom */
   verticalGradient(top, bottom) {
     for (let y = 0; y < this.height; y++) {

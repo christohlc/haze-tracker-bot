@@ -31,7 +31,7 @@ const SKY = {
 /** White outline around each region card, so it stands off a sky of a similar colour. */
 const OUTLINE = 5;
 
-const C = {
+export const C = {
   card: rgb('#ffffff'),
   ink: rgb('#1c1712'),
   muted: rgb('#6b6560'),
@@ -41,7 +41,7 @@ const C = {
 };
 
 /** --band-<id> and --band-<id>-ink. */
-const BAND = {
+export const BAND = {
   good: [rgb('#0ca30c'), rgb('#0b0b0b')],
   moderate: [rgb('#2a78d6'), rgb('#ffffff')],
   unhealthy: [rgb('#dcab00'), rgb('#0b0b0b')],
@@ -138,25 +138,36 @@ function legendRow(c, y, title, bands, colourIds) {
 let mapAlpha = /** @type {Uint8Array | null} */ (null);
 let logoRgba = /** @type {Uint8Array | null} */ (null);
 
-/** @param {any} snap a snapshot (lib/snapshot.js) @returns {Canvas} */
-export function drawSummaryCard(snap) {
-  const worst = snap.worst?.psi24h ?? null;
-  const band = psiBand(worst?.value);
-
-  const sky = SKY[band?.id ?? 'none'] ?? SKY.none;
-
-  const c = new Canvas(CARD_W, CARD_H);
+/**
+ * A card's background and brand: the hero sky for today's worst 24-hour PSI band, the island,
+ * the logo and name, and "Singapore haze · <time>". Shared with the forecast card, which leaves
+ * out the island: its panels would cover nearly all of it.
+ * @param {number} height @param {any} snap @param {{ island?: boolean }} [opts]
+ * @returns {{ c: Canvas, sky: typeof SKY.none }}
+ */
+export function backdrop(height, snap, { island = true } = {}) {
+  const sky = SKY[psiBand(snap.worst?.psi24h?.value)?.id ?? 'none'] ?? SKY.none;
+  const c = new Canvas(CARD_W, height);
   c.verticalGradient(sky.top, sky.bottom);
   // The hero's haze: radial-gradient(120% 60% at 20% 105%, haze, transparent 70%).
-  c.glow(CARD_W * 0.2, CARD_H * 1.05, CARD_W * 1.2, CARD_H * 0.6, sky.haze, sky.hazeAlpha, 0.7);
-  mapAlpha ??= decodeMask(fromBase64(MAP_MASK.data), 0, MAP_MASK.w * MAP_MASK.h);
-  c.blitMask(mapAlpha, MAP_MASK.w, MAP_MASK.h, 0, 0, C.card, sky.land);
-
-  // Brand, then the answer: the worst official reading and its band.
+  c.glow(CARD_W * 0.2, height * 1.05, CARD_W * 1.2, height * 0.6, sky.haze, sky.hazeAlpha, 0.7);
+  if (island) {
+    mapAlpha ??= decodeMask(fromBase64(MAP_MASK.data), 0, MAP_MASK.w * MAP_MASK.h);
+    c.blitMask(mapAlpha, MAP_MASK.w, MAP_MASK.h, 0, 0, C.card, sky.land);
+  }
   logoRgba ??= fromBase64(LOGO.data);
   c.blitRgba(logoRgba, LOGO.w, LOGO.h, 56, 48);
   c.text('I’m going hazelnuts!', 164, 84, 'head', sky.ink);
   c.text(`Singapore haze · ${cardDate(snap.asOf)}`, 164, 122, 'body', sky.ink);
+  return { c, sky };
+}
+
+/** @param {any} snap a snapshot (lib/snapshot.js) @returns {Canvas} */
+export function drawSummaryCard(snap) {
+  const worst = snap.worst?.psi24h ?? null;
+  const band = psiBand(worst?.value);
+  // Brand, then the answer: the worst official reading and its band.
+  const { c, sky } = backdrop(CARD_H, snap);
   // The band as a chip in its own colour, as in the legend: band-coloured text on the sky of the
   // same band would be too faint to read.
   if (band) {

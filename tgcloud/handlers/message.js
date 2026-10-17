@@ -7,7 +7,7 @@ import { renderAlertSettings } from '../lib/alert-settings.js';
 import { dashboardButton } from '../lib/buttons.js';
 import { ADMINS_ONLY, COMMANDS, isGroupChat, parseCommand, topicOf } from '../lib/chat-rules.js';
 import { REGIONS } from '../lib/config.js';
-import { sendCardOrText } from '../lib/card/send.js';
+import { sendCardOrText, sendForecastCardOrText } from '../lib/card/send.js';
 import { botInfo, canManageAlerts } from '../lib/groups.js';
 import { answer, sendHtml } from '../lib/messages.js';
 import { formatCigs, formatForecast, formatHaze, formatHazeCaption } from '../lib/format.js';
@@ -60,9 +60,11 @@ export default async function (message) {
       return answer(message, (to) => sendCardOrText(to, snap, { caption, text: formatHaze(snap, ahead, { region }), reply_markup }));
     }
     case 'forecast': {
-      const ahead = await getAhead(getSnapshot());
+      const refreshed = getSnapshot();
+      const [snap, ahead, reply_markup] = await Promise.all([refreshed, getAhead(refreshed), dashboardButton(message.chat.id)]);
       if (!ahead.outlook && !ahead.range) return reply(message, 'Nothing to show yet. NEA issues a 24-hr PSI forecast only during haze episodes, and our range for the next few hours needs three days of recent readings.');
-      return reply(message, formatForecast(ahead), await dashboardButton(message.chat.id));
+      const caption = formatForecast(ahead, { table: false });
+      return answer(message, (to) => sendForecastCardOrText(to, snap, ahead, { caption, text: formatForecast(ahead), reply_markup }));
     }
     case 'cigs': {
       const { regionId, outdoorPct } = parseCigsArgs(args);
