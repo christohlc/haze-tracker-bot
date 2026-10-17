@@ -36,9 +36,10 @@
         aria-current={r.mine ? 'true' : undefined}
         animate:flip={{ duration: reducedMotion() ? 0 : 220, easing: quartInOut }}
       >
-        <span class="name"
-          >{r.name}{#if r.mine}<span class="tag"><span class="visually-hidden">, </span>Your area</span>{/if}</span
-        >
+        <span class="name">
+          {r.name}
+          {#if r.mine}<span class="tag">Your area</span>{/if}
+        </span>
         <span class="track" aria-hidden="true">
           {#if r.v != null}
             <!-- Clipped rather than scaled, so the rounded end keeps its shape at any length. -->
