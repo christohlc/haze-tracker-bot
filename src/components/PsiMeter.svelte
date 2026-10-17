@@ -1,7 +1,7 @@
 <script lang="ts">
   // NEA's day forecast as a half-dial of the PSI bands, after the meter on haze.gov.sg: NEA's range
   // at full strength over a faded dial, and a tick at today's official 24-hr PSI. The range is NEA's
-  // numbers when it gives them, else the span its band words cover (outlookSpan).
+  // numbers when it gives them, else the span its band words cover (meterSpan).
   import { METER_MAX } from '../../tgcloud/lib/outlook-parse.js';
   import { bandRanges } from '../../tgcloud/lib/psi.js';
 

@@ -4,7 +4,7 @@
 // The feed is the JSON haze.gov.sg itself uses, not a documented API, so nothing here may throw.
 
 import { decodeEntities } from './html.js';
-import { bandRanges, PSI_BANDS } from './psi.js';
+import { bandRanges, PSI_BANDS, psiBand } from './psi.js';
 import { MONTHS, sgtDateOf, toSgtIso } from './time.js';
 
 export const OUTLOOK_FEED = 'https://www.nea.gov.sg/api/advisory/latesthazesituationupdate';
@@ -64,25 +64,46 @@ export function parseOutlook(json) {
   const body = plain(json?.BodyText);
   const day = body.match(/forecast for (\d{1,2} [A-Za-z]{3,9} \d{4})/i);
   const forDate = day ? isoDate(day[1]) : null;
-  // The short line first; the sentence in the body if NEA changes it.
-  const said = (
-    plain(json?.AirQualityBlurb).match(/(?:24-hr )?PSI Forecast:\s*(.+)$/i)?.[1] ??
-    body.match(/forecast for [^.]*? is (.+?)\./i)?.[1] ??
-    ''
-  ).trim();
-  // "150 - 230 Unhealthy to Very Unhealthy", or "150 – 230 (Unhealthy to Very Unhealthy)" in the body.
-  const nums = said.match(/^(\d{1,4})(?:\s*(?:-|–|to)\s*(\d{1,4}))?\s*\(?\s*(.*?)\s*\)?$/i);
-  const text = nums ? nums[3] : said;
-  const psi = nums ? { lo: Number(nums[1]), hi: Number(nums[2] ?? nums[1]) } : null;
-  const parts = splitBands(text);
-  const from = bandId(parts[0] ?? '');
-  const to = bandId(parts.at(-1) ?? '');
+  // The short line first; the sentence in the body if that's missing or unreadable.
+  const forecast =
+    readForecast(plain(json?.AirQualityBlurb).match(/(?:24-hr )?PSI Forecast:\s*(.+)$/i)?.[1]) ??
+    readForecast(body.match(/forecast for [^.]*? is (.+?)\.(?!\d)/i)?.[1]);
   const issuedAt = sgtIso(json?.DateOfArticle);
   // NEA fills one or the other; the site hides the box after it.
   const expires = sgtIso(json?.ExpiryDateHazeDisplayDt) ?? sgtIso(json?.ExpiryDateHazeDisplay);
-  if (!forDate || !from || !to || parts.length > 2 || !issuedAt || (psi && psi.lo > psi.hi)) return null;
-  return { text, from, to, psi, forDate, issuedAt, expires };
+  if (!forDate || !forecast || !issuedAt) return null;
+  return { ...forecast, forDate, issuedAt, expires };
 }
+
+/**
+ * "Unhealthy to Low Very Unhealthy", "150 - 230 Unhealthy to Very Unhealthy" or "150 – 230
+ * (Unhealthy to Very Unhealthy)." → its words, band ids and numbers. Numbers that don't fall in
+ * the bands NEA names are dropped, keeping the words. Null if the words aren't one or two bands.
+ * @param {string | undefined} line
+ */
+function readForecast(line) {
+  // "150 - 230", "150", "150 – 230 PSI -" before the words.
+  const nums = (line ?? '').trim().match(/^(\d{1,4})(?:\s*(?:-|–|to)\s*(\d{1,4}))?(?:\s*PSI)?\s*[-–:]?\s*/i);
+  const text = (line ?? '')
+    .trim()
+    .slice(nums?.[0].length ?? 0)
+    .replace(/^\(\s*|\s*\)?\s*\.?$/g, '');
+  const parts = splitBands(text);
+  const from = bandId(parts[0] ?? '');
+  const to = bandId(parts.at(-1) ?? '');
+  if (!from || !to || parts.length > 2) return null;
+  const [a, b] = nums ? [Number(nums[1]), Number(nums[2] ?? nums[1])] : [NaN, NaN];
+  const psi = nums ? { lo: Math.min(a, b), hi: Math.max(a, b) } : null;
+  const named = [from, to];
+  const fits = psi && named.includes(psiBand(psi.lo)?.id ?? '') && named.includes(psiBand(psi.hi)?.id ?? '');
+  return { text, from, to, psi: fits ? psi : null };
+}
+
+/** "150–230", or "150" when it's one number. @param {{ lo: number, hi: number }} r */
+export const psiRangeText = ({ lo, hi }) => (lo === hi ? `${lo}` : `${lo}–${hi}`);
+
+/** "150–230 (Unhealthy to Very Unhealthy)", or NEA's words alone when it gave no numbers. @param {Outlook} o */
+export const outlookLabel = (o) => (o.psi ? `${psiRangeText(o.psi)} (${o.text})` : o.text);
 
 /** Where the dial ends: Hazardous runs from 301 to here. */
 export const METER_MAX = 400;
@@ -110,4 +131,20 @@ export function outlookSpan(text) {
   if (!first || !last || parts.length > 2) return null;
   // In whichever order NEA words it.
   return { lo: Math.min(first.from, last.from), hi: Math.max(first.to, last.to) };
+}
+
+/** The narrowest stretch the dial draws, so a single number never vanishes. */
+const METER_MIN_SPAN = 12;
+
+/**
+ * What the dial draws for a forecast: NEA's numbers when it gave them, else the span its words
+ * cover; at least METER_MIN_SPAN wide. Null if neither can be drawn.
+ * @param {Outlook} o
+ * @returns {{ lo: number, hi: number } | null}
+ */
+export function meterSpan(o) {
+  const span = o.psi ?? outlookSpan(o.text);
+  if (!span || span.hi - span.lo >= METER_MIN_SPAN) return span;
+  const mid = (span.lo + span.hi) / 2;
+  return { lo: mid - METER_MIN_SPAN / 2, hi: mid + METER_MIN_SPAN / 2 };
 }

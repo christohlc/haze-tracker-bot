@@ -140,7 +140,7 @@ layout change.
 
 ## What’s ahead
 
-- **NEA’s forecast** is a half-dial of the PSI bands, after haze.gov.sg’s meter (`PsiMeter.svelte`). The span NEA’s words cover is full strength over a faded dial (`outlookSpan`: a third of a band for Low, Mid or High). There are no forecast numbers, because NEA forecasts in bands. A tick marks today’s official 24-hour PSI (labelled “today”, not “now”, which is our 1-hour PSI), and its label tucks under an end of the dial when it's near one. The pills sit under the dial, so large text never covers it.
+- **NEA’s forecast** is a half-dial of the PSI bands, after haze.gov.sg’s meter (`PsiMeter.svelte`). NEA’s range is full strength over a faded dial (`meterSpan`): its numbers when it gives them (since 16 Oct 2026, “150 - 230 Unhealthy to Very Unhealthy”), shown beside the pills, else the span its words cover (a third of a band for Low, Mid or High), never under 12 PSI wide. Only the band words go inside “NEA’s words” quotes; the numbers sit outside them. A tick marks today’s official 24-hour PSI (labelled “today”, not “now”, which is our 1-hour PSI), and its label tucks under an end of the dial when it's near one. The pills sit under the dial, so large text never covers it.
 - **The next few hours** are colour bars on one 0–300+ scale: faded band segments, the likely span at full strength with hard stops at band edges, and a “now” line through every row. The band names sit under each bar, with dots, so colour never stands alone.
 - Neither animates. People revisit the Outlook tab, and the tab already rises in once.
 

@@ -43,7 +43,22 @@ test('reads NEA’s forecast with numbers', () => {
   const blurb = (text) => parseOutlook({ ...numbered, AirQualityBlurb: `PSI Forecast: ${text}` });
   assert.deepEqual(blurb('120 Unhealthy')?.psi, { lo: 120, hi: 120 });
   assert.deepEqual(blurb('80 &ndash; 140 (Moderate to Unhealthy)')?.psi, { lo: 80, hi: 140 });
-  assert.equal(blurb('230 - 150 Unhealthy to Very Unhealthy'), null, 'backwards');
+  assert.deepEqual(blurb('230 - 150 Unhealthy to Very Unhealthy')?.psi, { lo: 150, hi: 230 }, 'backwards');
+  for (const w of ['150 - 230 (Unhealthy to Very Unhealthy).', '150 - 230 PSI Unhealthy to Very Unhealthy', '150 - 230 - Unhealthy to Very Unhealthy'])
+    assert.deepEqual(blurb(w)?.psi, { lo: 150, hi: 230 }, w);
+  // Numbers outside the bands NEA names: keep the words, drop the numbers.
+  const off = blurb('50 - 230 Unhealthy to Very Unhealthy');
+  assert.deepEqual([off?.text, off?.psi], ['Unhealthy to Very Unhealthy', null]);
+  // An unreadable short line falls back to the body.
+  assert.deepEqual(blurb('Smoky')?.psi, { lo: 150, hi: 230 });
+});
+
+test('the dial draws NEA’s numbers, at least 12 wide', async () => {
+  const { meterSpan } = await import('../tgcloud/lib/outlook-parse.js');
+  const o = /** @type {any} */ (parseOutlook(numbered));
+  assert.deepEqual(meterSpan(o), { lo: 150, hi: 230 });
+  assert.deepEqual(meterSpan({ ...o, text: 'Moderate', psi: { lo: 80, hi: 80 } }), { lo: 74, hi: 86 });
+  assert.deepEqual(meterSpan(/** @type {any} */ (parseOutlook(sample))), { lo: 101, hi: 233 });
 });
 
 test('handles NEA’s other wordings', () => {
@@ -61,7 +76,7 @@ test('handles NEA’s other wordings', () => {
   );
   // No short line: the underlined sentence in the body.
   assert.equal(parseOutlook({ ...sample, AirQualityBlurb: '' })?.text, 'Unhealthy to Low Very Unhealthy');
-  assert.equal(parseOutlook(blurb('Moderate&#x2013;Low&nbsp;Unhealthy &amp; worse')), null, 'three parts');
+  assert.equal(parseOutlook({ ...blurb('Moderate&#x2013;Low&nbsp;Unhealthy &amp; worse'), AirQualityBlurb: '24-hr PSI Forecast: Moderate &ndash; Low Unhealthy &amp; worse' })?.text, 'Unhealthy to Low Very Unhealthy', 'three parts: the body instead');
   assert.deepEqual(parseOutlook(blurb('Moderate &#8211; Low&nbsp;Unhealthy'))?.text, 'Moderate – Low Unhealthy');
 });
 

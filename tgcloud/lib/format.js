@@ -4,6 +4,7 @@
 import { verdict } from './advice.js';
 import { escapeHtml } from './html.js';
 import { PUBLISHERS } from './news-parse.js';
+import { outlookLabel } from './outlook-parse.js';
 import { bandById, PSI_BANDS, psiBand } from './psi.js';
 import { RANGE_RECORD } from './range.js';
 import { readingsFor } from './snapshot.js';
@@ -130,11 +131,8 @@ export function formatBandAlert(snap, fromId, toId, region = null) {
   return lines.join('\n');
 }
 
-/** "NEA’s 24-hr PSI forecast for tomorrow: <b>150–230 (Unhealthy to Very Unhealthy)</b>", numbers when NEA gives them. @param {import('./outlook-parse.js').Outlook} o */
-const outlookLine = (o) => {
-  const nums = o.psi ? (o.psi.lo === o.psi.hi ? `${o.psi.lo}` : `${o.psi.lo}–${o.psi.hi}`) : null;
-  return `NEA’s 24-hr PSI forecast for ${sgtDayName(o.forDate)}: <b>${nums ? `${nums} (${escapeHtml(o.text)})` : escapeHtml(o.text)}</b>`;
-};
+/** "NEA’s 24-hr PSI forecast for tomorrow: <b>150–230 (Unhealthy to Very Unhealthy)</b>" @param {import('./outlook-parse.js').Outlook} o */
+const outlookLine = (o) => `NEA’s 24-hr PSI forecast for ${sgtDayName(o.forDate)}: <b>${escapeHtml(outlookLabel(o))}</b>`;
 
 /**
  * A breaking-news message: a story we picked from the news, or the official 24-hour PSI rising
