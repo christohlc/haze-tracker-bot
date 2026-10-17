@@ -9,6 +9,12 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-18-living-map',
+    date: '2026-10-18',
+    title: 'Fires and wind you can see moving',
+    body: 'On Outlook, fires on the map glow and a ring pulses round Singapore. The wind dial streams the way the air is moving, and rain falls on it when it’s raining.',
+  },
+  {
     id: '2026-10-18-chart-draw',
     date: '2026-10-18',
     title: 'Charts that draw themselves in',

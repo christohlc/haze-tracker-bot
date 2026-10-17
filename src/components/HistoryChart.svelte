@@ -389,16 +389,6 @@
       stroke-dashoffset: 0;
     }
   }
-  @keyframes ping {
-    from {
-      transform: scale(1);
-      opacity: 0.5;
-    }
-    to {
-      transform: scale(3);
-      opacity: 0;
-    }
-  }
   .cross {
     stroke: var(--axis);
     stroke-width: 1;

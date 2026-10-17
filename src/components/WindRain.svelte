@@ -14,6 +14,12 @@
   import { clearDirection, smokeLine, windHeadline } from '../../tgcloud/lib/weather-parse.js';
   import { loadWeather, type Snapshot, type WeatherResult } from '../lib/api';
   import { STALE_MS, timeAgo } from '../lib/format';
+  import { ambient } from '../lib/motion';
+
+  // Arrows and streaks point downwind: the opposite of where the wind comes from.
+  const downwind = (from: number) => from + 180;
+  // One pass of a streak across the compass: 4 s in a light breeze, down to 1.5 s from 30 km/h.
+  const streakSeconds = (kmh: number) => Math.min(4, Math.max(1.5, 4.5 - kmh * 0.1));
 
   // `first` is the request App started with the dashboard; Try again makes a new one.
   let { snapshot, first = null }: { snapshot: Snapshot; first?: Promise<WeatherResult> | null } = $props();
@@ -49,9 +55,8 @@
   onMount(() => load(first));
 </script>
 
-<!-- Points the way the wind is blowing, so it's the opposite of where it comes from. -->
 {#snippet pointer(cls: string, from: number)}
-  <svg class={cls} viewBox="0 0 24 24" style="--deg: {from + 180}deg">
+  <svg class={cls} viewBox="0 0 24 24" style="--deg: {downwind(from)}deg">
     <path d="M12 3 L18 15 L12 12.5 L6 15 Z" />
   </svg>
 {/snippet}
@@ -76,9 +81,14 @@
     {:else}
       {#if wind}
         <div class="wind">
-          <div class="compass" aria-hidden="true">
+          <div class="compass" aria-hidden="true" use:ambient>
+            {#if weather.rain?.raining.length}<span class="drops"></span>{/if}
             <span class="n">N</span>
             {#if arrow != null}
+              <!-- Air streaming the way the arrow points, faster in a stronger wind. -->
+              <span class="streaks" style:--deg="{downwind(arrow)}deg" style:--dur="{streakSeconds(wind.kmh)}s">
+                {#each [14, 27, 40] as x, i (x)}<span style:left="{x}px" style:--i={i}></span>{/each}
+              </span>
               {@render pointer('arrow', arrow)}
             {:else}
               <span class="calm"></span>
@@ -162,6 +172,67 @@
     height: 56px;
     border-radius: 50%;
     background: var(--control);
+    overflow: hidden;
+    isolation: isolate;
+  }
+  /* Streaks and rain sit behind the arrow and the N, clipped to the dial. Transform and opacity
+     only; ambient() pauses them off screen. Reduced motion: neither shows. */
+  .streaks,
+  .drops {
+    position: absolute;
+    z-index: -1;
+    pointer-events: none;
+  }
+  .streaks {
+    inset: 0;
+    transform: rotate(var(--deg));
+  }
+  .streaks span {
+    position: absolute;
+    top: 50%;
+    width: 2px;
+    height: 9px;
+    border-radius: 1px;
+    background: var(--accent);
+    opacity: 0;
+    /* three streaks a third of a pass apart */
+    animation: stream var(--dur) linear calc(var(--dur) * var(--i) / -3) infinite;
+  }
+  /* Up is the way the arrow points; each streak fades in, crosses and fades out. */
+  @keyframes stream {
+    from {
+      transform: translateY(22px);
+      opacity: 0;
+    }
+    30%,
+    70% {
+      opacity: 0.45;
+    }
+    to {
+      transform: translateY(-32px);
+      opacity: 0;
+    }
+  }
+  /* Light rain: small drops, offset in alternate columns, falling one tile per loop. */
+  .drops {
+    --drop: radial-gradient(1px 2.5px, var(--link) 90%, transparent);
+    inset: -12px 0 0;
+    background-image: var(--drop), var(--drop);
+    background-size: 9px 12px;
+    background-position: 0 0, 4.5px 6px;
+    opacity: 0.45;
+    animation: fall 0.7s linear infinite;
+  }
+  @keyframes fall {
+    to {
+      transform: translateY(12px);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .streaks,
+    .drops {
+      display: none;
+    }
   }
   .n {
     position: absolute;

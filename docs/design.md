@@ -124,10 +124,18 @@ messages is the same short form, for the general public.
   region's chart draws each time the region is opened, since that's a new view. The pulse is
   HTML over the chart, so its loop composites instead of repainting the SVG. Reduced motion:
   the lines and dot appear at once.
+- The haze map's fires glow like embers (opacity, 3 s) and a ring spreads from Singapore. They’re
+  separate SVG/HTML layers over the map, so the loops never repaint the coast, haze or NEA’s
+  wind picture. That picture is a raster, so nothing animates along its arrows. The Wind and rain
+  dial streams in the arrow's direction, faster in a stronger wind (4 s to 1.5 s a pass), only
+  when the direction is clear; rain falls on the dial while it’s raining anywhere. Reduced
+  motion: all of these stay still or hidden.
 - Looping animations go on an element with `use:ambient` (`src/lib/motion.ts`), which pauses
   them while it’s off screen, the page is hidden or Telegram has the app in the background.
-  Loops animate `transform` and `opacity` only. Loading skeletons are the exception: they're
-  gone within seconds, so their shimmer doesn't need pausing.
+  Loops animate `transform` and `opacity` only. A steady flow (streaks, rain, shimmer) is `linear`;
+  a breathing or drifting loop is plain `ease-in-out`, since the two curve tokens are for UI.
+  Loading skeletons are the exception: they’re gone within seconds, so their shimmer doesn’t
+  need pausing.
 - Use `--ease-out` for things entering and `--ease-in-out` for things moving on screen.
 - Every animation has a `prefers-reduced-motion` fallback, either a plain fade or nothing. In
   JS, check `reducedMotion()` from `src/lib/motion.ts`.
