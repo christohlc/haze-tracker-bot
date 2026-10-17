@@ -19,7 +19,8 @@
 
   let result = $state<HazeMapResult | null>(null);
   let error = $state<string | null>(null);
-  let showWind = $state(false);
+  // On by default: it shows which way the smoke is heading. NEA's picture is ~260 KB, loaded from haze.gov.sg.
+  let showWind = $state(true);
   let windBroken = $state(false);
 
   const map = $derived(result?.map ?? null);
