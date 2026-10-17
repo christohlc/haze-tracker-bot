@@ -7,7 +7,7 @@
   import type { Range, RegionId, Snapshot } from '../lib/api';
   import { bandStops } from '../lib/bands';
   import { area, canLocate, locateArea, pickArea } from '../lib/area.svelte';
-  import { reducedMotion } from '../lib/motion';
+  import { ambient, reducedMotion } from '../lib/motion';
   import { PERIOD_ORDER, PERIODS, psiKey, type Period } from '../lib/period';
   import Segmented from './Segmented.svelte';
 
@@ -63,6 +63,11 @@
 </script>
 
 <section class="hero sky-{band?.id ?? 'none'}" aria-labelledby="hero-title">
+  <div class="drift" aria-hidden="true" use:ambient>
+    <span class="sun"></span>
+    <span class="bank low"></span>
+    <span class="bank high"></span>
+  </div>
   <div class="top">
     <h2 id="hero-title" class="eyebrow">{PERIODS[period].eyebrow}</h2>
     <label class="area" class:busy={locating}>
@@ -133,11 +138,15 @@
 <style>
   /* The card is a sky that clears or hazes with the band, like the logo. Ink is fixed per sky
      (not Telegram's text colour) so it always contrasts with the gradient; --ink-2 is checked
-     at >= 4.5:1 against each sky's top, bottom and haze. */
+     at >= 4.5:1 against each sky's top, bottom and haze. The drifting banks are light haze where
+     the ink is dark and dark smoke where it's light, so they only ever add contrast. */
   .hero {
     --sky-top: #8db8ea;
     --sky-bottom: #d9e6f2;
     --haze: rgba(255, 255, 255, 0.35);
+    --bank: rgba(255, 255, 255, 0.85);
+    --haze-density: 0.25;
+    --sun: 0;
     --ink: #0e1a26;
     --ink-2: rgba(14, 26, 38, 0.86);
     --control: rgba(255, 255, 255, 0.4);
@@ -153,28 +162,98 @@
     background:
       radial-gradient(120% 60% at 20% 105%, var(--haze), transparent 70%),
       linear-gradient(180deg, var(--sky-top), var(--sky-bottom));
+    transition:
+      --sky-top 280ms var(--ease-in-out),
+      --sky-bottom 280ms var(--ease-in-out),
+      --haze 280ms var(--ease-in-out);
   }
-  .sky-moderate { --sky-top: #a6c1db; --sky-bottom: #e6e2d3; --haze: rgba(240, 232, 214, 0.55); }
-  .sky-unhealthy { --sky-top: #c3c0b2; --sky-bottom: #ebcd78; --haze: rgba(245, 226, 170, 0.6); }
+  .sky-good { --sun: 1; }
+  .sky-moderate { --sky-top: #a6c1db; --sky-bottom: #e6e2d3; --haze: rgba(240, 232, 214, 0.55); --bank: rgba(240, 232, 214, 0.9); --haze-density: 0.4; }
+  .sky-unhealthy { --sky-top: #c3c0b2; --sky-bottom: #ebcd78; --haze: rgba(245, 226, 170, 0.6); --bank: rgba(245, 226, 170, 0.9); --haze-density: 0.5; }
   .sky-very_unhealthy {
     --sky-top: #b9946a; --sky-bottom: #e7ad5c; --haze: rgba(240, 205, 150, 0.55);
+    --bank: rgba(240, 205, 150, 0.9); --haze-density: 0.6;
     --ink: #1e1206; --ink-2: rgba(30, 18, 6, 0.86);
   }
   .sky-hazardous {
     --sky-top: #4b2f45; --sky-bottom: #8a4a36; --haze: rgba(190, 120, 90, 0.15);
+    --bank: rgba(40, 20, 25, 0.7); --haze-density: 0.75;
     --ink: #fbf3ea; --ink-2: rgba(251, 243, 234, 0.9);
     --control: rgba(0, 0, 0, 0.22); --control-thumb: rgba(255, 255, 255, 0.22);
   }
 
   :global([data-theme='dark']) .hero {
     --sky-top: #183553; --sky-bottom: #24496e; --haze: rgba(120, 170, 220, 0.18);
+    --bank: rgba(8, 20, 35, 0.7); --haze-density: 0.3; --sun: 0;
     --ink: #f3f6fa; --ink-2: rgba(243, 246, 250, 0.86);
     --control: rgba(0, 0, 0, 0.25); --control-thumb: rgba(255, 255, 255, 0.18);
   }
-  :global([data-theme='dark']) .sky-moderate { --sky-top: #24303c; --sky-bottom: #3a4550; --haze: rgba(200, 190, 160, 0.14); }
-  :global([data-theme='dark']) .sky-unhealthy { --sky-top: #2f2d24; --sky-bottom: #5a4818; --haze: rgba(226, 184, 74, 0.2); }
-  :global([data-theme='dark']) .sky-very_unhealthy { --sky-top: #33241a; --sky-bottom: #6a3a19; --haze: rgba(230, 140, 70, 0.22); }
-  :global([data-theme='dark']) .sky-hazardous { --sky-top: #251425; --sky-bottom: #4c1f35; --haze: rgba(200, 90, 120, 0.2); }
+  :global([data-theme='dark']) .sky-moderate { --sky-top: #24303c; --sky-bottom: #3a4550; --haze: rgba(200, 190, 160, 0.14); --bank: rgba(12, 14, 16, 0.7); --haze-density: 0.45; }
+  :global([data-theme='dark']) .sky-unhealthy { --sky-top: #2f2d24; --sky-bottom: #5a4818; --haze: rgba(226, 184, 74, 0.2); --bank: rgba(30, 22, 5, 0.7); --haze-density: 0.55; }
+  :global([data-theme='dark']) .sky-very_unhealthy { --sky-top: #33241a; --sky-bottom: #6a3a19; --haze: rgba(230, 140, 70, 0.22); --bank: rgba(35, 15, 5, 0.7); --haze-density: 0.65; }
+  :global([data-theme='dark']) .sky-hazardous { --sky-top: #251425; --sky-bottom: #4c1f35; --haze: rgba(200, 90, 120, 0.2); --bank: rgba(25, 5, 15, 0.75); --haze-density: 0.75; }
+
+  /* Behind everything in the card (the area pill's own backdrop sits at -1). Haze banks drift
+     on slow loops, thicker as the band rises; a clear day gets a breathing sun, never at night. */
+  .drift {
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    pointer-events: none;
+  }
+  .bank {
+    position: absolute;
+    width: 130%;
+    height: 70%;
+    background: radial-gradient(closest-side, var(--bank), transparent);
+    opacity: var(--haze-density);
+    transition: opacity 280ms var(--ease-in-out);
+  }
+  .low {
+    left: -45%;
+    bottom: -25%;
+    animation: drift-low 28s ease-in-out infinite alternate;
+  }
+  .high {
+    right: -50%;
+    top: 5%;
+    animation: drift-high 40s ease-in-out infinite alternate;
+  }
+  @keyframes drift-low {
+    to {
+      transform: translate3d(30%, -6%, 0);
+    }
+  }
+  @keyframes drift-high {
+    to {
+      transform: translate3d(-28%, 5%, 0);
+    }
+  }
+  .sun {
+    position: absolute;
+    top: -35%;
+    right: -25%;
+    width: 85%;
+    aspect-ratio: 1;
+    background: radial-gradient(closest-side, rgba(255, 247, 214, 0.75), transparent);
+    opacity: var(--sun);
+    transition: opacity 280ms var(--ease-in-out);
+    animation: glow 6s ease-in-out infinite alternate;
+  }
+  @keyframes glow {
+    from {
+      transform: scale(0.85);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hero {
+      transition: none;
+    }
+    .bank,
+    .sun {
+      animation: none;
+    }
+  }
 
   .eyebrow {
     margin: 0;

@@ -9,6 +9,12 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-18-living-sky',
+    date: '2026-10-18',
+    title: 'A sky that shows the haze',
+    body: 'The reading up top now sits in a sky with haze slowly drifting across it. It thickens as the PSI rises, and on a clear day the sun comes out.',
+  },
+  {
     id: '2026-10-18-shorter-copy',
     date: '2026-10-18',
     title: 'Read alerts at a glance',
