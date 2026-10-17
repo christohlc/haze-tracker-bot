@@ -16,6 +16,7 @@ import { cancelEvent, getBreaking, isBreakingPaused, sendBreaking } from '../lib
 import { COMMANDS } from '../lib/chat-rules.js';
 import { requireCli } from '../lib/cli-only.js';
 import { errorText } from '../lib/http.js';
+import { FETCH_GIVES_UP_MS } from '../lib/fetch-retry.js';
 import { getPm25Day } from '../lib/nea.js';
 import { PSI_BANDS } from '../lib/psi.js';
 import { getSnapshot } from '../lib/refresh.js';
@@ -67,7 +68,7 @@ async function backfill(days) {
     }
     if (fetched++ && sleep) await sleep(BACKFILL_PAUSE_MS);
     try {
-      const items = await getPm25Day(date);
+      const items = await getPm25Day(date, deadline - FETCH_GIVES_UP_MS); // a retry mustn't overrun the budget
       await upsertReadings(items);
       done[date] = items.length;
     } catch (e) {
