@@ -26,15 +26,18 @@ async function get(url, what = 'HTTP', deadline) {
   return res;
 }
 
-/** @type {Promise<string | null> | null} */
+/** How long an isolate keeps the key before reading the setting again, so a new key needs no redeploy. */
+const KEY_READ_MS = 10 * 60_000;
+/** @type {{ key: Promise<string | null>, at: number } | null} */
 let keyRead = null;
 /**
  * data.gov.sg's API key, if one is set (admin `datagov_api_key`): it raises the rate limit that
- * NEA's readings sit behind. Read once per isolate; a new key reaches isolates as they recycle.
+ * NEA's readings sit behind. data.gov.sg answers an unknown or revoked key like no key (17 Oct
+ * 2026), so revoking the old one never breaks a fetch.
  */
 function datagovKey() {
-  keyRead ??= getSetting('datagov_api_key').catch(() => null);
-  return keyRead;
+  if (!keyRead || Date.now() - keyRead.at > KEY_READ_MS) keyRead = { key: getSetting('datagov_api_key').catch(() => null), at: Date.now() };
+  return keyRead.key;
 }
 
 /** @param {string} url @param {string} [what] @param {number} [deadline] see get() */
