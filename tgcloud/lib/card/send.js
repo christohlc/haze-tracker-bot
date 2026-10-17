@@ -29,13 +29,18 @@ function cardKind(stateKey, filename) {
   /** @type {{ key: string, fileId?: string, png?: Uint8Array, failed?: boolean } | null} */
   let card = null;
 
-  /** Memory first; the DB once per key per isolate. @param {string} key */
+  /**
+   * Memory first; the DB until this isolate has the file id or is drawing the card, so it picks up
+   * one another isolate uploaded meanwhile instead of drawing and uploading its own. @param {string} key
+   */
   async function load(key) {
-    if (card?.key !== key) {
+    if (card?.key !== key) card = { key };
+    const c = card;
+    if (!c.fileId && !c.png && !c.failed) {
       const saved = (await getState(stateKey))?.value;
-      card = { key, ...(saved?.key === key && { fileId: saved.fileId }) };
+      if (saved?.key === key && saved.fileId) c.fileId ??= saved.fileId;
     }
-    return card;
+    return c;
   }
 
   /**

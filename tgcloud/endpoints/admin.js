@@ -12,6 +12,7 @@
 //   npx tgcloud run endpoints/admin "{ action: 'breaking_test', chatId: 123 }"  (send the latest event, or a sample, to one chat)
 
 import { api, EndpointError } from 'sdk';
+import { saveRange } from '../lib/ahead.js';
 import { cancelEvent, getBreaking, isBreakingPaused, sendBreaking } from '../lib/breaking.js';
 import { COMMANDS } from '../lib/chat-rules.js';
 import { requireCli } from '../lib/cli-only.js';
@@ -78,6 +79,7 @@ async function backfill(days) {
       deadline = 0;
     }
   }
+  if (fetched) await saveRange(); // the stored range is worked out from these readings
   return { ok: true, paced, days: done, remaining, readings: await countReadings() };
 }
 

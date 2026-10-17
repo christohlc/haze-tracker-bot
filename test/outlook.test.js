@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { isCurrent, parseOutlook } from '../tgcloud/lib/outlook-parse.js';
-import { nextHours } from '../tgcloud/lib/range.js';
+import { currentRange, latestRange, nextHours } from '../tgcloud/lib/range.js';
 import { pm25ToPsi } from '../tgcloud/lib/psi.js';
 import { sgtDayName } from '../tgcloud/lib/time.js';
 
@@ -127,6 +127,14 @@ test('a steady reading stays put; too little or old history gives no range', () 
   assert.equal(nextHours(rows(2, () => 30), NOW), null);
   assert.equal(nextHours(rows(14, () => 30), END + 4 * 3600_000), null, 'NEA stopped updating');
   assert.equal(nextHours([], NOW), null);
+});
+
+test('a stored range reads back as the fresh one, and ages out the same way', () => {
+  const history = rows(14, (i) => 40 + 20 * Math.sin(i / 5));
+  const stored = JSON.parse(JSON.stringify(latestRange(history))); // as state('range') keeps it
+  assert.deepEqual(currentRange(stored, NOW), nextHours(history, NOW));
+  assert.equal(currentRange(stored, END + 4 * 3600_000), null, 'NEA stopped updating');
+  assert.equal(currentRange(latestRange(rows(2, () => 30)), NOW), null, 'too little history');
 });
 
 test('the span NEA’s words cover, for the meter', async () => {

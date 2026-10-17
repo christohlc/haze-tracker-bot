@@ -5,7 +5,9 @@
 
 import { getLatestPsi, getPm25History } from './nea.js';
 import { buildSnapshot } from './snapshot.js';
-import { claimEvery, getState, recentReadings, recordSource, setState, upsertReadings } from './store.js';
+import { saveRange } from './ahead.js';
+import { HISTORY_HOURS } from './range.js';
+import { claimEvery, getState, lastHours, recentReadings, recordSource, setState, upsertReadings } from './store.js';
 import { unixHour } from './time.js';
 
 const STALE_MS = 80 * 60_000; // NEA publishes ~15 min past the hour
@@ -30,11 +32,12 @@ export async function refreshNea() {
     await recordSource('nea_psi', { ok: false, error: psi.reason?.message ?? psi.reason });
   }
 
-  const history = await recentReadings(25);
-  const psiState = (await getState('psi'))?.value;
+  // One read for the snapshot (the last 25 hours) and the range (two weeks).
+  const [rows, psiState] = await Promise.all([recentReadings(HISTORY_HOURS), getState('psi').then((s) => s?.value)]);
+  const history = lastHours(rows, 25);
   if (!history.length || !psiState) throw new Error('No NEA data yet (fetch failed and nothing cached)');
   const snap = buildSnapshot(history, psiState);
-  await setState('snapshot', snap);
+  await Promise.all([setState('snapshot', snap), saveRange(rows)]);
   return snap;
 }
 
