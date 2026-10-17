@@ -1,6 +1,6 @@
-import { sgtDateOf, sgtDayMonth, sgtDayName, sgtHour } from '../../tgcloud/lib/time.js';
+import { sgtDateOf, sgtDayMonth, sgtDayName, sgtHour, sgtWeekday } from '../../tgcloud/lib/time.js';
 
-export { sgtDayMonth, sgtDayName, sgtHour };
+export { sgtDayMonth, sgtDayName, sgtHour, sgtWeekday };
 
 /** unix seconds → "1:05 pm" in SGT */
 export function sgtClock(sec: number): string {

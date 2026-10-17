@@ -7,13 +7,15 @@ import { getNews } from '../lib/news.js';
 import { getSnapshot } from '../lib/refresh.js';
 import { allSourceStatus, recentReadings } from '../lib/store.js';
 
+const HISTORY_HOURS = 8 * 24;
+
 export default async function () {
   const refreshed = getSnapshot();
   const [{ history: _recent, ...snapshot }, ahead, history, sources, news] = await Promise.all([
     refreshed,
     getAhead(refreshed),
-    // 48h so the chart can draw 24h rolling averages across the whole past day.
-    refreshed.then(() => recentReadings(48)),
+    // 7 days, plus a day so the chart can draw 24h rolling averages across all of them.
+    refreshed.then(() => recentReadings(HISTORY_HOURS)),
     allSourceStatus(),
     getNews(),
   ]);

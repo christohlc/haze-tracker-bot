@@ -21,6 +21,24 @@ export const CHANGELOG: ChangelogEntry[] = [
     body: 'If the latest readings can’t load, you’ll see the last ones you opened, with the time they’re from, instead of an error.',
   },
   {
+    id: '2026-10-17-region-week',
+    date: '2026-10-17',
+    title: 'Look back over a week',
+    body: 'Tap a region in Around the island to see its readings and the past 7 days. The history chart on Outlook can show 7 days too.',
+  },
+  {
+    id: '2026-10-17-hero-ahead',
+    date: '2026-10-17',
+    title: 'The next few hours up top',
+    body: 'When we can estimate them, our ranges for the next few hours’ PSI now sit right under the reading. They’re our calculation, not NEA’s. Tap them for the details.',
+  },
+  {
+    id: '2026-10-17-alert-level',
+    date: '2026-10-17',
+    title: 'Choose when alerts reach you',
+    body: 'Hear about band changes only from Unhealthy up, and you’ll still be told when it clears. Turn on Quiet at night and alerts from 11 pm to 7 am SGT arrive without sound.',
+  },
+  {
     id: '2026-10-17-one-alert',
     date: '2026-10-17',
     title: 'Clearer haze alerts',

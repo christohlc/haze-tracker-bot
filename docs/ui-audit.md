@@ -92,11 +92,13 @@ In short, the bot is the same page re-skinned with Telegram colours. Nothing on 
    tap (needs a `subscribe` endpoint), and an alerts status chip in the header. This is the
    biggest thing the website can't do. *(Round 2; needs backend.)*
 5. **Forecast in the hero** — a "next 6 hours" strip under the number, rather than a separate
-   table like the reference. *(After the forecast work lands.)*
+   table like the reference. *(Done: our next-hours range sits under the reading and opens
+   Outlook.)*
 6. **Telegram-native structure** — section headers outside cards (Telegram settings style),
    collapsible Data sources, BackButton for detail views (e.g. tap a region for its own chart),
    haptics on slider and region taps, remember region/period in `CloudStorage`.
-   *(Collapsible Data sources, and BackButton from the Outlook/More tabs: done.)*
+   *(Collapsible Data sources, BackButton from the Outlook/More tabs, and tapping a region for
+   its own view with a 7-day chart and a selection haptic: done.)*
 7. **Re-order** — Now → Forecast → Regions → What to do → Cigarettes → History → Sources, so
    advice sits near the answer. *(Wait for the forecast merge; it touches the same lines of
    `App.svelte`.)* *(Superseded: the cards are now in Now / Outlook / More tabs, with advice

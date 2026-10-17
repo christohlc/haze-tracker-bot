@@ -2,13 +2,20 @@
   import { flip } from 'svelte/animate';
   import { quartInOut } from 'svelte/easing';
   import { psiBand } from '../../tgcloud/lib/psi.js';
-  import type { Snapshot } from '../lib/api';
+  import type { RegionId, Snapshot } from '../lib/api';
   import { area } from '../lib/area.svelte';
   import { fmt } from '../lib/format';
   import { reducedMotion } from '../lib/motion';
   import { PERIODS, psiKey, type Period } from '../lib/period';
+  import { selectionHaptic } from '../lib/telegram';
 
-  let { snapshot, period = '3h' }: { snapshot: Snapshot; period?: Period } = $props();
+  // `onselect`: a row was tapped, to open that region's own view.
+  let { snapshot, period = '3h', onselect }: { snapshot: Snapshot; period?: Period; onselect?: (id: RegionId) => void } = $props();
+
+  function select(id: RegionId) {
+    selectionHaptic();
+    onselect?.(id);
+  }
 
   const key = $derived(psiKey(period));
   // The user's area goes first; the rest keep NEA's order.
@@ -26,7 +33,7 @@
 
 <section class="card" aria-labelledby="regions-title">
   <h2 id="regions-title" class="section-title">Around the island</h2>
-  <p class="note">{PERIODS[period].adj} PSI by NEA region. PM2.5 is the latest hourly reading.</p>
+  <p class="note">{PERIODS[period].adj} PSI by NEA region. PM2.5 is the latest hourly reading. Tap a region for its past week.</p>
 
   <ul>
     {#each rows as r (r.id)}
@@ -36,6 +43,7 @@
         aria-current={r.mine ? 'true' : undefined}
         animate:flip={{ duration: reducedMotion() ? 0 : 220, easing: quartInOut }}
       >
+        <button type="button" class="row" data-region={r.id} onclick={() => select(r.id as RegionId)}>
         <span class="name">
           {r.name}
           {#if r.mine}<span class="tag">Your area</span>{/if}
@@ -52,6 +60,8 @@
           <!-- The reading and its unit stay on one line. -->
           <span class="pm">PM2.5 <span class="num">{fmt(r.pm25)}</span>{#if r.pm25 != null}&nbsp;µg/m³{/if}</span>
         </span>
+        <svg class="chev" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M4.5 2.5 8 6l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg>
+        </button>
       </li>
     {/each}
   </ul>
@@ -63,12 +73,30 @@
     padding: 0;
     list-style: none;
   }
-  li {
+  /* The whole row is the button: it opens the region. */
+  .row {
     display: grid;
-    grid-template-columns: 4.75rem minmax(0, 1fr) 3ch;
+    grid-template-columns: 4.75rem minmax(0, 1fr) 3ch 12px;
     align-items: center;
     column-gap: 10px;
+    width: 100%;
+    min-height: 44px;
     padding: 8px 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: transform 120ms var(--ease-out);
+  }
+  .row:active {
+    transform: scale(0.97);
+  }
+  .chev {
+    grid-row: 1;
+    grid-column: 4;
+    color: var(--muted);
   }
   li + li {
     border-top: 1px solid var(--hairline);
@@ -76,7 +104,7 @@
   /* The user's area sits first on a tinted panel, set off from the rest of the list. */
   li.mine {
     margin: 0 -10px 6px;
-    padding: 10px;
+    padding: 2px 10px;
     border-radius: 12px;
     background: var(--control);
   }
@@ -124,7 +152,8 @@
     white-space: nowrap;
   }
   @media (prefers-reduced-motion: reduce) {
-    .bar {
+    .bar,
+    .row {
       transition: none;
     }
   }

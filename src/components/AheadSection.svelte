@@ -1,8 +1,8 @@
 <script lang="ts">
   import { meterSpan, outlookLabel, psiRangeText } from '../../tgcloud/lib/outlook-parse.js';
-  import { bandRanges, psiBand } from '../../tgcloud/lib/psi.js';
   import { RANGE_RECORD } from '../../tgcloud/lib/range.js';
   import type { Ahead } from '../lib/api';
+  import { bandsIn, bandStops as stops } from '../lib/bands';
   import { sgtDayMonth, sgtDayName, sgtHour } from '../lib/format';
   import { openLink } from '../lib/telegram';
   import BandPill from './BandPill.svelte';
@@ -19,28 +19,9 @@
 
   const span = $derived(outlook ? meterSpan(outlook) : null);
 
-  // The first and last band a range crosses ("Unhealthy to Hazardous" reads as "through").
-  const bandsIn = (lo: number, hi: number) => {
-    const a = psiBand(lo);
-    const b = psiBand(hi);
-    return !a || !b ? [] : a === b ? [a] : [a, b];
-  };
-
   // Range bars share one scale, at least 0–300 so a moderate day doesn't fill it.
   const max = $derived(range ? Math.max(300, Math.ceil(Math.max(range.now, ...range.steps.map((s) => s.hi)) / 100) * 100) : 300);
   const pct = (v: number) => (Math.min(Math.max(v, 0), max) / max) * 100;
-  // Band colours as hard stops between `lo` and `hi`, so each colour sits exactly on its band.
-  function stops(lo: number, hi: number, faded: boolean) {
-    const at = (v: number) => (hi === lo ? 0 : ((Math.min(Math.max(v, lo), hi) - lo) / (hi - lo)) * 100);
-    const parts = bandRanges().flatMap((b) => {
-      const from = Math.max(b.from, lo);
-      const to = Math.min(b.to, hi);
-      if (from > to) return [];
-      const c = faded ? `color-mix(in srgb, var(--band-${b.id}) 22%, transparent)` : `var(--band-${b.id})`;
-      return [`${c} ${at(from).toFixed(2)}%`, `${c} ${at(to + 1).toFixed(2)}%`];
-    });
-    return `linear-gradient(90deg, ${parts.join(', ')})`;
-  }
   const track = $derived(stops(0, max, true));
 
   function open(e: MouseEvent) {

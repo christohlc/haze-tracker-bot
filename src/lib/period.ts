@@ -17,4 +17,7 @@ export const PERIODS: Record<Period, { short: string; adj: string; eyebrow: stri
   '24h': { short: '24 hr', adj: '24-hour', eyebrow: 'Past 24 hours', caption: 'NEA’s official 24-hour PSI.' },
 };
 
+/** Shortest first. */
+export const PERIOD_ORDER = Object.keys(PERIODS) as Period[];
+
 export const psiKey = (p: Period) => `psi${p}` as const;

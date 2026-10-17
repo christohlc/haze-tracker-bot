@@ -2,9 +2,10 @@
 // Subscriber storage.
 
 import { db } from 'sdk';
-import { eq, isNotNull, like, lt } from 'sdk/db';
+import { eq, inArray, isNotNull, like, lt } from 'sdk/db';
 import { alertsSent, subscribers } from '../schema.js';
 import { scopeOf } from './alert-rules.js';
+import { TURNED_ON } from './alert-settings.js';
 import { getAlertBands } from './store.js';
 
 const nowSec = () => Math.floor(Date.now() / 1000);
@@ -21,7 +22,7 @@ const currentBand = async (region) => (await getAlertBands())[scopeOf(region)]?.
  * Create or update. A new subscriber, or one moving to another region, starts at that region's
  * current alert band, so neither triggers an immediate "band changed" alert.
  * @param {number} chatId
- * @param {{ bandAlerts?: boolean, dailyHour?: number | null, breakingAlerts?: boolean, threadId?: number | null, region?: string | null }} patch
+ * @param {{ bandAlerts?: boolean, dailyHour?: number | null, breakingAlerts?: boolean, threadId?: number | null, region?: string | null, minBand?: string | null, quietNights?: boolean }} patch
  */
 export async function saveSubscriber(chatId, patch) {
   const existing = await getSubscriber(chatId);
@@ -32,7 +33,7 @@ export async function saveSubscriber(chatId, patch) {
     return { sub: { ...existing, ...set }, created: false };
   }
   const lastBand = await currentBand(patch.region);
-  const sub = { chatId, bandAlerts: true, dailyHour: null, breakingAlerts: true, region: null, ...patch, lastBand, createdAt: nowSec() };
+  const sub = { chatId, ...TURNED_ON, ...patch, lastBand, createdAt: nowSec() };
   await db.insert(subscribers).values(sub).run();
   return { sub, created: true };
 }
@@ -74,6 +75,11 @@ export async function dailySubscribers() {
 /** @param {number} chatId @param {string} band */
 export async function setLastBand(chatId, band) {
   await db.update(subscribers).set({ lastBand: band }).where(eq(subscribers.chatId, chatId)).run();
+}
+
+/** @param {number[]} chatIds @param {string} band */
+export async function setLastBands(chatIds, band) {
+  await db.update(subscribers).set({ lastBand: band }).where(inArray(subscribers.chatId, chatIds)).run();
 }
 
 /** Chats with an alert claimed under a key matching `pattern` (SQL LIKE). @param {string} pattern */
