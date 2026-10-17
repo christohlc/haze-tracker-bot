@@ -1,7 +1,7 @@
 <script lang="ts">
   import { bandById, psiBand } from '../../tgcloud/lib/psi.js';
 
-  // NEA's outlook gives bands, not numbers: pass `bandId` with `showLabel`.
+  // For NEA's outlook, which names bands: pass `bandId` with `showLabel`.
   let {
     value = null,
     bandId = null,

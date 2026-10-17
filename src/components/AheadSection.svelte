@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { outlookSpan } from '../../tgcloud/lib/outlook-parse.js';
+  import { meterSpan, outlookLabel, psiRangeText } from '../../tgcloud/lib/outlook-parse.js';
   import { bandRanges, psiBand } from '../../tgcloud/lib/psi.js';
   import { RANGE_RECORD } from '../../tgcloud/lib/range.js';
   import type { Ahead } from '../lib/api';
@@ -17,7 +17,7 @@
   const range = $derived(ahead.range);
   const day = $derived(outlook ? sgtDayName(outlook.forDate) : '');
 
-  const span = $derived(outlook ? outlookSpan(outlook.text) : null);
+  const span = $derived(outlook ? meterSpan(outlook) : null);
 
   // The first and last band a range crosses ("Unhealthy to Hazardous" reads as "through").
   const bandsIn = (lo: number, hi: number) => {
@@ -54,13 +54,14 @@
   {#if outlook}
     <h3 class="subhead">{day[0].toUpperCase()}{day.slice(1)} · NEA forecast</h3>
     {#if span}
-      <PsiMeter lo={span.lo} hi={span.hi} words={outlook.text} now={psi24h}>
+      <PsiMeter lo={span.lo} hi={span.hi} words={outlookLabel(outlook)} now={psi24h}>
+        {#if outlook.psi}<span class="num forecast">{psiRangeText(outlook.psi)}</span>{/if}
         <BandPill bandId={outlook.from} showLabel />
         {#if outlook.to !== outlook.from}<span class="to">to</span> <BandPill bandId={outlook.to} showLabel />{/if}
       </PsiMeter>
     {/if}
     <p class="note">
-      24-hr PSI, in NEA’s words “{outlook.text}”{#if span && psi24h != null}; the tick marks today’s official 24-hr PSI{/if}. Issued {sgtDayMonth(outlook.issuedAt)}, {sgtHour(outlook.issuedAt, true)} SGT.
+      24-hr PSI{#if outlook.psi}{' '}<span class="num">{psiRangeText(outlook.psi)}</span>{/if}, in NEA’s words “{outlook.text}”{#if span && psi24h != null}; the tick marks today’s official 24-hr PSI{/if}. Issued {sgtDayMonth(outlook.issuedAt)}, {sgtHour(outlook.issuedAt, true)} SGT.
       <a href={HAZE_SITE} target="_blank" rel="noopener noreferrer" onclick={open}>More at haze.gov.sg</a>
     </p>
   {/if}
@@ -75,7 +76,7 @@
       {#each range.steps as s (s.h)}
         <li>
           <span class="in">{s.h} {s.h === 1 ? 'hour' : 'hours'} <span class="when">{sgtHour(s.t)} SGT</span></span>
-          <span class="num range">{s.lo === s.hi ? s.lo : `${s.lo}–${s.hi}`}</span>
+          <span class="num range">{psiRangeText(s)}</span>
           <span class="track" style:background={track} aria-hidden="true">
             <span class="span" style:left="min({pct(s.lo)}%, calc(100% - 6px))" style:width="max(6px, {pct(s.hi) - pct(s.lo)}%)" style:background={stops(s.lo, s.hi, false)}></span>
           </span>
@@ -102,6 +103,10 @@
   }
   .to {
     color: var(--ink-2);
+  }
+  .forecast {
+    font-weight: 650;
+    white-space: nowrap;
   }
   /* An inline link, but with a finger-sized hit area. */
   .note a {
