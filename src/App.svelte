@@ -37,6 +37,7 @@
   let data = $state<Dashboard | null>(null);
   let error = $state<string | null>(null);
   let period = $state<Period>('3h');
+  let group = $state<'general' | 'vulnerable'>('general');
   let loadedAt = 0;
   // Started alongside the dashboard rather than when its card mounts, so it isn't a second round trip.
   let weatherFirst = $state<Promise<WeatherResult> | null>(null);
@@ -140,9 +141,9 @@
     </div>
     {#if visited.now}
       <div id="panel-now" class="sections" class:off={tab !== 'now'} role="tabpanel" aria-labelledby="tab-now">
-        <Hero snapshot={data.snapshot} bind:period />
+        <Hero snapshot={data.snapshot} bind:period {group} />
         <RegionTable snapshot={data.snapshot} {period} />
-        <Advice snapshot={data.snapshot} />
+        <Advice snapshot={data.snapshot} bind:group />
         <AlertsCard />
         <ShareCard snapshot={data.snapshot} />
       </div>

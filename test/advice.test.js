@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { verdict } from '../tgcloud/lib/advice.js';
+import { formatBandAlert, formatBreaking, formatHaze } from '../tgcloud/lib/format.js';
 
 const rank = (psi, pm, group = 'general') => verdict(psi, pm, group)?.rank;
 
@@ -30,6 +31,51 @@ test('vulnerable people take NEA’s stricter 24-hr PSI rows; PM2.5 advice is th
 test('no readings, no verdict', () => {
   assert.equal(verdict(null, null, 'general'), null);
   assert.equal(verdict(250, null, 'general')?.headline, 'Skip long or hard exercise outdoors.');
+});
+
+// Every band edge of the 24-hour PSI and 1-hour PM2.5, plus no reading.
+const PSIS = [null, 0, 50, 51, 100, 101, 200, 201, 300, 301, 500];
+const PM25S = [null, 0, 55, 56, 150, 151, 250, 251, 400];
+const GROUPS = ['general', 'vulnerable'];
+
+test('the mask headline is the verdict’s short form: one per rank, never contradicting it', () => {
+  const titleOf = new Map();
+  for (const psi of PSIS)
+    for (const pm of PM25S)
+      for (const group of GROUPS) {
+        const v = verdict(psi, pm, group);
+        if (!v) {
+          assert.ok(psi == null && pm == null);
+          continue;
+        }
+        if (titleOf.has(v.rank)) assert.deepEqual(v.mask, titleOf.get(v.rank), `rank ${v.rank} at PSI ${psi}, PM2.5 ${pm}`);
+        else titleOf.set(v.rank, v.mask);
+      }
+  assert.deepEqual([...titleOf.keys()].sort(), [0, 1, 2, 3, 4]);
+  assert.equal(new Set([...titleOf.values()].map((m) => m.title)).size, 5); // the title alone says which rank
+  assert.equal(titleOf.get(3).title, 'Mask up'); // docs/design.md, "Answer first"
+});
+
+test('bot messages give the same advice in the 😷 line and Outside now, whatever the 3-hour PSI', () => {
+  const mask = (text) => text.match(/😷 <b>(.+?)\.<\/b>/)?.[1];
+  const outside = (text) => text.match(/Outside now:<\/b> (.+)/)?.[1];
+  for (const psi of PSIS)
+    for (const pm of PM25S)
+      for (const psi3h of [20, 400]) {
+        const snap = {
+          asOf: '2026-10-17T13:00:00+08:00',
+          regions: [],
+          cigs: { past24h: 1 },
+          worst: { psi3h: { name: 'West', value: psi3h }, psi24h: psi == null ? null : { name: 'West', value: psi }, pm25: pm == null ? null : { name: 'West', value: pm } },
+        };
+        const v = verdict(psi, pm, 'general');
+        const texts = [formatHaze(snap), formatBandAlert(snap, 'good', 'hazardous')];
+        if (psi != null) texts.push(formatBreaking({ kind: 'psi24', band: 'hazardous', value: psi }, snap));
+        for (const text of texts) {
+          assert.equal(mask(text), v?.mask.title, `PSI ${psi}, PM2.5 ${pm}, 3h ${psi3h}`);
+          assert.equal(outside(text), v?.headline);
+        }
+      }
 });
 
 test('PM2.5 trend compares the latest hour with three hours earlier, by time', async () => {

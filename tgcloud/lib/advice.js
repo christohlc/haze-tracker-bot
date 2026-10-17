@@ -4,24 +4,6 @@
 
 import { psiBand, pm25Band } from './psi.js';
 
-/** @type {Record<string, { title: string, text: string }>} */
-const MASK = {
-  good: { title: 'Breathe easy', text: 'No mask needed.' },
-  moderate: { title: 'All good', text: 'No mask needed for most people.' },
-  unhealthy: { title: 'Take it easy', text: 'Sensitive? Keep an N95 handy.' },
-  very_unhealthy: { title: 'Mask up', text: 'N95 if you really must go out.' },
-  hazardous: { title: 'Stay in', text: 'N95 outdoors, windows shut indoors.' },
-};
-
-/**
- * Short headline card, keyed off the headline PSI.
- * @param {number | null} psi
- */
-export function maskCard(psi) {
-  const band = psiBand(psi);
-  return band ? MASK[band.id] : null;
-}
-
 // "Is it safe outside right now?" in one line. NEA's advice for the 24-hour PSI band and for the
 // 1-hour PM2.5 band, put on one scale of outdoor action, 0 (normal) to 4 (stay in); the stricter wins.
 
@@ -37,19 +19,37 @@ const PSI_RANK = {
 /** NEA's 1-hour PM2.5 bands as a rank; NEA gives one piece of advice per band for everyone. */
 const PM25_RANK = { I: 0, II: 1, III: 3, IV: 4 };
 
+/** One entry per rank. `mask` is the short form for the hero and the 😷 line in bot messages
+    ("Mask up." in docs/design.md), so the headline and the verdict can never disagree. */
 const VERDICT = [
-  { headline: 'Fine for normal activities.', detail: '' },
-  { headline: 'Go easy on long or hard exercise outdoors.', detail: 'Stop and rest if you feel unwell.' },
-  { headline: 'Skip long or hard exercise outdoors.', detail: 'Move workouts indoors.' },
-  { headline: 'Keep time outdoors short.', detail: 'Move activities indoors. Wear a well-fitted N95 if you must be out for long.' },
-  { headline: 'Stay indoors where you can.', detail: 'Keep windows shut and run a purifier or air-con on recirculate. Wear a well-fitted N95 if you must go out.' },
+  { headline: 'Fine for normal activities.', detail: '', mask: { title: 'Breathe easy', text: 'No mask needed.' } },
+  {
+    headline: 'Go easy on long or hard exercise outdoors.',
+    detail: 'Stop and rest if you feel unwell.',
+    mask: { title: 'Take it easy', text: 'Sensitive? Keep an N95 handy.' },
+  },
+  {
+    headline: 'Skip long or hard exercise outdoors.',
+    detail: 'Move workouts indoors.',
+    mask: { title: 'Ease off', text: 'Keep an N95 handy for long spells out.' },
+  },
+  {
+    headline: 'Keep time outdoors short.',
+    detail: 'Move activities indoors. Wear a well-fitted N95 if you must be out for long.',
+    mask: { title: 'Mask up', text: 'N95 if you must be out for long.' },
+  },
+  {
+    headline: 'Stay indoors where you can.',
+    detail: 'Keep windows shut and run a purifier or air-con on recirculate. Wear a well-fitted N95 if you must go out.',
+    mask: { title: 'Stay in', text: 'N95 outdoors, windows shut indoors.' },
+  },
 ];
 
 /**
  * The stricter of NEA's 24-hour PSI and 1-hour PM2.5 advice, for the general public or vulnerable
  * people. Null without either reading.
  * @param {number | null} psi24h  @param {number | null} pm25Now  @param {'general' | 'vulnerable'} group
- * @returns {{ rank: number, headline: string, detail: string } | null}
+ * @returns {{ rank: number, headline: string, detail: string, mask: { title: string, text: string } } | null}
  */
 export function verdict(psi24h, pm25Now, group) {
   const band = psiBand(psi24h);

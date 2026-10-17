@@ -15,12 +15,12 @@
   const TREND = { rising: { arrow: '↑', word: 'Rising' }, easing: { arrow: '↓', word: 'Easing' }, steady: { arrow: '→', word: 'Steady' } };
   const GROUP_KEY = 'advice_group';
 
-  let { snapshot }: { snapshot: Snapshot } = $props();
+  // The group is shared with the hero (bound in App), so its mask line follows the same advice.
+  let { snapshot, group = $bindable('general') }: { snapshot: Snapshot; group?: Group } = $props();
   const psi24 = $derived(snapshot.worst.psi24h);
   const pm = $derived(snapshot.worst.pm25);
   const trend = $derived(pm?.trend ?? null);
 
-  let group = $state<Group>('general');
   const v = $derived(verdict(psi24?.value ?? null, pm?.value ?? null, group));
   onMount(() => {
     getStored(GROUP_KEY).then((g) => g === 'vulnerable' && (group = g));
