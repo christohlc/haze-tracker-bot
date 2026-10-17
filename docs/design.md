@@ -117,6 +117,13 @@ messages is the same short form, for the general public.
   the dark theme). The banks are light haze behind dark ink and dark smoke behind light ink, so
   they never lower the contrast above. A band change fades the sky (280ms; the colours are
   `@property`-registered in `app.css`). Loading skeletons shimmer instead of pulsing.
+- The history chart's lines draw in once (600ms, 60ms apart), the first time the chart is in
+  view (`use:reveal`, so it doesn't play below the fold), then a ring pulses on the highest
+  reading of the newest hour (none when no region has it; hidden while scrubbing). Changing the
+  span, scale or average redraws without replaying, unless it passes through an empty span; a
+  region's chart draws each time the region is opened, since that's a new view. The pulse is
+  HTML over the chart, so its loop composites instead of repainting the SVG. Reduced motion:
+  the lines and dot appear at once.
 - Looping animations go on an element with `use:ambient` (`src/lib/motion.ts`), which pauses
   them while it’s off screen, the page is hidden or Telegram has the app in the background.
   Loops animate `transform` and `opacity` only. Loading skeletons are the exception: they're

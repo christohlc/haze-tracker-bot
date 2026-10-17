@@ -2,6 +2,7 @@
   import { untrack } from 'svelte';
   import type { HourRow, RegionId, Snapshot } from '../lib/api';
   import { fmt, sgtHour, sgtWeekday } from '../lib/format';
+  import { ambient, reveal } from '../lib/motion';
   import { niceTicks, rollingSeries, type Scale, type Window } from '../lib/series';
   import Segmented from './Segmented.svelte';
 
@@ -103,6 +104,16 @@
     hover = Math.min(n - 1, Math.max(0, i));
   }
 
+  // The newest hour on the highest line, marked as live. None when that hour is missing.
+  const latest = $derived.by(() => {
+    let best: { id: RegionId; v: number } | null = null;
+    for (const s of series) {
+      const v = s.points[n - 1]?.v;
+      if (v != null && (!best || v > best.v)) best = { id: s.id, v };
+    }
+    return best;
+  });
+
   const tip = $derived(hover == null || !series[0] ? null : { t: series[0].points[hover].t, left: x(hover) });
 
   const unit = $derived(scale === 'psi' ? 'PSI' : 'µg/m³');
@@ -159,7 +170,7 @@
   {#if !series.some((s) => s.points.some((p) => p.v != null))}
     <p class="empty">No readings in the past {span} yet.</p>
   {:else}
-  <div class="plot" bind:clientWidth={width}>
+  <div class="plot" bind:clientWidth={width} use:reveal use:ambient>
     <svg
       viewBox="0 0 {width} {H}"
       width="100%"
@@ -182,8 +193,8 @@
         <text x={x(tk.i)} y={H - 6} class="tick" text-anchor={x(tk.i) < pad.l + 14 ? 'start' : x(tk.i) > width - pad.r - 14 ? 'end' : 'middle'}>{tk.label}</text>
       {/each}
 
-      {#each series as s (s.id)}
-        <path d={path(s.points)} stroke="var(--region-{s.id})" class="line" />
+      {#each series as s, k (s.id)}
+        <path d={path(s.points)} pathLength="1" stroke="var(--region-{s.id})" class="line" style:--k={k} />
       {/each}
       <!-- Band names go on top of the lines; their halo keeps them legible where lines cross. -->
       {#each bandLines.filter((b) => b.showLabel) as b (b.v)}
@@ -200,7 +211,18 @@
         {/each}
       {/if}
     </svg>
-
+    <!-- Live pulse on the newest hour. HTML, not SVG, so its loop runs on the compositor instead
+         of repainting the chart; the viewBox is 1:1 with pixels, so x() and y() place it. -->
+    {#if latest && !tip}
+      <span
+        class="pulse"
+        style:left="{x(n - 1)}px"
+        style:top="{y(latest.v)}px"
+        style:--c="var(--region-{latest.id})"
+        style:--k={series.length - 1}
+        aria-hidden="true"
+      ><span class="ring"></span><span class="live"></span></span>
+    {/if}
   </div>
 
   {/if}
@@ -321,6 +343,61 @@
     stroke-width: 2;
     stroke-linejoin: round;
     stroke-linecap: round;
+  }
+  .pulse {
+    position: absolute;
+    pointer-events: none;
+  }
+  .pulse > span {
+    position: absolute;
+    left: -4px;
+    top: -4px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--c);
+  }
+  .live {
+    box-shadow: 0 0 0 2px var(--card);
+  }
+  /* Under reduced motion the lines and the dot simply appear, and the ring stays hidden under it. */
+  @media (prefers-reduced-motion: no-preference) {
+    /* Draw-in: each line traces left to right (pathLength="1" makes the dash one line long),
+       a region every 60ms (--k). */
+    .line {
+      stroke-dasharray: 1;
+      stroke-dashoffset: 1;
+    }
+    .plot:global([data-revealed]) .line {
+      animation: draw 600ms var(--ease-out) calc(var(--k) * 60ms) both;
+    }
+    /* The pulse fades in after the last line (--k is the last line's index), then a ring
+       spreads and fades. */
+    .pulse {
+      opacity: 0;
+    }
+    .plot:global([data-revealed]) .pulse {
+      opacity: 1;
+      transition: opacity 200ms var(--ease-out) calc(var(--k) * 60ms + 600ms);
+    }
+    .ring {
+      animation: ping 2.4s var(--ease-out) infinite;
+    }
+  }
+  @keyframes draw {
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+  @keyframes ping {
+    from {
+      transform: scale(1);
+      opacity: 0.5;
+    }
+    to {
+      transform: scale(3);
+      opacity: 0;
+    }
   }
   .cross {
     stroke: var(--axis);
