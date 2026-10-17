@@ -111,7 +111,10 @@ the news cached. To set it up:
 1. GitHub → Settings → Developer settings → Fine-grained tokens → new token with access to this
    repository only and the single permission **Actions: Read and write**. Set an expiry and a
    reminder to renew it; once it lapses only the unreliable `schedule` is left.
-2. Deploy the Worker (free plan; opens a browser to log in to Cloudflare the first time):
+2. Deploy the Worker (free plan; `npx wrangler@4 login` first). On a new Cloudflare account,
+   open **Workers & Pages** in the dashboard once before deploying: cron triggers need the
+   account's workers.dev subdomain (error 10063), which that page creates, even though this
+   Worker has no public URL.
 
    ```bash
    npx wrangler@4 deploy --config cron/wrangler.jsonc
