@@ -113,8 +113,9 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   in `scripts/card/singapore.svg`). Don't edit them by hand. `card/send` uploads it once per
   snapshot and reuses Telegram's file id (state `card`, rechecked before drawing, so isolates share
   one upload); if the photo fails, the text goes instead. So that every snapshot has one, the tick
-  uploads the card to the `ops_chat_id` chat, silently, when nobody was sent it yet (`uploadCard` in
-  `lib/ops.js`, `cardUploadDue` in `ops-rules.js`; skipped without that setting or after 15 s of the run).
+  uploads the card to the `ops_chat_id` chat, silently, when nobody was sent it yet, and deletes the
+  message (the file id stays good): `uploadCard` in `lib/ops.js`, `cardUploadDue` in `ops-rules.js`;
+  skipped without that setting or after 15 s of the run.
   `/forecast` and the daily update send a second picture, `card/forecast.js`, cached the same way
   (state `forecast_card`, keyed by everything drawn on it). The daily update sends it as a second
   message after the haze card, while there's haze to talk about (`dailyForecastDue`): a phase of
@@ -157,8 +158,8 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   Copy must keep saying so; only the 24-hour PSI and NEA's forecast are official.
 - **Inline mode** (`handlers/inline_query.js`, `lib/inline-rules.js`): `@bot` in any chat offers
   the summary card, by the file id `card/send` cached (the tick uploads one to the ops chat each
-  snapshot; none yet, or no `ops_chat_id`: text only, since an inline answer can't upload), and a text summary (`@bot west` leads with West). It answers from
-  `storedSnapshot()`, never a refetch. Inline mode is switched on in BotFather (`/setinline`, placeholder “PSI now”); after
+  snapshot; none yet, or no `ops_chat_id`: text only, since an inline answer can't upload), and a
+  text summary (`@bot west` leads with West). It answers from `storedSnapshot()`, never a refetch. Inline mode is switched on in BotFather (`/setinline`, placeholder “PSI now”); after
   the first push with this handler, check `npx tgcloud webhook` lists `inline_query`.
 - **The Mini App keeps the last dashboard** in `localStorage` (`src/lib/cache.ts`, news left out). A
   failed load shows it with a “Couldn’t refresh / You’re offline” banner and retries on `online`;
