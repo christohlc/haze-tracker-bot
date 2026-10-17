@@ -4,7 +4,7 @@
 import { verdict } from './advice.js';
 import { escapeHtml } from './html.js';
 import { PUBLISHERS } from './news-parse.js';
-import { outlookLabel } from './outlook-parse.js';
+import { outlookLabel, psiRangeText } from './outlook-parse.js';
 import { bandById, PSI_BANDS, psiBand } from './psi.js';
 import { RANGE_RECORD } from './range.js';
 import { readingsFor } from './snapshot.js';
@@ -37,8 +37,8 @@ function whereOf(snap, area, key) {
   return `${area.name}${top && top.region !== area.id ? `; highest ${top.name} ${n(top.value)}` : ''}`;
 }
 
-/** The chat's area, or for a chat without one the worst region. @param {any} snap @param {any} area */
-const placeOf = (snap, area) => area?.name ?? `${snap.worst.psi3h?.name ?? '–'}, the highest`;
+/** " in East": the chat's area, or for a chat without one the highest region (nothing without a reading). @param {any} snap @param {any} area */
+const placeOf = (snap, area) => (area ? ` in ${area.name}` : snap.worst.psi3h ? ` in ${snap.worst.psi3h.name}, the highest` : '');
 
 /** " · West highest at 244" when the highest 3-hour PSI is outside the chat's area. @param {any} snap @param {any} area */
 function highestElsewhere(snap, area) {
@@ -64,39 +64,39 @@ function focus(snap, region) {
 export function formatHaze(snap, ahead, { table = true, region = null } = {}) {
   const f = focus(snap, region);
   const band = psiBand(f.psi3h);
-  const { mask, outside } = adviceLines(f.psi24h, f.pm25);
+  const advice = adviceLines(f.psi24h, f.pm25);
 
   const lines = [
-    `${band?.emoji ?? '⚪️'} <b>${band?.label ?? 'No data'}</b> · PSI ${n(f.psi3h)} in ${placeOf(snap, f.area)}`,
-    `<i>Our 3-hour PSI, from PM2.5 · ${sgtTime(snap.asOf)} SGT${highestElsewhere(snap, f.area)}</i>`,
+    `${band?.emoji ?? '⚪️'} <b>${band?.label ?? 'No data'}</b> · 3-hr PSI ${n(f.psi3h)}${placeOf(snap, f.area)}`,
+    `<i>Our calculation from PM2.5 · ${sgtTime(snap.asOf)} SGT${highestElsewhere(snap, f.area)}</i>`,
     ...(snap.stale ? ['⚠️ <i>NEA hasn’t updated recently, so this may be out of date.</i>'] : []),
     '',
-    ...(outside ? [outside] : []),
-    ...(mask ? [mask] : []),
+    ...advice,
   ];
   const soon = ahead?.range?.steps.find((s) => s.h === 3);
-  if (ahead?.outlook) lines.push(`📅 ${outlookLine(ahead.outlook)} · /forecast`);
-  else if (soon) lines.push(`📈 In 3 hours: likely <b>${soon.lo}–${soon.hi}</b> island-wide, our calculation · /forecast`);
-  lines.push(`🚬 <b>${n(snap.cigs.past24h, 1)}</b> cigarettes’ worth in 24h, outdoors all day`, '');
+  if (ahead?.outlook) lines.push(`📅 NEA’s forecast for ${sgtDayName(ahead.outlook.forDate)}: <b>${escapeHtml(ahead.outlook.psi ? psiRangeText(ahead.outlook.psi) : ahead.outlook.text)}</b> · /forecast`);
+  else if (soon) lines.push(`📈 Island-wide 1-hr PSI in 3 hours: likely <b>${soon.lo}–${soon.hi}</b>, our calculation · /forecast`);
+  lines.push(`🚬 <b>${n(snap.cigs.past24h, 1)}</b> cigarettes’ worth in 24h, island-wide, outdoors all day`, '');
   if (table) lines.push(`<pre>${regionTable(snap)}</pre>`, '<i>PM2.5 in µg/m³. 1h/3h PSI computed from PM2.5; 24h PSI is NEA’s.</i>', '');
-  lines.push(table ? '<i>Not official. Check haze.gov.sg for NEA advisories.</i>' : '<i>The picture is NEA’s 24-hr PSI. Not official: check haze.gov.sg.</i>');
+  lines.push(table ? '<i>Not official. Check haze.gov.sg for NEA advisories.</i>' : '<i>The picture is NEA’s official 24-hr PSI. Advisories: haze.gov.sg.</i>');
   return lines.join('\n');
 }
 
 /**
- * The 😷 line and "Outside now" from one verdict, so they can't disagree. "Outside now" adds
- * vulnerable people's advice if it's stricter. Nulls without readings.
+ * The advice lines, in one order for every message: "Outside now", vulnerable people's own line
+ * if their advice is stricter, then the 😷 line. All from one verdict, so they can't disagree.
+ * Empty without readings.
  * @param {number | null} psi24h  @param {number | null} pm25Now
  */
 function adviceLines(psi24h, pm25Now) {
   const all = verdict(psi24h, pm25Now, 'general');
-  if (!all) return { mask: null, outside: null };
+  if (!all) return [];
   const vul = verdict(psi24h, pm25Now, 'vulnerable');
-  const outside = `👉 <b>Outside now:</b> ${all.headline}`;
-  return {
-    mask: `😷 <b>${all.mask.title}.</b> ${all.mask.text}`,
-    outside: vul && vul.rank > all.rank ? `${outside}\n🧓 <b>Vulnerable people:</b> ${vul.headline}` : outside,
-  };
+  return [
+    `👉 <b>Outside now:</b> ${all.headline}`,
+    ...(vul && vul.rank > all.rank ? [`🧓 <b>Vulnerable people:</b> ${vul.headline}`] : []),
+    `😷 <b>${all.mask.title}.</b> ${all.mask.text}`,
+  ];
 }
 
 /** Caption for the summary card. @param {any} snap @param {import('./ahead.js').Ahead | null} [ahead] @param {string | null} [region] */
@@ -137,7 +137,6 @@ export function formatBandAlert(snap, fromId, toId, region = null, official = nu
   const from = bandById(fromId);
   const f = focus(snap, region);
   const worse = PSI_BANDS.indexOf(/** @type {any} */ (to)) > PSI_BANDS.indexOf(/** @type {any} */ (from));
-  const { mask, outside } = adviceLines(f.psi24h, f.pm25);
   const lines = [
     ...(official ? [...officialLines(official, snap), ''] : []),
     `${to?.emoji ?? '⚪️'} <b>Haze${f.area ? ` in ${f.area.name}` : ''} ${worse ? 'up' : 'down'} to ${to?.label ?? toId}</b> (was ${from?.label ?? fromId})`,
@@ -145,9 +144,7 @@ export function formatBandAlert(snap, fromId, toId, region = null, official = nu
   ];
   // The worst region's 24-hour PSI is already the official lines' number.
   if (f.area || !official) lines.push(`NEA’s 24-hour PSI <b>${n(f.psi24h)}</b>, ${whereOf(snap, f.area, 'psi24h')}`);
-  if (mask) lines.push(mask);
-  if (outside) lines.push(outside);
-  lines.push('', '<i>/alerts to change or stop these.</i>');
+  lines.push(...adviceLines(f.psi24h, f.pm25), '', '<i>/alerts to change or stop these.</i>');
   return lines.join('\n');
 }
 
@@ -172,11 +169,7 @@ export function formatBreaking(event, snap) {
   const psi = snap.worst.psi24h;
   const footer = ['', '<i>/alerts to change or stop these.</i>'];
   if (event.kind === 'psi24') {
-    const { mask, outside } = adviceLines(event.value, snap.worst.pm25?.value ?? null);
-    const lines = officialLines(event, snap);
-    if (mask) lines.push(mask);
-    if (outside) lines.push(outside);
-    return [...lines, ...footer].join('\n');
+    return [...officialLines(event, snap), ...adviceLines(event.value, snap.worst.pm25?.value ?? null), ...footer].join('\n');
   }
   const publisher = PUBLISHERS[/** @type {keyof typeof PUBLISHERS} */ (event.source)]?.name ?? event.source;
   return [
