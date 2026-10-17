@@ -203,6 +203,22 @@ export function parseHaze(kml, date = null) {
 }
 
 /**
+ * The https address of `href` on the page at `base`, as `new URL(href, base)` would give for the
+ * links NEA writes (absolute, "//host/…", "/root/…" or "same-folder.png"). By hand: the bot's
+ * runtime has no `URL` (as in news-parse.js). Null for anything that isn't https.
+ * @param {string} href @param {string} base
+ */
+export function resolveUrl(href, base) {
+  if (/^https:\/\//i.test(href)) return href;
+  if (/^[a-z][a-z\d+.-]*:/i.test(href)) return null;
+  const m = base.match(/^(https:\/\/[^/?#]+)(\/[^?#]*)?/i);
+  if (!m) return null;
+  if (href.startsWith('//')) return `https:${href}`;
+  if (href.startsWith('/')) return `${m[1]}${href}`;
+  return `${m[1]}${(m[2] ?? '/').replace(/[^/]*$/, '')}${href}`;
+}
+
+/**
  * NEA's wind KML → its picture (resolved against the KML's address) and the box it covers. Null if unreadable.
  * @param {unknown} kml @param {string} url the KML's own address
  * @returns {Wind | null}
@@ -214,13 +230,8 @@ export function parseWind(kml, url) {
   const edge = (side) => Number(kml.match(new RegExp(`<${side}>\\s*([-\\d.]+)\\s*</${side}>`, 'i'))?.[1]);
   const box = { west: edge('west'), east: edge('east'), south: edge('south'), north: edge('north') };
   if (!href || !Object.values(box).every(Number.isFinite) || box.west >= box.east || box.south >= box.north) return null;
-  let image;
-  try {
-    image = new URL(decodeEntities(href), url).href;
-  } catch {
-    return null;
-  }
-  if (!/^https:\/\//.test(image)) return null;
+  const image = resolveUrl(decodeEntities(href), url);
+  if (!image) return null;
   return { image, box, date: fileDate(image) ?? fileDate(url) };
 }
 

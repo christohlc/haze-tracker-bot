@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-import { fileDate, MAP_BOUNDS, parseHaze, project, parseHome, parseHotspots, parseUpdated, parseWind } from '../tgcloud/lib/hazemap-parse.js';
+import { fileDate, MAP_BOUNDS, parseHaze, project, parseHome, parseHotspots, parseUpdated, parseWind, resolveUrl } from '../tgcloud/lib/hazemap-parse.js';
 
 // haze.gov.sg's homepage and the three KML files it linked to, fetched on 17 Oct 2026, 1:40 pm SGT.
 const read = (name) => readFileSync(new URL(`./hazemap/${name}`, import.meta.url), 'utf8');
@@ -79,6 +79,26 @@ test('reads the wind picture and the box it covers', () => {
     box: { west: 81.25, east: 150, south: -18.75, north: 28.75 },
     date: '2026-10-17',
   });
+});
+
+test('reads the wind picture without URL, which the bot’s runtime lacks', () => {
+  const kml = read('wind.kml');
+  const saved = globalThis.URL;
+  // @ts-ignore
+  delete globalThis.URL;
+  try {
+    assert.equal(parseWind(kml, home.windUrl ?? '')?.image, 'https://www.haze.gov.sg/docs/default-source/haze_wind/Haze_Wind_20261017_000000.png');
+  } finally {
+    globalThis.URL = saved;
+  }
+  const base = 'https://www.haze.gov.sg/docs/a/b.kml?time=1';
+  for (const href of ['c.png', '/x/c.png', 'https://cdn.example/c.png', '//cdn.example/c.png', 'c.png?v=2']) {
+    assert.equal(resolveUrl(href, base), new URL(href, base).href, href);
+  }
+  assert.equal(resolveUrl('c.png', 'https://www.haze.gov.sg'), 'https://www.haze.gov.sg/c.png');
+  assert.equal(resolveUrl('c.png', 'not a url'), null);
+  assert.equal(resolveUrl('c.png', 'http://www.haze.gov.sg/w.kml'), null, 'https only');
+  assert.equal(resolveUrl('javascript:alert(1)', base), null);
 });
 
 test('never throws on what haze.gov.sg might send instead', () => {
