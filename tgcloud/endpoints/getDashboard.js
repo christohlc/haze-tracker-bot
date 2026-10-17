@@ -6,11 +6,7 @@ import { aheadFrom } from '../lib/ahead.js';
 import { getNews } from '../lib/news.js';
 import { HISTORY_HOURS } from '../lib/range.js';
 import { getSnapshot } from '../lib/refresh.js';
-import { allSourceStatus, recentReadings } from '../lib/store.js';
-
-// The chart: the last 48 hours (so it can draw 24h rolling averages across the whole past day),
-// none older than 50 h, as recentReadings(48) gives.
-const CHART_MS = 50 * 3_600_000;
+import { allSourceStatus, lastHours, recentReadings } from '../lib/store.js';
 
 export default async function () {
   const refreshed = getSnapshot();
@@ -19,10 +15,8 @@ export default async function () {
   const [{ history: _recent, ...snapshot }, ahead, history, sources, news] = await Promise.all([
     refreshed,
     aheadFrom(readings),
-    readings.then((rows) => {
-      const since = Date.now() - CHART_MS;
-      return rows.filter((r) => Date.parse(r.timestamp) >= since).slice(-48);
-    }),
+    // 48h so the chart can draw 24h rolling averages across the whole past day.
+    readings.then((rows) => lastHours(rows, 48)),
     allSourceStatus(),
     getNews(),
   ]);

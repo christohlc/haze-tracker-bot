@@ -13,7 +13,7 @@ const RETRY_MS = 5 * 60_000; // don't hammer NEA when it's down
 
 /** Fetch NEA, store readings and the new snapshot. Feed errors are recorded, not thrown, if cached data exists. */
 export async function refreshNea() {
-  await setState('last_fetch_attempt', Date.now()); // its updated_at is the claim getSnapshot checks
+  await claimEvery('last_fetch_attempt', 0); // always granted: Mini Apps don't refetch right after
   const [pm25, psi] = await Promise.allSettled([getPm25History(), getLatestPsi()]);
 
   if (pm25.status === 'fulfilled') {
@@ -59,8 +59,13 @@ export async function getSnapshot() {
   const fresh = cached && Date.now() - Date.parse(cached.asOf) < STALE_MS;
   if (fresh) return { ...cached, stale: false };
 
-  // Only one of the Mini Apps opened together refetches (data.gov.sg rate-limits); the rest show the stored copy.
-  if (cached && !(await claimEvery('last_fetch_attempt', RETRY_MS / 1000))) return { ...cached, stale: true };
+  if (cached) {
+    const lastAttempt = (await getState('last_fetch_attempt'))?.updatedAt ?? 0;
+    // A read first, so NEA being down doesn't make every open a write; then only one of the Mini
+    // Apps opened together refetches (data.gov.sg rate-limits), the rest show the stored copy.
+    const tried = Date.now() / 1000 - lastAttempt < RETRY_MS / 1000;
+    if (tried || !(await claimEvery('last_fetch_attempt', RETRY_MS / 1000))) return { ...cached, stale: true };
+  }
   try {
     const snap = await refreshNea();
     return { ...snap, stale: Date.now() - Date.parse(snap.asOf) >= STALE_MS };

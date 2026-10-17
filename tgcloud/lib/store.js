@@ -82,11 +82,23 @@ export async function upsertReadings(items) {
   }
 }
 
+/** Readings count as the last `hours` from here (a little slack for NEA publishing late). @param {number} hours */
+const windowStart = (hours) => nowSec() - (hours + 2) * 3600;
+
 /** Last `hours` of readings, oldest first, in NEA's item shape (timestamps in SGT). */
 export async function recentReadings(hours = 25) {
-  const since = nowSec() - (hours + 2) * 3600;
+  const since = windowStart(hours);
   const rows = await db.select().from(readings).where(gte(readings.hour, since)).orderBy(desc(readings.hour)).limit(hours).all();
   return rows.reverse().map((r) => ({ timestamp: toSgtIso(r.hour), readings: r.pm25 }));
+}
+
+/**
+ * The last `hours` of readings already read with recentReadings(more), as recentReadings(hours) would give them.
+ * @param {Array<{ timestamp: string, readings: Record<string, number> }>} rows oldest first @param {number} hours
+ */
+export function lastHours(rows, hours) {
+  const since = windowStart(hours);
+  return rows.filter((r) => Date.parse(r.timestamp) / 1000 >= since).slice(-hours);
 }
 
 export async function countReadings() {
