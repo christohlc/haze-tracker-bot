@@ -128,6 +128,11 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   App). In the Mini App the area is per user (`src/lib/area.svelte.ts`, CloudStorage); while alerts
   are on, picking an area saves it to the subscription. **Run `npx tgcloud migrate` before
   pushing** a build that reads `region`.
+- **Alert level and quiet nights.** `subscribers.min_band` (null = every band) skips band changes
+  below it but not the drop back below it (`wantsBandAlert`); a skipped change still moves the
+  chat's `lastBand`. `subscribers.quiet_nights` sends every alert from 11 pm to 7 am SGT with
+  `disable_notification` (`alertTarget` in `lib/alert-rules.js`); nothing is held back. **Run
+  `npx tgcloud migrate` before pushing** a build that reads them.
 - **Secrets live in the `settings` DB table**, set only via `endpoints/admin` from the
   CLI. Never commit or echo a key. `datagov_api_key` (optional, free from data.gov.sg) is sent
   as `x-api-key` to NEA's v2 API only, for a higher rate limit (`lib/http.js`). Each isolate rereads it

@@ -9,6 +9,12 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-17-alert-level',
+    date: '2026-10-17',
+    title: 'Choose when alerts reach you',
+    body: 'Hear about band changes only from Unhealthy up, and you’ll still be told when it clears. Turn on Quiet at night and alerts from 11 pm to 7 am arrive without sound.',
+  },
+  {
     id: '2026-10-17-one-alert',
     date: '2026-10-17',
     title: 'Clearer haze alerts',

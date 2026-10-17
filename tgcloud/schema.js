@@ -39,6 +39,8 @@ export const subscribers = table('subscribers', {
   lastBand: text('last_band'),
   threadId: integer('thread_id'), // forum topic in a group where alerts go; null = General / not a forum
   region: text('region'), // band alerts follow this region's 3-hour PSI; null = the highest region
+  minBand: text('min_band'), // band alerts only at or above this band (and the drop back below it); null = every band
+  quietNights: boolean('quiet_nights').notNull().default(false), // 11 pm–7 am SGT alerts arrive without sound
   createdAt: integer('created_at').notNull(),
 });
 

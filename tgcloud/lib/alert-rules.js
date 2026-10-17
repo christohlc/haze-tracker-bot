@@ -1,6 +1,8 @@
 // @ts-check
 // When to alert. Pure, so it can be unit-tested.
 
+import { levelOrNull } from './alert-settings.js';
+import { subscriberTarget } from './chat-rules.js';
 import { REGIONS } from './config.js';
 import { PSI_BANDS, psiBand } from './psi.js';
 
@@ -38,6 +40,35 @@ export function dailyDue(dailyHour, sgtHourNow) {
 
 /** Current hour in Singapore. @param {number} now ms */
 export const sgtHourOf = (now) => new Date(now + 8 * 3600_000).getUTCHours();
+
+/** Quiet nights: alerts sent from 11 pm to 7 am SGT arrive without sound. */
+export const QUIET_FROM = 23;
+export const QUIET_UNTIL = 7;
+
+/** @param {number} now ms */
+export const isQuietHour = (now) => {
+  const h = sgtHourOf(now);
+  return h >= QUIET_FROM || h < QUIET_UNTIL;
+};
+
+/**
+ * Where a subscriber's alerts go, silent at night for a chat with quiet nights on: still sent,
+ * so a sharp rise is never held back, but without sound.
+ * @param {{ chatId: number, threadId?: number | null, quietNights?: boolean | null }} sub @param {number} now ms
+ */
+export const alertTarget = (sub, now) => ({ ...subscriberTarget(sub), ...(sub.quietNights && isQuietHour(now) && { disable_notification: true }) });
+
+/**
+ * Is a move from band `from` to `to` worth an alert for a chat whose level is `minBand`? Below
+ * the level it isn't, except the drop back below it (the all clear).
+ * @param {string} from @param {string} to @param {string | null | undefined} minBand
+ */
+export function wantsBandAlert(from, to, minBand) {
+  const level = levelOrNull(minBand);
+  if (!level) return true;
+  const min = bandRank(level);
+  return bandRank(to) >= min || bandRank(from) >= min;
+}
 
 /**
  * Whether the daily update brings the forecast picture: while there's haze to talk about, i.e.
@@ -110,8 +141,9 @@ export function advanceBands(prev, snap, now) {
 
 /**
  * Band subscribers with their scope's band: `due` were told another band and get an alert;
- * `unseeded` were never told one and just start at it.
- * @template {{ region?: string | null, lastBand?: string | null }} S
+ * `unseeded` were never told one, and `skipped` moved between bands below their alert level:
+ * both just move to it, without an alert, so a later alert says where it came from.
+ * @template {{ region?: string | null, lastBand?: string | null, minBand?: string | null }} S
  * @param {S[]} subs @param {Record<string, AlertBand>} bands
  */
 export function bandAlertsFor(subs, bands) {
@@ -119,12 +151,16 @@ export function bandAlertsFor(subs, bands) {
   const due = [];
   /** @type {Array<{ sub: S, band: AlertBand, scope: string }>} */
   const unseeded = [];
+  /** @type {Array<{ sub: S, band: AlertBand, scope: string }>} */
+  const skipped = [];
   for (const sub of subs) {
     const scope = scopeOf(sub.region);
     const band = bands[scope];
     if (!band) continue;
     if (!sub.lastBand) unseeded.push({ sub, band, scope });
-    else if (sub.lastBand !== band.id) due.push({ sub, band, scope });
+    else if (sub.lastBand === band.id) continue;
+    else if (wantsBandAlert(sub.lastBand, band.id, sub.minBand)) due.push({ sub, band, scope });
+    else skipped.push({ sub, band, scope });
   }
-  return { due, unseeded };
+  return { due, unseeded, skipped };
 }

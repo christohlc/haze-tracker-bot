@@ -21,7 +21,7 @@ const currentBand = async (region) => (await getAlertBands())[scopeOf(region)]?.
  * Create or update. A new subscriber, or one moving to another region, starts at that region's
  * current alert band, so neither triggers an immediate "band changed" alert.
  * @param {number} chatId
- * @param {{ bandAlerts?: boolean, dailyHour?: number | null, breakingAlerts?: boolean, threadId?: number | null, region?: string | null }} patch
+ * @param {{ bandAlerts?: boolean, dailyHour?: number | null, breakingAlerts?: boolean, threadId?: number | null, region?: string | null, minBand?: string | null, quietNights?: boolean }} patch
  */
 export async function saveSubscriber(chatId, patch) {
   const existing = await getSubscriber(chatId);
@@ -32,7 +32,7 @@ export async function saveSubscriber(chatId, patch) {
     return { sub: { ...existing, ...set }, created: false };
   }
   const lastBand = await currentBand(patch.region);
-  const sub = { chatId, bandAlerts: true, dailyHour: null, breakingAlerts: true, region: null, ...patch, lastBand, createdAt: nowSec() };
+  const sub = { chatId, bandAlerts: true, dailyHour: null, breakingAlerts: true, region: null, minBand: null, quietNights: false, ...patch, lastBand, createdAt: nowSec() };
   await db.insert(subscribers).values(sub).run();
   return { sub, created: true };
 }

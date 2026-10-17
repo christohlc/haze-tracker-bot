@@ -156,7 +156,7 @@
         <Hero snapshot={data.snapshot} bind:period mask={outside?.mask} />
         <RegionTable snapshot={data.snapshot} {period} />
         <Advice snapshot={data.snapshot} v={outside} {group} onpick={pickGroup} />
-        <AlertsCard />
+        <AlertsCard {group} />
         <ShareCard snapshot={data.snapshot} />
       </div>
     {/if}

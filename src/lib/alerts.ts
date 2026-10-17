@@ -8,6 +8,10 @@ export interface AlertSettings {
   breakingAlerts: boolean;
   /** Band alerts follow this region; null follows the highest region. */
   region: RegionId | null;
+  /** Band alerts only from this band up, and the drop back below it; null is every band. */
+  minBand: 'unhealthy' | 'very_unhealthy' | null;
+  /** Alerts from 11 pm to 7 am SGT arrive without sound. */
+  quietNights: boolean;
 }
 
 // Outside Telegram (dev preview) there's no endpoint: keep settings in memory.
