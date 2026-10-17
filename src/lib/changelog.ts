@@ -9,6 +9,12 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-18-chart-draw',
+    date: '2026-10-18',
+    title: 'Charts that draw themselves in',
+    body: 'History charts now draw themselves in when you reach them, and a soft pulse marks the latest hour.',
+  },
+  {
     id: '2026-10-18-living-sky',
     date: '2026-10-18',
     title: 'A sky that shows the haze',
