@@ -1,0 +1,1119 @@
+ <!DOCTYPE html> <html lang="en"> <head> <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"> <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"> <title>
+	Haze - The National Environment Agency
+</title> <meta id="During periods of haze, you can use the health advisory, air quality forecast, 1-hr PM2.5 and daily PSI readings to plan your schedule." name="description" content="Haze - The National Environment Agency"> <meta name="viewport" content="width=device-width,initial-scale=1"> <link rel="icon" href="/assets/favicon.ico" type="image/x-icon"> <!-- Web Mobile --> <link rel="apple-touch-icon" href="/apple-icon.png"> <link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png"> <link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png"> <link rel="apple-touch-icon" sizes="72x72" href="/apple-icon-72x72.png"> <link rel="apple-touch-icon" sizes="76x76" href="/apple-icon-76x76.png"> <link rel="apple-touch-icon" sizes="114x114" href="/apple-icon-114x114.png"> <link rel="apple-touch-icon" sizes="120x120" href="/apple-icon-120x120.png"> <link rel="apple-touch-icon" sizes="144x144" href="/apple-icon-144x144.png"> <link rel="apple-touch-icon" sizes="152x152" href="/apple-icon-152x152.png"> <link rel="apple-touch-icon" sizes="180x180" href="/apple-icon-180x180.png"> <link rel="manifest" href="/assets/images/web_mobile/manifest.json"> <link rel="stylesheet" href="/assets/styles/main.css" /> <link rel="stylesheet" href="/assets/styles/sgdshaze.css" /> <script type="module" src="https://cdn.jsdelivr.net/npm/@govtechsg/sgds-web-component@2.1.2/components/Masthead/index.umd.js"></script> <script src="/assets/scripts/sketch.js" type="text/javascript"></script> <script src="/assets/scripts/modernizr-custom.js" type="text/javascript"></script> <script src="/assets/scripts/main.js" type="text/javascript"></script> <!-- WOGAA --> <script src="https://assets.wogaa.sg/scripts/wogaa.js"></script> <script>
+        var $ = jQuery.noConflict();
+    </script> <meta name="google-site-verification" content="HViOH23YG-w_7YBWgOpam8jxs3eiVwnWUQlZmhzXzoA" /><meta property="og:title" content="Haze - The National Environment Agency" /><meta property="og:description" content="During periods of haze, you can use the health advisory, air quality forecast, 1-hr PM2.5 and daily PSI readings to plan your schedule." /><meta property="og:url" content="https://www.haze.gov.sg" /><meta property="og:type" content="website" /><meta property="og:site_name" content="Default" /><script type="text/javascript">
+document.addEventListener("DOMContentLoaded", function () {
+  const closeButton = document.querySelector(".notification-btn-close");
+  const collapseTarget = document.getElementById("collapseNotification");
+
+  closeButton.addEventListener("click", function () {
+    collapseTarget.style.transition = "height 0.3s ease";
+    collapseTarget.style.overflow = "hidden";
+    collapseTarget.style.height = collapseTarget.scrollHeight + "px";
+
+    void collapseTarget.offsetHeight;
+
+    collapseTarget.style.height = "0";
+
+    setTimeout(() => {
+      collapseTarget.style.display = "none";
+      collapseTarget.style.opacity = "0";
+      closeButton.setAttribute("aria-expanded", "false");
+    }, 300);
+  });
+});
+
+</script><style type="text/css" media="all">.notification-bg {
+  background-color: hsl(70, 67%, 81%);
+  padding: 1rem;
+}
+
+.notification-wrapper {
+  display: flex;
+  justify-content: space-between;
+}
+
+.notification-content {
+  display: flex;
+  gap: 1rem;
+
+  & > svg {
+    flex-shrink: 0;
+  }
+}
+
+.notification-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+
+  & > p {
+    margin: 0;
+
+    & > a {
+      color: #1547be;
+      text-decoration: underline;
+    }
+  }
+}
+
+.notification-btn-close {
+  background-color: transparent;
+  box-sizing: content-box;
+  border: 0;
+  border-radius: 0.375rem;
+  height: 1em;
+  width: 1em;
+  margin: 0;
+
+  cursor: pointer;
+  -webkit-appearance: button;
+}
+
+.notification-container {
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+@media (min-width: 992px) {
+  .notification-container {
+    max-width: 960px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .notification-container {
+    max-width: 1140px;
+  }
+}
+
+@media (min-width: 1400px) {
+  .notification-container {
+    max-width: 1320px;
+  }
+}
+
+.header__main > .container {
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+@media screen and (min-width: 1216px) {
+  .header__main > .container {
+    max-width: 1180px;
+  }
+}
+
+@media screen and (min-width: 1408px) {
+  .header__main > .container {
+    max-width: 1344px;
+  }
+}</style><style type="text/css" media="all">.rte a:not([class^=btn]) {
+    color: #195f7b;
+    text-decoration: underline
+}
+
+.tab__nav-item2.is-active {
+    background: #fff;
+    color: #005b85
+}
+
+.tab__item .info-group .info.moderate {
+    border: 3px solid #005b85
+}
+
+.tab__item .info-group .info.moderate.is-active,.tab__item .info-group .info.moderate:hover {
+    background: #005b85;
+    color: #fff;
+    -webkit-transition: all .2s ease-in;
+    transition: all .2s ease-in
+}
+
+.tab__item .info-group .info.moderate.is-active:after,.tab__item .info-group .info.moderate:hover:after {
+    border-top: 10px solid #005b85;
+    -webkit-transition: all .2s ease-in;
+    transition: all .2s ease-in
+}
+
+.tab__item .info-group .info.moderate:before {
+    bottom: -14px;
+    border-color: #005b85 transparent transparent transparent;
+    border-width: 14px
+}
+
+.latest-update__title {
+    background: #005b85;
+    color: #fff;
+    margin-top: -1px;
+    margin-left: -20px;
+    margin-right: -20px;
+    padding-left: 20px;
+    padding-right: 20px
+}
+
+.panel-stats-value-content .value {
+    color: #005b85;
+    font-weight: bold;
+    font-size: 2.25em;
+    line-height: 40px
+}
+
+.panel-right-group-title {
+    color: #005b85;
+    font-weight: bold
+}
+
+.chart-big-value .label {
+    margin-right: 10px;
+    color: #005b85
+}
+
+.satellite-box .btn-group-download a {
+    color: #005b85
+}
+
+.text-danger {
+    color: #A71D2A
+}
+
+.btn--leaf-green {
+    color: #006400
+}
+
+.font-resizer .js-resizer {
+  padding: 4px !important;
+}
+
+.print-button {
+  padding: 4px !important;
+}
+
+.sgds-footer {
+    background-color: #005E8A;
+}</style><script type="text/javascript">
+document.addEventListener("DOMContentLoaded", () => {
+    const host = document.querySelector('sgds-masthead');
+    const shadow = host.shadowRoot;
+    const banner = shadow.getElementById("sgds-masthead");
+    banner.removeAttribute("role");
+})
+</script><link rel="canonical" href="https://www.haze.gov.sg" /><meta name="description" content="During periods of haze, you can use the health advisory, air quality forecast, 1-hr PM2.5 and daily PSI readings to plan your schedule." /><meta name="keywords" content="haze, singapore, psi" /></head> <body> <sgds-masthead></sgds-masthead> <form id="form1"> <script src="/assets/scripts/jquery.min.js" type="text/javascript"></script> <a href="#main" class="skip-link vh" aria-hidden="true">Skip to main</a> <header id="header" class="header is-homepage microsite"> <div style="min-height:1px; background-color:#f0f0f0"></div> <div class="nav"> 
+
+
+
+<div >
+    <div class="sfContentBlock sf-Long-text" ><div class="notification-bg" id="collapseNotification"><div class="container notification-container"><div class="notification-wrapper"><div class="notification-content"><svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 24 24" height="24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8z"></path><path d="M11 11h2v6h-2zm0-4h2v2h-2z"></path></svg>
+
+ <div class="notification-text"><p>Government officials will NEVER ask you to transfer money or disclose bank log-in details over a phone call.
+                    </p><p>Visit <a href="http://www.scamshield.gov.sg" target="_blank" data-sf-ec-immutable="">ScamShield</a> or call the 24/7 ScamShield Helpline at 1799 if you are unsure if something is a scam.
+                    </p></div></div><button type="button" class="notification-btn-close" aria-label="Close" aria-expanded="false"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#000000" viewBox="0 0 256 256"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"></path></svg>
+ </button></div></div></div></div>
+</div>
+<nav class="navbar header__main sgds-menu">
+	<div class="container">
+		<div class="navbar-brand">
+			<a href="/" class="logo"><img src="/assets/images/design/logo.png" alt="National Environment Agency"></a>
+			<div class="navbar-burger burger js-mobile-menu" data-target="mainnav">
+				<span></span>
+				<span></span>
+				<span></span>
+			</div>
+		</div>
+		<ul id="mainnav" class="navbar-menu microsite-main-nav nav-container">
+			<li class="navbar-item is-hidden-desktop sgds-search">
+				<div class="field has-addons">
+                    <div class="control has-icons-right is-expanded">
+                        <input class="input is-fullwidth" id="siteSearchMobile" type="text" placeholder="Search for information" name="query">
+                        <button type="button" id="startSpeechRecognition" class="mic-search mic-button"><span class="visuallyhidden">Voice search</span><i class="icon-mic is-size-6"></i></button>
+                        <button type="submit" class="btn-search sgds-btn-search"><span class="visuallyhidden">Submit search</span><i class="sgds-icon icon-search is-size-6 search-bar"></i></button>
+                    </div>
+				</div>
+			</li>
+
+		<li class="navbar-item is-expanded has-dropdown is-hoverable">
+			<a href="/who-we-are" target="_self" class="navbar-link nav__item is-uppercase">
+				Who We Are
+			</a>
+		</li>
+
+			<li class="navbar-item is-expanded has-dropdown is-hoverable">
+				<a href="#1" class="navbar-link is-uppercase js-anchored">
+					Latest Update
+				</a>
+			</li>
+			<li class="navbar-item is-expanded has-dropdown is-hoverable">
+				<a href="#2" class="navbar-link is-uppercase js-anchored">
+					Air Quality
+				</a>
+			</li>
+			<li class="navbar-item is-expanded has-dropdown is-hoverable">
+				<a href="#3" class="navbar-link is-uppercase js-anchored">
+					Hotspot
+				</a>
+			</li>
+			<li class="navbar-item is-expanded has-dropdown is-hoverable">
+				<a href="#4" class="navbar-link is-uppercase js-anchored">
+					Health Advisory
+				</a>
+			</li>
+			<li class="navbar-item is-expanded has-dropdown is-hoverable">
+				<a href="#5" class="navbar-link is-uppercase js-anchored">
+					Media
+				</a>
+			</li>
+		<li class="navbar-item is-expanded has-dropdown is-hoverable">
+			<a href="/resources" target="_self" class="navbar-link nav__item is-uppercase has-child">
+				Resources
+			</a>
+            <i class="sgds-icon sgds-icon-chevron-down dropdown-icon"></i>
+			<div class="navbar-dropdown">
+				<div class="container">
+							<a class="navbar-item" href="/resources/1-hr-pm2.5-readings" target="_self">1-hr PM2.5 Readings</a>
+		<a class="navbar-item" href="/resources/readings-over-the-last-24-hours" target="_self">Readings over the last 24 hours</a>
+		<a class="navbar-item" href="/resources/pollutant-concentrations" target="_self">Pollutant Concentrations</a>
+		<a class="navbar-item" href="/resources/historical-readings" target="_self">Historical Readings</a>
+		<a class="navbar-item" href="/resources/portable-air-cleaners" target="_self">Portable Air Cleaners</a>
+		<a class="navbar-item" href="/resources/posters" target="_self">Posters</a>
+
+				</div>
+			</div>
+		</li>
+
+		</ul>
+		<ul class="navbar-menu nav-container mobile-navbar-menu">
+			<li class="navbar-item has-dropdown is-hoverable notification">
+				<button class="sgds-button is-white btn-notification js-notification" type="button" style="padding: 0.3rem" aria-label="notifications button">
+					<span class="icon icon-notifications"></span>
+					<i class="" id="notification-circle"></i>
+				</button>
+			</li>
+			<li class="navbar-item has-dropdown is-hoverable is-hidden-touch">
+				<button id="search-activate" class="sgds-button is-white" type="button" style="padding: 0.3rem; margin-right:-0.3rem;" aria-label="search toggle button">
+					<span class="sgds-icon sgds-icon-search"></span>
+				</button>
+			</li>
+		</ul>
+	</div>
+</nav>
+
+<div class="sgds-search container-fluid is-hidden-touch search-bar" id="searchbar">
+	<hr />
+	<div class="container">
+		<div class="row">
+			<div class="col">
+				<div class="field has-addons padding--sm">
+					<div class="control has-icons-left is-expanded">
+						<input class="input is-fullwidth is-borderless is-shadowless" id="siteSearch" type="text" placeholder="Search for information" name="query" autocomplete="off">
+						<span class="icon is-left">
+							<i class="sgds-icon sgds-icon-search is-size-4 search-bar"></i>
+						</span>
+					</div>
+					<div class="control">
+						<button type="button" class="sgds-button is-primary sgds-btn-search" id="desktop-search">SEARCH</button>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+
+
+
+
+ 
+
+ </div> </header> <div class="clearfix"></div> <main id="main" class="main"> <div class="microsite"> 
+ <div id="1"> 
+
+<div >
+    <div class="sfContentBlock sf-Long-text" ><div class="latest-update" style="width:100%;font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;"><div class="container" style="width:100%;max-width:1200px;margin:0 auto;padding-left:15px;padding-right:15px;"><div class="section--white" style="background-color:#ffffff;padding:10px 0;"><!-- Row 1: Image 1 (Top Centered PSI Forecast Header - Negative margin pulls bottom content up) -->
+
+ <div class="row" style="margin-bottom:-15px;margin-left:0;margin-right:0;position:relative;z-index:2;"><div class="col-xs-12" style="padding-left:0;padding-right:0;display:flex;justify-content:center;align-items:center;"><div style="flex:0 1 700px;max-width:100%;"><img src="/images/default-source/health-advisory-images/header-image_17-oct-2026.png" style="display:block;width:100%;height:auto;border:0;" alt="PSI Forecast Header" /></div></div></div><!-- Row 2: Image 2 & Image 3 (Stacked on Mobile, Side-by-Side on Desktop) -->
+
+ <div class="row" style="margin-left:0;margin-right:0;position:relative;z-index:1;"><div class="col-xs-12" style="padding-left:0;padding-right:0;display:flex;justify-content:center;align-items:flex-start;flex-wrap:wrap;gap:0px;"><!-- Left: Image 2 (Gauge Dial) -->
+
+ <div class="col-xs-12 col-sm-6" style="flex:1 1 450px;max-width:100%;text-align:center;padding:0;"><img src="/images/default-source/health-advisory-images/new-chart.png" style="display:inline-block;max-width:100%;height:auto;border:0;" alt="PSI Gauge" /></div><!-- Right: Image 3 (Advisory Table) -->
+
+ <div class="col-xs-12 col-sm-6" style="flex:1 1 450px;max-width:100%;text-align:center;padding:0;"><img src="/images/default-source/health-advisory-images/table-advice_17-oct-2026.png" style="display:inline-block;max-width:100%;height:auto;border:0;" alt="Health Advisory Table" /></div></div></div></div></div></div></div>
+</div><style>
+    .accordionLatestUpdate {
+        text-transform: uppercase;
+        font-weight: bold;
+        font-size: 0.875em;
+        padding: 10px;
+        display: block;
+        cursor: pointer;
+    }
+
+        .accordionLatestUpdate:after {
+            content: '\e91b';
+            font-family: 'icomoon';
+            margin-left: 5px;
+        }
+
+    #itemLatestUpdate {
+        overflow: hidden;
+    }
+
+    #p-content {
+        overflow: hidden;
+        text-align: left;
+    }
+</style>
+
+<div class="no-desktop" style="height:50px"></div>
+<div class="nea-latest-update" style="display: none;">
+    <div class="container">
+        <div class="section--white">
+            <div class="latest-update__title">
+                <div class="row">
+                    <div class="col-xs-12 col-sm-12 col-md-10 offset-md-1">
+                        <h2 class="title">Latest Update</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-xs-12 col-sm-12 col-md-10 offset-md-1">
+                    <h3 id="h3-title" style="margin-bottom: 0;"></h3>
+                    <div class="accordion">
+                        <div id="itemLatestUpdate" style="transition: 0.5s height;">
+                            <div id="p-content" class="rte" data-fullcontent="" data-lesscontent=""></div>
+                        </div>
+                        <span class="accordionLatestUpdate" data-more="Full Update" data-less="Less Update" onclick="accordionLatestUpdate(this)">Full Update</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    function accordionLatestUpdate(elm) {
+        var datamore = elm.getAttribute('data-more');
+        var dataless = elm.getAttribute('data-less');
+
+        if (elm.innerHTML == datamore) {
+            elm.innerHTML = dataless;
+            jQuery('#p-content').html(jQuery('#p-content').data('fullcontent'));
+        } else if (elm.innerHTML == dataless) {
+            elm.innerHTML = datamore;
+            jQuery('#p-content').html(jQuery('#p-content').data('lesscontent'));
+        }
+
+        jQuery('#itemLatestUpdate').animate({ 'height': jQuery('#p-content').outerHeight(true) });
+    }
+
+    jQuery(function () {
+        // Wait for the timestamp to be loaded
+        window.timestampPromise
+            .then(timestamp => {
+                jQuery.ajax({
+                    url: 'https://www.nea.gov.sg/api/latestupdate/getlatestupdate/' + timestamp,
+                    success: function (result) {
+                        if (result !== null) {
+                            jQuery('.nea-latest-update').show();
+                            jQuery('#h3-title').html(result.Title);
+                            jQuery('#p-content').html('Date: <span class="date">' + result.PublicationDateStr + '</span><br/><br/>' + result.LessContent);
+                            jQuery('#p-content').data('lesscontent', 'Date: <span class="date">' + result.PublicationDateStr + '</span><br/><br/>' + result.LessContent);
+                            jQuery('#p-content').data('fullcontent', 'Date: <span class="date">' + result.PublicationDateStr + '</span>' + result.Content);
+                            jQuery('#itemLatestUpdate').animate({ 'height': jQuery('#p-content').outerHeight(true) });
+                        }
+                    }
+                });
+            })
+            .catch(error => {
+                console.error('Error during asynchronous tasks:', error);
+            });
+    })
+</script> </div> <div id="2"> 
+<style>
+    .air-quality-section .k-chart k-tooltip {
+        border-radius: 0 !important;
+        border-color: #ddd !important;
+        font-family: "Roboto", sans-serif !important;
+        padding: 3px 7px !important;
+    }
+    .k-chart .k-tooltip {
+        border: 2px solid #ddd !important;
+        font-weight: bold !important;
+        margin-left: -28px !important;
+        margin-top: -25px !important;
+        font-size: 0.75em;
+        /* border-radius: 0 !important; */
+        font-family: 'Roboto', sans-serif !important;
+        padding: 0 7px !important;
+    }
+    .chartHandler[data-box='24hr-psi'] {
+        display: none;
+    }
+
+    .chartHandler[data-box='1hr-pm25'] {
+        display: block;
+    }
+
+    /* Keep resize callbacks from showing charts belonging to the inactive tab. */
+    .air-quality[data-active-chart='1hr-pm25'] .chartHandler[data-box='24hr-psi'],
+    .air-quality[data-active-chart='24hr-psi'] .chartHandler[data-box='1hr-pm25'] {
+        display: none !important;
+    }
+
+    .panel-stats #region-selected-value {
+        display: block;
+        color: #111;
+        font-size: 30px;
+        font-weight: bold;
+        line-height: 1.2;
+        margin: 0 0 4px;
+        text-transform: uppercase;
+    }
+
+    .panel-stats.has-region-header {
+        padding-top: 0;
+    }
+
+    .air-quality .aq-advisory {
+        border: 0;
+        text-align: left;
+    }
+
+    .air-quality .aq-advisory-heading {
+        padding: 12px 16px;
+        background: #ddd;
+    }
+
+    .air-quality .aq-advisory-header {
+        margin: 0;
+        font-size: 1.25em;
+        font-weight: bold;
+    }
+
+    .air-quality .aq-advisory-header > :first-child,
+    .air-quality .aq-advisory-description > :first-child {
+        margin-top: 0;
+    }
+
+    .air-quality .aq-advisory-header > :last-child,
+    .air-quality .aq-advisory-description > :last-child {
+        margin-bottom: 0;
+    }
+
+    .air-quality .aq-advisory-description,
+    .air-quality .aq-advisory-unavailable {
+        padding: 12px 16px;
+        overflow-wrap: break-word;
+    }
+
+    .air-quality .map-psi .info-group .info.has-psi-band {
+        border-color: var(--psi-band-color);
+    }
+
+    .air-quality .map-psi .info-group .info.has-psi-band:before {
+        border-top-color: var(--psi-band-color);
+    }
+
+    .air-quality .map-psi .info-group .info.has-psi-band.is-active,
+    .air-quality .map-psi .info-group .info.has-psi-band:hover {
+        background-color: var(--psi-band-color);
+        color: #fff;
+    }
+
+    .air-quality .map-psi .info-group .info.has-psi-band.is-active:after,
+    .air-quality .map-psi .info-group .info.has-psi-band:hover:after {
+        border-top-color: var(--psi-band-color);
+    }
+
+    @media (min-width: 768px) {
+        .air-quality .aq-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) minmax(0, 0.9fr);
+            gap: 24px;
+            align-items: start;
+        }
+
+        .air-quality .aq-details,
+        .air-quality #airQualityInfo {
+            display: contents;
+        }
+
+        .air-quality #airQualityInfo:after {
+            display: none;
+        }
+
+        .air-quality .aq-layout #tableContent {
+            grid-column: 1;
+            grid-row: 1 / span 2;
+            width: 100%;
+            padding: 0;
+        }
+
+        .air-quality .aq-layout .panel-stats {
+            grid-column: 2;
+            grid-row: 1;
+            width: 100%;
+            padding-left: 0;
+            padding-right: 0;
+        }
+
+        .air-quality .aq-layout .panel-legends {
+            grid-column: 3;
+            grid-row: 1 / span 2;
+            width: 100%;
+            padding: 0;
+        }
+
+        .air-quality #airQualityInfo > .chartHandler {
+            grid-column: 2;
+            grid-row: 2;
+            min-width: 0;
+        }
+
+        .air-quality #airQualityInfo > .chartHandler > .chart-wrapper {
+            width: 100%;
+            margin: 0;
+        }
+
+        .air-quality #airQualityInfo > .js-open-chart {
+            display: none;
+        }
+
+        .air-quality .aq-map-footnote {
+            grid-column: 1 / -1;
+            grid-row: 3;
+            padding: 0;
+        }
+
+        .air-quality .aq-layout .panel-right {
+            grid-column: 1 / -1;
+            grid-row: 4;
+            width: 100%;
+        }
+    }
+</style>
+
+<div class="air-quality" data-show-region-header="false" data-active-chart="1hr-pm25">
+    <div class="container">
+        <div class="section--white">
+            <div class="row">
+                <div class="col-xs-12 col-sm-12 col-md-12">
+                    <div class="air-quality-small">
+                        <div class="tab__nav">
+                            <button type="button" data-box="24hr-psi" class="tab__nav-item">24-hr PSI</button>
+                            <button type="button" data-box="1hr-pm25" class="tab__nav-item is-active">1-hr PM2.5</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xs-12 col-sm-12 col-md-12">
+                    <div class="air-quality-section">
+                        <h2 class="title air-quality-title" data-pm25-title="Current Air Quality" data-psi-title="Air Quality (Past 24 hours)">Current Air Quality</h2>
+                        <div class="aq-layout">
+                            <div id="tableContent" class="tabbed-area col-md-4 col-xs-12 col-sm-4">
+                                <div id="box-two" data-box="1hr-pm25" class="tab__item is-active">
+                                    <div id="ContentPlaceHolderTicker_C049_Panel3" style="background-color:WhiteSmoke">
+                                        <div style="display: none" class="psi">
+                                            <div class="psi-title">
+                                                <h6>
+                                                    <span id="ContentPlaceHolderTicker_C049_Literal1">1-hr</span>
+                                                    <span id="ContentPlaceHolderTicker_C049_Literal2">PM2.5</span>
+                                                    <br>
+                                                    <span id="ContentPlaceHolderTicker_C049_Literal3" class="psi-status"></span>
+                                                    <br>
+                                                </h6>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="map map-pm">
+                                        <div class="thumbnail"><img src="/assets/images/map/map.png" alt="map"></div>
+                                        <div class="info-group">
+                                            <div class="row">
+                                                <div class="info mapNorth button-map">
+                                                    <div id="ContentPlaceHolderTicker_C049_DivTopNorth" class="top"></div>
+                                                    <div class="bot">North</div>
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="info mapWest button-map">
+                                                    <div id="ContentPlaceHolderTicker_C049_DivTopWest" class="top"></div>
+                                                    <div class="bot">West</div>
+                                                </div>
+                                                <div class="info mapCentral button-map">
+                                                    <div id="ContentPlaceHolderTicker_C049_DivTopCentral" class="top"></div>
+                                                    <div class="bot">Central</div>
+                                                </div>
+                                                <div class="info mapEast button-map">
+                                                    <div id="ContentPlaceHolderTicker_C049_DivTopEast" class="top"></div>
+                                                    <div class="bot">East</div>
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="info mapSouth button-map">
+                                                    <div id="ContentPlaceHolderTicker_C049_DivTopSouth" class="top"></div>
+                                                    <div class="bot">South</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="copyright"><span class="strong">Map Data</span><span>&copy;2016 Google</span></div>
+                                    </div>
+                                </div>
+                                <div id="box-one" style="display: none" data-box="24hr-psi" class="tab__item">
+                                    <div id="ContentPlaceHolderTicker_C049_PnlTimestamp" style="background-color:WhiteSmoke">
+                                        <div style="display: none" class="psi">
+                                            <div class="psi-title">
+                                                <h6>
+                                                    <span id="ContentPlaceHolderTicker_C049_LitPsi24">24-hr</span>
+                                                    <span id="ContentPlaceHolderTicker_C049_LitPsi3">PSI</span>
+                                                    <br><span id="ContentPlaceHolderTicker_C049_LitLatestDateTime" class="psi-status"></span>
+                                                </h6>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="map map-psi">
+                                        <div class="thumbnail"><img src="/assets/images/map/map.png" alt="map"></div>
+                                        <div class="info-group">
+                                            <div class="row">
+                                                <div class="info mapNorth button-map">
+                                                    <div id="ContentPlaceHolderTicker_C049_Div1" class="top">
+                                                        <span id="ContentPlaceHolderTicker_C049_LitValueNorth"></span>
+                                                    </div>
+                                                    <div class="bot">North</div>
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="info mapWest button-map">
+                                                    <div id="ContentPlaceHolderTicker_C049_Div2" class="top"><span id="ContentPlaceHolderTicker_C049_LitValueWest"></span></div>
+                                                    <div class="bot">West</div>
+                                                </div>
+                                                <div class="info mapCentral button-map">
+                                                    <div id="ContentPlaceHolderTicker_C049_Div3" class="top"><span id="ContentPlaceHolderTicker_C049_LitValueCentral"></span></div>
+                                                    <div class="bot">Central</div>
+                                                </div>
+                                                <div class="info mapEast button-map">
+                                                    <div id="ContentPlaceHolderTicker_C049_Div4" class="top"><span id="ContentPlaceHolderTicker_C049_LitValueEast"></span></div>
+                                                    <div class="bot">East</div>
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="info mapSouth button-map">
+                                                    <div id="ContentPlaceHolderTicker_C049_Div5" class="top"><span id="ContentPlaceHolderTicker_C049_LitValueSouth"></span></div>
+                                                    <div class="bot">South</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="copyright"><span class="strong">Map Data</span><span>©2016 Google</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="aq-details">
+                                <div id="airQualityInfo">
+                                    <div class="panel-stats col-md-4 col-xs-12 col-sm-4">
+                                        <span id="region-selected-value" style="display: none;">NORTH</span>
+                                        <div class="panel-stats-value-holder">
+                                            <div class="panel-stats-value-parent">
+                                                <div class="panel-stats-value-content"><span id="panel-stats-value" class="value"></span><span id="panel-stats-unit" class="unit"></span></div>
+                                            </div>
+                                        </div><span class="panel-stats-time"><span id="panel-stats-status" class="status"></span><span id="panel-stats-time-wrapper"><span class="panel-stats-title"></span><span class="panel-stats-timing"></span></span></span>
+                                    </div>
+                                    <div class="panel-legends col-md-4 col-xs-12 col-sm-4">
+                                        <div id="1hour" data-box="1hr-pm25" class="personal-guide is-active">
+                                            <div class="aq-advisory" aria-live="polite">
+                                                    <div class="aq-advisory-band aq-band" data-min="0" data-max="55"
+                                                         data-color="#479B02"
+                                                         data-header-color="#333333" data-header-background="#E8F4EC"
+                                                         data-body-color="#333333" data-body-background="#CEE7D4" style="display: none;">
+                                                        <div class="aq-advisory-heading">
+                                                            <div class="aq-advisory-header aq-band-header">Band 1 (Normal)</div>
+                                                            <div>(0 - 55 &micro;g/m<sup>3</sup>)</div>
+                                                        </div>
+                                                        <div class="aq-advisory-description"><p><strong>CONTINUE with<br />normal activities</strong></p></div>
+                                                    </div>
+                                                    <div class="aq-advisory-band aq-band" data-min="56" data-max="150"
+                                                         data-color="#FFCE03"
+                                                         data-header-color="#333333" data-header-background="#FFF8E3"
+                                                         data-body-color="#333333" data-body-background="#FFF1CC" style="display: none;">
+                                                        <div class="aq-advisory-heading">
+                                                            <div class="aq-advisory-header aq-band-header">Band 2 (Elevated)</div>
+                                                            <div>(56 - 150 &micro;g/m<sup>3</sup>)</div>
+                                                        </div>
+                                                        <div class="aq-advisory-description"><p><strong>Healthy persons<br />- REDUCE</strong> strenuous outdoor activities for the next hour</p><p><strong>Vulnerable persons*<br />- AVOID</strong> strenuous outdoor activities for the next hour</p></div>
+                                                    </div>
+                                                    <div class="aq-advisory-band aq-band" data-min="151" data-max="250"
+                                                         data-color="#E87D32"
+                                                         data-header-color="#333333" data-header-background="#FFF4E0"
+                                                         data-body-color="#333333" data-body-background="#FFE7B3" style="display: none;">
+                                                        <div class="aq-advisory-heading">
+                                                            <div class="aq-advisory-header aq-band-header">Band 3 (High)</div>
+                                                            <div>(151 - 250 &micro;g/m<sup>3</sup>)</div>
+                                                        </div>
+                                                        <div class="aq-advisory-description"><p><strong>Healthy persons<br />- AVOID</strong> strenuous outdoor activities for the next hour</p><p><strong>Vulnerable persons*<br />- AVOID</strong> all outdoor activities for the next hour; may wear a mask to reduce exposure</p></div>
+                                                    </div>
+                                                    <div class="aq-advisory-band aq-band" data-min="251" data-max=""
+                                                         data-color="#D60000"
+                                                         data-header-color="#333333" data-header-background="#FFEDE6"
+                                                         data-body-color="#333333" data-body-background="#FAD2C3" style="display: none;">
+                                                        <div class="aq-advisory-heading">
+                                                            <div class="aq-advisory-header aq-band-header">Band 4 (Very High)</div>
+                                                            <div>(251 and above &micro;g/m<sup>3</sup>)</div>
+                                                        </div>
+                                                        <div class="aq-advisory-description"><p><strong>Healthy persons<br />- MINIMISE</strong> all outdoor activities for the next hour; may wear a mask to reduce exposure</p><p><strong>Vulnerable persons*<br />- AVOID</strong> all outdoor activities for the next hour; may wear a mask to reduce exposure</p></div>
+                                                    </div>
+                                                <div class="aq-advisory-unavailable">Advisory unavailable.</div>
+                                            </div>
+                                        </div>
+                                        <table id="24hour" data-box="24hr-psi" class="personal-guide" style="display: none;">
+                                            <thead>
+                                                <tr>
+                                                    <th>PSI Value</th>
+                                                    <th>Air Quality Descriptor</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                    <tr class="psi-legend-band aq-band" data-band="1"
+                                                        data-min="0" data-max="100" data-color="#479B02">
+                                                        <td>0 - 100</td>
+                                                        <td class="aq-band-header">Good to Moderate</td>
+                                                    </tr>
+                                                    <tr class="psi-legend-band aq-band" data-band="2"
+                                                        data-min="101" data-max="200" data-color="#FFCE03">
+                                                        <td>101 - 200</td>
+                                                        <td class="aq-band-header">Unhealthy</td>
+                                                    </tr>
+                                                    <tr class="psi-legend-band aq-band" data-band="3"
+                                                        data-min="201" data-max="300" data-color="#FFA800">
+                                                        <td>201 - 300</td>
+                                                        <td class="aq-band-header">Very Unhealthy</td>
+                                                    </tr>
+                                                    <tr class="psi-legend-band aq-band" data-band="4"
+                                                        data-min="301" data-max="" data-color="#D60000">
+                                                        <td>301 and above</td>
+                                                        <td class="aq-band-header">Hazardous</td>
+                                                    </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <button type="button" class="btn btn--border js-open-chart"><span>See chart</span><i class="icon icon-arrow-down"></i></button>
+                                    <div data-box="1hr-pm25" class="chartHandler">
+                                        <div id="chart-1hr-pm25" class="chart-wrapper">
+                                            <div class="chart-label">1-hr PM<sub>2.5</sub> reading (&micro;g/m<sup>3</sup>)</div>
+                                            <div class="chart-small"></div>
+                                            <div class="chart-big-value"><span class="value-group"><span class="label">Min</span><span class="value value-min"></span></span><span class="value-group"><span class="label">Max</span><span class="value value-max"></span></span><span class="value-group"><span class="label">Current</span><span class="value value-current"></span></span></div>
+                                            <div class="footnote"></div>
+                                        </div>
+                                    </div>
+                                    <div data-box="24hr-psi" class="chartHandler">
+                                        <div id="chart-24hr-psi" class="chart-wrapper">
+                                            <div class="chart-label">24-hr PSI</div>
+                                            <div class="chart-small"></div>
+                                            <div class="chart-big-value"><span class="value-group"><span class="label">Min</span><span class="value value-min"></span></span><span class="value-group"><span class="label">Max</span><span class="value value-max"></span></span><span class="value-group"><span class="label">Current</span><span class="value value-current"></span></span></div>
+                                            <div class="footnote"></div>
+                                        </div>
+                                    </div>
+                                    <div class="col-xs-12 aq-map-footnote">
+                                        <p class="smaller" style="font-size: 0.75em">
+                                            <em>Maps are to be used solely for displaying air quality/hotspot information, and not for any other purpose. All maps are not to scale and are for illustrative purposes only.</em>
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="panel-right">
+                                    <div data-box="24hr-psi" class="chartHandler">
+                                        <div id="chart-pm25" class="chart-wrapper">
+                                            <div class="chart-label">PM<sub>2.5</sub> sub-index</div>
+                                            <div class="chart-small"></div>
+                                            <div class="chart-big-value"><span class="value-group"><span class="label">Min</span><span class="value value-min"></span></span><span class="value-group"><span class="label">Max</span><span class="value value-max"></span></span><span class="value-group"><span class="label">Current</span><span class="value value-current"></span></span></div>
+                                            <div class="footnote"></div>
+                                        </div>
+                                        <div id="chart-pm10" class="chart-wrapper">
+                                            <div class="chart-label">PM<sub>10</sub> sub-index</div>
+                                            <div class="chart-small"></div>
+                                            <div class="chart-big-value"><span class="value-group"><span class="label">Min</span><span class="value value-min"></span></span><span class="value-group"><span class="label">Max</span><span class="value value-max"></span></span><span class="value-group"><span class="label">Current</span><span class="value value-current"></span></span></div>
+                                            <div class="footnote"></div>
+                                        </div>
+                                        <div id="chart-so2" class="chart-wrapper">
+                                            <div class="chart-label">SO<sub>2</sub> sub-index</div>
+                                            <div class="chart-small"></div>
+                                            <div class="chart-big-value"><span class="value-group"><span class="label">Min</span><span class="value value-min"></span></span><span class="value-group"><span class="label">Max</span><span class="value value-max"></span></span><span class="value-group"><span class="label">Current</span><span class="value value-current"></span></span></div>
+                                            <div class="footnote"></div>
+                                        </div>
+                                        <div id="chart-o3" class="chart-wrapper">
+                                            <div class="chart-label">O<sub>3</sub> sub-index</div>
+                                            <div class="chart-small"></div>
+                                            <div class="chart-big-value"><span class="value-group"><span class="label">Min</span><span class="value value-min"></span></span><span class="value-group"><span class="label">Max</span><span class="value value-max"></span></span><span class="value-group"><span class="label">Current</span><span class="value value-current"></span></span></div>
+                                            <div class="footnote"></div>
+                                        </div>
+                                        <div id="chart-co" class="chart-wrapper">
+                                            <div class="chart-label">CO sub-index</div>
+                                            <div class="chart-small"></div>
+                                            <div class="chart-big-value"><span class="value-group"><span class="label">Min</span><span class="value value-min"></span></span><span class="value-group"><span class="label">Max</span><span class="value value-max"></span></span><span class="value-group"><span class="label">Current</span><span class="value value-current"></span></span></div>
+                                            <div class="footnote"></div>
+                                        </div>
+                                        <div id="chart-no2" class="chart-wrapper">
+                                            <div class="chart-label">NO<sub>2</sub> sub-index</div>
+                                            <div class="chart-small"></div>
+                                            <div class="chart-big-value"><span class="value-group"><span class="label">Min</span><span class="value value-min"></span></span><span class="value-group"><span class="label">Max</span><span class="value value-max"></span></span><span class="value-group"><span class="label">Current</span><span class="value value-current"></span></span></div>
+                                            <div class="footnote"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+ </div> <div id="3"> 
+
+
+<style>
+  canvas {
+    cursor: move;
+    cursor: grab;
+  }
+  canvas:active {
+    cursor: grabbing;
+  }
+</style>
+
+<div class="air-quality">
+    <div class="container">
+        <div class="section--white">
+            <div class="row">
+                <div class="col-xs-12 col-sm-12 col-md-12">
+                    <div class="air-quality-small">
+                        <div class="tab__nav">
+                            <button type="button" data-box="hotspots" class="tab__nav-item2 is-active">Hotspot</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-xs-12 col-sm-12 col-md-12">
+                    <div id="box-hotspots" data-box="hotspots" class="tab__item2 is-active">
+                        <div class="section--white">
+                            <h2 class="title" style="text-align:center; text-transform:uppercase;">Hotspots</h2>
+                            <div class="row">
+                                
+                                <div class="col-xs-12 col-sm-6 col-md-6">
+                                    <div id="canvasDiv" style="width: 100%; height: 400px; overflow: hidden">
+                                        <div id="canvas" style="width: 1026px; height: 800px"></div>
+                                    </div>
+                                    <p class="smaller"><em>The hotspots are derived from satellite data and may be affected by cloud cover and the satellite coverage</em></p>
+                                    <p class="smaller"><em>Refer to <a href="http://www.weather.gov.sg/warning-haze-information/" target="_blank" rel="noopener noreferrer">Meteorological Service Singapore</a> for more details</em></p>
+                                </div>
+                                
+                                <div class="col-xs-12 col-sm-6 col-md-6">
+                                    <div class="hotspot">
+                                        <!-- TO-DO: REPLACE this with one from API -->
+                                        <div class="smaller">
+                                            <h3 class="title">Latest Weather and Haze Situation</h3>
+                                            Dry conditions continued over many parts of the southern ASEAN region overnight, apart from showers mainly over the northern parts of Sumatra, and parts of Borneo. Scattered hotspots were detected in Kalimantan and the southern parts of Sumatra, while few hotspots were detected elsewhere in the southern ASEAN region. Moderate to dense transboundary smoke haze was observed over parts of Peninsular Malaysia, Singapore, Kalimantan, Sumatra, and the western parts of Sarawak. Moderate to dense smoke haze was also observed over Papua, Sulawesi and the Maluku Islands. Air quality stations in Singapore and Peninsular Malaysia recorded Unhealthy to Very Unhealthy levels, while those in Borneo and Sumatra reported Unhealthy to Hazardous levels. The full extent of the hotspot situation over Kalimantan and Sumatra could not be determined due to obscuration by thick smoke haze and cloud cover, while the smoke haze situation over parts of the region could not be fully determined due to cloud cover. 
+
+Dry weather was observed over the northern ASEAN region overnight, except over the central parts of the Philippines and the southern parts of the Mekong sub-region where there were some showers. Hotspot and smoke haze activities remained subdued.<br/><span class='text-danger'>Updated on 10:59 AM 17 October</span>
+                                            <br />
+                                            <h3 class="title">Weather and Haze Outlook</h3>
+                                            In the coming days, dry conditions are forecast to continue over parts of the southern ASEAN region, except for showers expected over Peninsular Malaysia, the northern and central parts of Sumatra and parts of Borneo. While the hotspot and smoke haze situation may improve in areas experiencing showers, the situation is expected to remain elevated in fire-prone regions experiencing prolonged dry conditions, with a continued risk of severe transboundary haze occurrence. The prevailing winds over the southern ASEAN region are expected to blow mainly from the southeast to southwest, except over parts of Borneo where winds are forecast to be light and variable in direction.
+
+Meanwhile, showers are expected over the northern ASEAN region, except for relatively drier conditions forecast over the northern parts of the Mekong sub-region. The hotspot and smoke haze situation is expected to remain subdued. The prevailing winds over the northern ASEAN region are forecast blow mainly from the northeast to southeast, except over the northwestern parts of the Mekong sub-region where winds are expected to be light and variable in direction.<br/><span class='text-danger'>Updated on 10:59 AM 17 October</span>
+                                        </div>
+                                        <br /><br />
+                                        <h3 class="title">Overlay</h3>
+                                        <div class="overlay-checkbox">
+                                            <input id="overlay1" onclick="showMarkers()" name="overlay1" type="checkbox" />
+                                            <label for="overlay1">2500ft wind</label>
+                                        </div>
+                                        <h3 class="title">Legend</h3>
+                                        <div class="legend">
+                                            <div class="legend__item">
+                                                <div class="image"><img alt="dense haze legend" src="/assets/images/legend-dense-haze.jpg" /></div>
+                                                <div class="text">Dense Haze</div>
+                                            </div>
+                                            <div class="legend__item">
+                                                <div class="image"><img alt="moderate haze legend" src="/assets/images/legend-moderate-haze.jpg" /></div>
+                                                <div class="text">Moderate Haze</div>
+                                            </div>
+                                            <div class="legend__item">
+                                                <div class="image"><img alt="hotspot legend" src="/assets/images/legend-hotspot.jpg" /></div>
+                                                <div class="text">Hotspot</div>
+                                            </div>
+                                            <div class="legend__item">
+                                                <div class="image"><img alt="wind legend" src="/assets/images/legend-wind.jpg" /></div>
+                                                <div class="text">2500ft wind</div>
+                                            </div>
+                                            <div class="legend__item">
+                                                <div class="image image--long"><img alt="wind speed legend" src="/assets/images/legend-wind-speed.jpg" /></div>
+                                                <div class="text">Wind speed (km/h)</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <script src="/assets/scripts/sketch.js" type="text/javascript"></script>
+                        <script src="/assets/scripts/hotspots.js" type="text/javascript"></script>
+                        <script>
+                            var mySketch = defineSketch(
+                                "https://www.haze.gov.sg/docs/default-source/haze_hotspots/Haze_Hotspots_20261016_164100.kml?time=639278406142372479",
+                                "https://www.haze.gov.sg/docs/default-source/hazeboundaries/HazeBoundaries_20261017_105929.kml",
+                                "https://www.haze.gov.sg/docs/default-source/haze_wind/Haze_Wind_20261017_000000-kml.kml",
+                                "",
+                                "https://www.haze.gov.sg/docs/default-source/haze_wind/Haze_Wind_20261017_000000.png",
+                                parseFloat(jQuery("#canvas").width()),
+                                parseFloat(jQuery("#canvas").height())
+                            );
+                            let myp5 = new p5(mySketch, "canvas");
+                            jQuery(document).ready(function () {
+                                checkboxes();
+                                pannable();
+                                jQuery("#canvasDiv").scrollTop(280);
+                                jQuery("#canvasDiv").scrollLeft(60);
+                            });
+                        </script>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+</div>
+ </div> <div id="4"> 
+
+
+<div class="content-block health-advisory">
+    <div class="container">
+        <div class="section--white">
+            <div class="row">
+                <div class="col-xs-12 col-sm-12 col-md-12">
+                    <h2 class="title">Health Advisory</h2><img src="/images/default-source/health-advisory-images/haze-pm-psi-guide-a4-yoca-english_16-oct_2026.jpg" alt="NEA PSI Poster">
+                    <div class="btn-group">
+                        <a href="/docs/default-source/posters/haze-pm-psi-guide-a4-yoca-english_16-oct_2026.pdf" target="_blank" class="btn btn--leaf-green">Download PDF</a>
+                        <a href="/resources/posters" target="_blank" class="btn btn--leaf-green">Useful Links</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div> </div> <div id="5"> <div class="whats-new"> <div class="container"> <div class="whats-new_item"> <div class="whats-new__title"> <h2 class="title">What's New</h2> </div> <div class="whats-new__wrapper"> <div class="row"> 
+
+
+<div class="col-md-6 col-sm-6 col-xs-12">
+    <div class="text-card__container">
+        <div class="title">
+            <img class="image" src="/images/default-source/whats-new/home-icon-haze.png" alt="home-icon-haze">
+            <div class="title__text">
+                <div class="title__text_container">
+                    <h3>Haze-Related Links</h3>
+                </div>
+            </div>
+        </div>
+        <div class="content">
+                    <ul class="list1">
+                        <li><a href="http://fires.globalforestwatch.org" target="_blank" rel="noreferrer noopener">http://fires.globalforestwatch.org</a></li>
+                            <li><a href="https://hazeportal.asean.org/" target="_blank" rel="noreferrer noopener">https://hazeportal.asean.org/</a></li>
+                                                    <li><a href="https://asmc.asean.org/home" target="_blank" rel="noreferrer noopener">https://asmc.asean.org/home</a></li>
+                    </ul>
+        </div>
+        <a href="/haze-related-links" class="btn btn--leaf-lightgreen" target="_blank" rel="noreferrer noopener">
+            View More Related Links
+        </a>
+    </div>
+</div> </div> </div> </div> </div> </div> </div> </div> </main> <footer class="footer"> <button type="button" class="backtotop js-backtotop"><i class="icon icon-arrow-up"></i><span class="vh">Back to</span><span>Top</span></button> <div class="related-sites"> <div class="container"> <div class="related-sites_item"> <div class="related-sites_title"> <h2 class="title">Our Related Sites</h2> </div> </div> </div> </div> 
+
+<div >
+    <div class="sfContentBlock sf-Long-text" ><div class="footer__icons">
+<div class="container-fluid">
+<ul class="icon--wrapper row">
+    <li class="icon--wrapper_item" style="margin-left:-20px;"><a href="https://www.nea.gov.sg" target="_blank" class="icon--item"><img src="/images/default-source/default-album/footer-logo-nea.jpg" title="footer-logo-nea" data-displaymode="Original" alt="NEA logo" /></a></li>
+    <li class="icon--wrapper_item"><a href="http://www.weather.gov.sg/" target="_blank" class="icon--item"><img src="/images/default-source/default-album/footer-logo-mss.jpg" title="footer-logo-mss" data-displaymode="Original" alt="Weather Singapore logo" /></a></li>
+    <li class="icon--wrapper_item"><a href="https://www.cgs.gov.sg/" target="_blank" class="icon--item"><img src="/images/default-source/default-album/footer-logo-cgs.jpg" title="footer-logo-cgs" data-displaymode="Original" alt="Clean and Green logo" /></a></li>
+    <li class="icon--wrapper_item"><a href="https://www.publichygienecouncil.sg/" target="_blank" class="icon--item"><img src="/images/default-source/default-album/footer-logo-phc.jpg" title="footer-logo-phc" data-displaymode="Original" alt="public hygiene logo" /></a></li>
+    <li class="icon--wrapper_item"><a href="https://www.reach.gov.sg/" target="_blank" class="icon--item"><img src="/images/default-source/default-album/footer-logo-reach.jpg" title="footer-logo-reach" data-displaymode="Original" alt="Reach Singapore logo" /></a></li>
+    <li class="icon--wrapper_item"><a href="https://www.cleanenvirosummit.gov.sg/" target="_blank" class="icon--item"><img src="/images/default-source/default-album/footer-logo-cess.png" title="footer-logo-cess" data-displaymode="Original" alt="Clean Enviro summit logo" /></a></li>
+</ul>
+</div>
+</div></div>
+</div> 
+<div class="sgds-footer top-section">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-6">
+                <p class="title"><b>National Environment Agency</b></p>
+            </div>
+            <div class="col-md-6 is-right-desktop-only">
+                <div class="footer_info">
+                    <span class="has-text-weight-bold">Follow us</span>
+                    <ul class="social-media">
+                            <li><a href="https://www.facebook.com/NEASingapore" target="_blank" rel="noreferrer noopener" class="social-media__item" aria-label="facebook"><span class="visuallyhidden">Facebook</span><i class="icon icon-facebook"></i></a></li>
+                                                                            <li><a href="https://www.instagram.com/nea_sg/" target="_blank" rel="noreferrer noopener" class="social-media__item" aria-label="instagram"><span class="visuallyhidden">Instagram</span><i class="icon icon-instagram"></i></a></li>
+                                                    <li><a href="https://www.linkedin.com/company/national-environment-agency" target="_blank" rel="noreferrer noopener" class="social-media__item" aria-label="linkedin"><span class="visuallyhidden">LinkedIn</span><i class="icon icon-linkedin"></i></a></li>
+                                                    <li><a href="https://www.youtube.com/channel/UC-tjEFkd0tT2VpD5vbjyAKA/videos" target="_blank" rel="noreferrer noopener" class="social-media__item" aria-label="youtube"><span class="visuallyhidden">Youtube</span><i class="icon icon-youtube"></i></a></li>
+                    </ul>
+                </div>
+                <div class="footer_info app-block">
+                    <span class="has-text-weight-bold">Get the app</span>
+                    <ul class="social-media app-list">
+                            <li>
+                                <a href="https://play.google.com/store/apps/details?id=sg.gov.nea&amp;hl=en" target="_blank" rel="noreferrer noopener" class="app-list-item">
+                                    <i class="icon icon-android"></i>
+                                    <span>Download <br />for Android</span>
+                                </a>
+                            </li>
+                                                    <li>
+                                <a href="https://itunes.apple.com/sg/app/myenv/id444435182?mt=8" target="_blank" rel="noreferrer noopener" class="app-list-item">
+                                    <i class="icon icon-iphone"></i>
+                                    <span>Download <br />for iPhone</span>
+                                </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6">
+                <p>Best viewed using the current and previous release of Chrome and Safari.</p>
+            </div>
+            <div class="col-md-6 is-right-desktop-only">
+                <ul>
+                    <li class="">
+                        <p><a href="/contact-us" target="_self">Contact Us</a></p>
+                    </li>
+                    <li class="">
+                        <p><a href="/feedback" target="_self">Feedback</a></p>
+                    </li>
+                    <li class="">
+                        <p><a href="/sitemap" target="_self">Sitemap</a></p>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <div class="row divider">
+            <div class="col-md-6">
+                <ul class="footer-links">
+                    <li><a href="https://tech.gov.sg/report_vulnerability" target="_blank" rel="noreferrer noopener">Report Vulnerability <i class="sgds-icon sgds-icon-external"></i></a></li>
+                    <li><a href="/privacy-statement" target="_self">Privacy</a></li>
+                    <li><a href="/terms-of-use" target="_self">Terms of Use</a></li>
+                    <li><a href="/open-data-licence" target="_self">Open Data Licence</a></li>
+                </ul>
+            </div>
+            <div class="col-md-6 is-right-desktop-only">
+                <p class="copyright">
+                    <span>&copy; 2026 National Environment Agency</span><br />
+                    <span class="last-update">Last updated 17 October 2026</span>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+ </footer> 
+ </form> <script src="/assets/scripts/sgds.js" type="text/javascript"></script> <!-- Global site tag (gtag.js) - Google Analytics --> <script async src="https://www.googletagmanager.com/gtag/js?id=G-WQKV5V6SWR"></script> <script>
+            window.dataLayer = window.dataLayer || [];
+            function gtag() { dataLayer.push(arguments); }
+            gtag('js', new Date());
+
+            gtag('config', 'G-WQKV5V6SWR');
+        </script> <script src="/assets/scripts/socialmedia.js" type="text/javascript"></script> <script type="text/javascript" src="/assets/scripts/kendo.dataviz.min.js"></script> <script type="text/javascript" src="/assets/scripts/data.js?v=20261016.1"></script> <script type="text/javascript">
+        jQuery(document).ready(function () {
+                    jQuery('.js-notification').click();
+            });</script> </body> </html>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2">
+    <Document id="feat_4">
+        <GroundOverlay id="feat_35">
+            <name>GroundOverlay</name>
+            <Icon id="link_33">
+                <href>Haze_Wind_20261017_000000.png</href>
+            </Icon>
+            <LatLonBox>
+                <north>28.75</north>
+                <south>-18.75</south>
+                <east>150.0</east>
+                <west>81.25</west>
+            </LatLonBox>
+        </GroundOverlay>
+    </Document>
+</kml>

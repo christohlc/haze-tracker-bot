@@ -35,6 +35,15 @@
   --status-good: #0ca30c;
   --status-critical: #d03b3b;
 
+  /* Haze map (HazeMap): NEA's own hues for haze (orange moderate, brown-red dense), fires in red. */
+  --map-sea: #e4ebf0;
+  --map-land: #d8d5cb;
+  --map-coast: #bfbcb1;
+  --map-label: #6b6a65;
+  --haze-moderate: #f0a63c;
+  --haze-dense: #a5402a;
+  --map-fire: #e0301e;
+
   /* Brand: hazelnut-in-haze, from public/logo.svg. */
   --brand-shell: #8a5a2e;
   --brand-haze: #e2b84a;
@@ -86,6 +95,14 @@
   --region-central: #199e70;
   --region-east: #c98500;
   --region-south: #d55181;
+
+  --map-sea: #141a1f;
+  --map-land: #2e2d2a;
+  --map-coast: #45443f;
+  --map-label: #a3a29a;
+  --haze-moderate: #e0982f;
+  --haze-dense: #d0583c;
+  --map-fire: #ff5a3c;
 }
 
 html,

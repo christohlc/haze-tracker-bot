@@ -45,6 +45,7 @@ which is described below.
 | PSI bands | `--band-<id>`, `--band-<id>-ink` | `good`, `moderate`, `unhealthy`, `very_unhealthy`, `hazardous`. Ordinal, checked for colour blindness |
 | Regions | `--region-north` … `--region-south` | Fixed order matching `REGIONS`. Never cycled or reassigned |
 | Status | `--status-good`, `--status-critical` | Feed health, errors, “Stop all alerts” |
+| Haze map | `--map-sea`, `--map-land`, `--map-coast`, `--map-label`, `--haze-moderate`, `--haze-dense`, `--map-fire` | Haze hues follow NEA’s map (orange moderate, brown-red dense) so they read the same as haze.gov.sg |
 | Shape | `--radius` 16px, `--gutter` 16px | |
 | Motion | `--ease-out`, `--ease-in-out` | |
 
@@ -75,7 +76,7 @@ or, outside Telegram, from the OS. A new colour token needs both a light and a d
   tabs. It sits at the top, not the bottom, because Telegram’s MainButton (“Get haze alerts”)
   owns the bottom edge.
   - **Now:** hero, regions, advice, alerts, share.
-  - **Outlook:** what’s ahead, wind and rain, history.
+  - **Outlook:** what’s ahead, wind and rain, where it’s coming from (NEA’s regional haze map), history.
   - **More:** live views, news, cigarettes, what’s new, sources (collapsed).
 - A tab mounts the first time it’s opened and then stays mounted, hidden (laid out at zero
   height rather than `display: none`), so its controls keep their state, its cards rise in only
@@ -126,7 +127,7 @@ of the sky and the haze. Check that again whenever a sky colour changes.
 Every section handles loading, empty and failed states. To check them outside Telegram, use
 the dev toolbar (`?demo=worst|empty|error|loading`). Those last two hide every card, so a card's
 own states take `?card=<card>:<state>`, comma-separated: `cameras:error|loading` for Live views and
-`weather:error|loading|partial` for Wind and rain, `ahead:range|outlook` for one half of What’s ahead. `?tab=outlook|more` opens on that tab. The
+`weather:error|loading|partial` for Wind and rain, `hazemap:error|loading|none|old` for the haze map, `ahead:range|outlook` for one half of What’s ahead. `?tab=outlook|more` opens on that tab. The
 worst-case data has long names, missing readings and extreme values, so use it before shipping a
 layout change.
 

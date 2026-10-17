@@ -9,6 +9,12 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-17-haze-map',
+    date: '2026-10-17',
+    title: 'See where the haze is coming from',
+    body: 'The Outlook tab now has NEA’s map of fires and smoke haze around Singapore, with the wind that carries it and NEA’s own write-up of the haze situation.',
+  },
+  {
     id: '2026-10-17-haze-picture-map',
     date: '2026-10-17',
     title: 'A clearer haze picture',
