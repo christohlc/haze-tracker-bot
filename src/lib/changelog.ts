@@ -9,6 +9,12 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-17-area-first',
+    date: '2026-10-17',
+    title: 'Your area at the top',
+    body: 'Around the island now lists your area first, highlighted, so your reading is the first one you see.',
+  },
+  {
     id: '2026-10-17-daily-forecast',
     date: '2026-10-17',
     title: 'The forecast in your daily update',

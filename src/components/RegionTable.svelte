@@ -1,18 +1,24 @@
 <script lang="ts">
+  import { flip } from 'svelte/animate';
+  import { quartInOut } from 'svelte/easing';
   import { psiBand } from '../../tgcloud/lib/psi.js';
   import type { Snapshot } from '../lib/api';
   import { area } from '../lib/area.svelte';
   import { fmt } from '../lib/format';
+  import { reducedMotion } from '../lib/motion';
   import { PERIODS, psiKey, type Period } from '../lib/period';
 
   let { snapshot, period = '3h' }: { snapshot: Snapshot; period?: Period } = $props();
 
   const key = $derived(psiKey(period));
+  // The user's area goes first; the rest keep NEA's order.
   const rows = $derived(
-    snapshot.regions.map((r) => {
-      const v = r[key];
-      return { ...r, v, band: psiBand(v) };
-    }),
+    snapshot.regions
+      .map((r) => {
+        const v = r[key];
+        return { ...r, v, band: psiBand(v), mine: r.id === area.id };
+      })
+      .sort((a, b) => Number(b.mine) - Number(a.mine)),
   );
   // Bars share one scale: at least 200 so a moderate day doesn't look alarming.
   const max = $derived(Math.max(200, ...rows.map((r) => r.v ?? 0)));
@@ -24,8 +30,16 @@
 
   <ul>
     {#each rows as r (r.id)}
-      <li aria-current={area.id === r.id ? 'true' : undefined}>
-        <span class="name">{r.name}</span>
+      <!-- When the area changes, rows slide to their new places (quartInOut is --ease-in-out). -->
+      <li
+        class:mine={r.mine}
+        aria-current={r.mine ? 'true' : undefined}
+        animate:flip={{ duration: reducedMotion() ? 0 : 220, easing: quartInOut }}
+      >
+        <span class="name">
+          {r.name}
+          {#if r.mine}<span class="tag">Your area</span>{/if}
+        </span>
         <span class="track" aria-hidden="true">
           {#if r.v != null}
             <!-- Clipped rather than scaled, so the rounded end keeps its shape at any length. -->
@@ -34,7 +48,6 @@
         </span>
         <span class="value num"><span class="visually-hidden">{PERIODS[period].adj} PSI </span>{fmt(r.v)}</span>
         <span class="detail">
-          {#if area.id === r.id}<span class="mine">Your area</span> ·{/if}
           {r.band?.label ?? 'No reading'} ·
           <!-- The reading and its unit stay on one line. -->
           <span class="pm">PM2.5 <span class="num">{fmt(r.pm25)}</span>{#if r.pm25 != null}&nbsp;µg/m³{/if}</span>
@@ -57,12 +70,28 @@
     column-gap: 10px;
     padding: 8px 0;
   }
-  .mine {
-    font-weight: 650;
-    color: var(--ink);
-  }
   li + li {
     border-top: 1px solid var(--hairline);
+  }
+  /* The user's area sits first on a tinted panel, set off from the rest of the list. */
+  li.mine {
+    margin: 0 -10px 6px;
+    padding: 10px;
+    border-radius: 12px;
+    background: var(--control);
+  }
+  li.mine + li {
+    border-top: 0;
+  }
+  /* The empty track would vanish into the panel's tint. */
+  li.mine .track {
+    background: var(--card);
+  }
+  .tag {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 650;
+    color: var(--ink-2);
   }
   .name {
     font-weight: 600;

@@ -109,7 +109,7 @@ messages is the same short form, for the general public.
 
 - Short and purposeful: cards rise 8px over 280ms with a small stagger, the first time a tab is
   shown; showing a tab fades it in (150ms). The hero number counts
-  up once on first load (600ms, from the bottom of its band, so it never reads lower than the band shown) and moves quickly when the period changes (220ms). Buttons
+  up once on first load (600ms, from the bottom of its band, so it never reads lower than the band shown) and moves quickly when the period changes (220ms). In Around the island, rows slide to their new places when the area changes (220ms). Buttons
   scale to 0.97 when pressed.
 - Use `--ease-out` for things entering and `--ease-in-out` for things moving on screen.
 - Every animation has a `prefers-reduced-motion` fallback, either a plain fade or nothing. In
