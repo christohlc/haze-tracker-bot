@@ -46,6 +46,7 @@ which is described below.
 | Regions | `--region-north` … `--region-south` | Fixed order matching `REGIONS`. Never cycled or reassigned |
 | Status | `--status-good`, `--status-critical` | Feed health, errors, “Stop all alerts” |
 | Haze map | `--map-sea`, `--map-land`, `--map-coast`, `--map-label`, `--haze-moderate`, `--haze-dense`, `--map-fire` | Haze hues follow NEA’s map (orange moderate, brown-red dense) so they read the same as haze.gov.sg |
+| Purifier pet | `--pet-body`, `--pet-vent`, `--pet-line`, `--pet-blush`, `--pet-sweat` | A pale appliance in both schemes, so its face reads on any card |
 | Shape | `--radius` 16px, `--gutter` 16px | |
 | Motion | `--ease-out`, `--ease-in-out`, `--ease-push` | `--ease-push` only for a view a tap pushes in (a region's page) |
 
@@ -278,6 +279,27 @@ updates”). Entries are written for users, not developers:
 Each entry needs a new, unique `id`. The latest entry’s `id` is saved in Telegram `CloudStorage`
 (`localStorage` outside Telegram) once the More tab has been opened. Until then, the More tab
 shows a dot, and entries added since the last visit get a “New” label.
+
+## Purifier pet
+
+A small air purifier (`src/components/PurifierPet.svelte`, physics in `src/lib/pet-physics.ts`)
+wanders the dashboard. The idea comes from PostHog's hedgehog-mode (MIT): the cards are its
+platforms, it can be dragged and thrown, and a weighted wander AI picks walk, wait, hop or wave.
+It's written small, with no physics or canvas library.
+
+- Its mood follows the hero's band: dozing (Good), happy (Moderate, or no reading), busy
+  (Unhealthy), struggling and heroic (Very unhealthy, Hazardous, sweating). The fan spins faster
+  as the band rises. Its lines are about itself, never advice: the dashboard says what to do.
+- It roams the safe box (inside `--inset-top` and the side insets) and stands on the top edges
+  of the visible tab's cards, or on the floor just above the tab bar. It sits at z-index 4,
+  over the tab bar and under the game, which hides it.
+- Only the pet takes the pointer, so whatever is under it stays tappable. A drag past 10px picks it
+  up (a selection tick); less is a tap, a pat (a light impact, a wiggle and a speech bubble).
+  The bubble's “Tuck away” hides it; the Purifier pet card in More brings it back. The spot it
+  was dropped in is remembered (as fractions of the screen), not every place it wanders to.
+- Motion: its position is a transform set each frame; fan, feet and breathing are CSS loops under
+  `use:ambient`. Reduced motion: no fan, wander or bounce; let go, it goes straight down onto what's
+  under it.
 
 ## Easter egg
 

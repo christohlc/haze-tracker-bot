@@ -7,10 +7,33 @@ export const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)'
 const looping = new Map<Element, boolean>();
 let appActive = true; // Telegram's own state (Bot API 8.0+): false while minimised or behind a chat
 
+// Code that animates in JS (a rAF loop) and wants to stop when nobody can see the app.
+const watchers = new Set<(visible: boolean) => void>();
+
+/** Whether the page is shown and Telegram doesn't have the app in the background. */
+export const appVisible = () => !document.hidden && appActive;
+
+/** Calls `cb` whenever `appVisible()` may have changed. Returns an unsubscribe. */
+export function onAppVisible(cb: (visible: boolean) => void): () => void {
+  watchers.add(cb);
+  return () => watchers.delete(cb);
+}
+
+/** Calls `cb` when the reduced-motion setting changes. Returns an unsubscribe. */
+export function onReducedMotion(cb: (reduce: boolean) => void): () => void {
+  const q = matchMedia('(prefers-reduced-motion: reduce)');
+  const fn = () => cb(q.matches);
+  q.addEventListener('change', fn);
+  return () => q.removeEventListener('change', fn);
+}
+
 function sync(node: Element) {
   node.toggleAttribute('data-paused', !looping.get(node) || document.hidden || !appActive);
 }
-const syncAll = () => looping.forEach((_, node) => sync(node));
+const syncAll = () => {
+  looping.forEach((_, node) => sync(node));
+  watchers.forEach((cb) => cb(appVisible()));
+};
 
 const observer =
   typeof IntersectionObserver === 'function'
