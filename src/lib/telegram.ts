@@ -65,26 +65,6 @@ export function confirmAction(message: string): Promise<boolean> {
   return new Promise((resolve) => tg.showConfirm(message, (ok: boolean) => resolve(ok)));
 }
 
-/** Show Telegram's bottom MainButton. Returns a cleanup that hides it and drops the handler. */
-export function showMainButton(text: string, onClick: () => void): () => void {
-  const mb = tg?.MainButton;
-  if (!inTelegram || !mb) return () => {};
-  mb.setParams({ text, is_visible: true, is_active: true });
-  mb.onClick(onClick);
-  return () => {
-    mb.offClick(onClick);
-    mb.hideProgress();
-    mb.hide();
-  };
-}
-
-export function setMainButtonBusy(busy: boolean) {
-  const mb = tg?.MainButton;
-  if (!inTelegram || !mb) return;
-  if (busy) mb.showProgress(false);
-  else mb.hideProgress();
-}
-
 /** Show Telegram's header BackButton. Returns a cleanup that hides it and drops the handler. */
 export function showBackButton(onClick: () => void): () => void {
   const bb = tg?.BackButton;

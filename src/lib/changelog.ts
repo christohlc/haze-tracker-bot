@@ -9,6 +9,12 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-18-bottom-tabs',
+    date: '2026-10-18',
+    title: 'Tabs within thumb reach',
+    body: 'Now, Outlook and More moved to a bar at the bottom of the screen: tap a tab, or slide your finger along the bar. “Get haze alerts” is now a button in the Alerts card.',
+  },
+  {
     id: '2026-10-18-where-its-worst',
     date: '2026-10-18',
     title: 'Updates say where it’s worst',

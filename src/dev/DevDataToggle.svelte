@@ -19,7 +19,7 @@
 <style>
   .dev {
     position: fixed;
-    bottom: 12px;
+    top: 8px; /* the bottom belongs to the tab bar */
     left: 50%;
     transform: translateX(-50%);
     display: flex;

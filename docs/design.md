@@ -11,7 +11,7 @@ code and this file disagree, fix one of them.
 - **Its own product.** The data and maths are the same as the public Haze Tracker SG site, but
   the Mini App shouldn’t look like a copy of it. The name, palette, sky hero and region bars are
   what set it apart; keep them.
-- **Telegram-native.** Follow Telegram’s theme, use the MainButton for the main action, add
+- **Telegram-native.** Follow Telegram’s theme and its back button, add
   haptics on selections and saves, and let alerts arrive in the chat. Use what a website can’t.
 - **Honest about the numbers.** Only NEA’s 24-hour PSI and NEA’s own forecast are official,
   and the forecast keeps NEA’s wording. The 1-hour and 3-hour PSI are calculated from PM2.5, and
@@ -72,9 +72,12 @@ or, outside Telegram, from the OS. A new colour token needs both a light and a d
   band so cards don't scroll visibly behind them. Side padding (`--pad-left` / `--pad-right`) adds the notch in landscape.
   Desktop clients keep their window.
 - Each section is a `.card` with a `.section-title`, an optional `.note` and its content.
-- Under the header, a sticky tab bar (`Segmented` with `kind="tab"`) splits the cards into three
-  tabs. It sits at the top, not the bottom, because Telegram’s MainButton (“Get haze alerts”)
-  owns the bottom edge.
+- A floating tab bar at the bottom (`TabBar`), within thumb reach, splits the cards into three
+  tabs: a frosted-glass pill (`backdrop-filter`, opaque without it or under reduced
+  transparency) above the home indicator (`--inset-bottom`). The page leaves room for it under
+  the last card, and it steps aside while the game is open (slides down and fades, 200ms).
+  Its labels are 0.6875rem, under an icon, like a native tab bar. Telegram’s MainButton isn’t used, so the bottom
+  edge is the bar’s alone: “Get haze alerts” is a button in the Alerts card.
   - **Now:** hero, regions, advice, alerts, share. The hero's area pill (a native select over a
     pill) picks the region the hero, advice and alerts follow, and Around the island lists it first on a
     tinted row tagged “Your area”; until someone picks, it's the highest.
@@ -83,9 +86,9 @@ or, outside Telegram, from the OS. A new colour token needs both a light and a d
 - A tab mounts the first time it’s opened and then stays mounted, hidden (laid out at zero
   height rather than `display: none`), so its controls keep their state, its cards rise in only
   once, charts keep their width, and Live views loads its pictures only once More is opened.
-  The tab bar takes arrow keys, Home and End. Switching keeps the
+  The tab bar takes arrow keys, Home and End, and a finger can slide along it. Switching keeps the
   header scrolled away if it already was. Away from Now, Telegram’s back arrow returns to Now.
-- Tap targets are at least 44px. Segmented controls switch on `pointerdown` for a mouse, and on
+- Tap targets are at least 44px. Segmented controls and the tab bar switch on `pointerdown` for a mouse, and on
   lift for a finger, so a scroll that starts on one doesn’t change it; `:active` gives the press
   feedback straight away.
 - On/off settings are drawn switches, not checkboxes. Saving one shows the change at once and undoes
@@ -112,6 +115,11 @@ messages is the same short form, for the general public.
   shown; showing a tab fades it in (150ms). The hero number counts
   up once on first load (600ms, from the bottom of its band, so it never reads lower than the band shown) and moves quickly when the period changes (220ms). In Around the island, rows slide to their new places when the area changes (220ms). Buttons
   scale to 0.97 when pressed.
+- The tab bar's thumb is a lens: pressed, it swells to 1.12 (160ms `--ease-out`) with a lit rim,
+  like iOS's tab bar; dragged sideways it follows the finger and switches on lift; released, it
+  settles in 200ms. A tap slides it to the tab (200ms `--ease-in-out`); a keyboard switch jumps.
+  It's frosted glass and a scale, not refraction: Telegram on iOS runs WebKit, which can't bend
+  the page behind it. Reduced motion: no swell or slide.
 - The hero sky is alive but calm: two haze banks drift on slow loops (28 s and 40 s), more
   opaque as the band rises (`--haze-density`), and a clear day gets a breathing sun (never in
   the dark theme). The banks are light haze behind dark ink and dark smoke behind light ink, so
