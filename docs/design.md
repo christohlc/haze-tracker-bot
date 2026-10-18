@@ -76,6 +76,8 @@ or, outside Telegram, from the OS. A new colour token needs both a light and a d
   tabs: a frosted-glass pill (`backdrop-filter`, opaque without it or under reduced
   transparency) above the home indicator (`--inset-bottom`). The page leaves room for it under
   the last card, and it steps aside while the game is open (slides down and fades, 200ms).
+  Like a native tab bar, touches on it never scroll the page (`touch-action: none`), and while a
+  finger is on it Telegram's swipe-down-to-minimise is off, so a drag that drifts still holds.
   Its labels are 0.6875rem, under an icon, like a native tab bar. Telegram’s MainButton isn’t used, so the bottom
   edge is the bar’s alone: “Get haze alerts” is a button in the Alerts card.
   - **Now:** hero, regions, advice, alerts, share. The hero's area pill (a native select over a
@@ -116,8 +118,9 @@ messages is the same short form, for the general public.
   up once on first load (600ms, from the bottom of its band, so it never reads lower than the band shown) and moves quickly when the period changes (220ms). In Around the island, rows slide to their new places when the area changes (220ms). Buttons
   scale to 0.97 when pressed.
 - The tab bar's thumb is a lens: pressed, it swells to 1.12 (160ms `--ease-out`) with a lit rim,
-  like iOS's tab bar; dragged sideways it follows the finger and switches on lift; released, it
-  settles in 200ms. A tap slides it to the tab (200ms `--ease-in-out`); a keyboard switch jumps.
+  like iOS's tab bar; dragged sideways it follows the finger and switches on lift, with a rubber
+  band past either end (a fifth of the finger's travel);
+  released, it settles in 200ms. A tap slides it to the tab (200ms `--ease-in-out`); a keyboard switch jumps.
   It's frosted glass and a scale, not refraction: Telegram on iOS runs WebKit, which can't bend
   the page behind it. Reduced motion: no swell or slide.
 - The hero sky is alive but calm: two haze banks drift on slow loops (28 s and 40 s), more

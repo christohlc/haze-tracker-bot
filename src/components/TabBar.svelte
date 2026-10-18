@@ -1,6 +1,7 @@
 <script lang="ts" generics="T extends string">
   import { rovingTarget } from '../lib/roving';
-  import { selectionHaptic } from '../lib/telegram';
+  import { onDestroy } from 'svelte';
+  import { lockVerticalSwipes, selectionHaptic } from '../lib/telegram';
 
   let {
     options,
@@ -36,8 +37,8 @@
 
   let pointer: number | null = null;
   let startX = 0;
-  let startY = 0;
   let dragged = false;
+  let unlockSwipes: (() => void) | null = null;
 
   function pick(v: T, fromKeys = false) {
     // Only this switch jumps; the next one from elsewhere (Telegram's back arrow) slides again.
@@ -62,20 +63,25 @@
   let origin = 0;
   let tabW = 0;
 
+  const RUBBER = 5; // past either end the thumb follows at a fifth of the finger's travel
+
   // Where the thumb goes under the finger: its left edge, and the tab it's mostly over.
   function dragSlot(clientX: number) {
-    const x = Math.min(Math.max(clientX - origin - tabW / 2, 0), (options.length - 1) * tabW);
-    return { x, i: Math.round(x / tabW) };
+    const max = (options.length - 1) * tabW;
+    const raw = clientX - origin - tabW / 2;
+    const x = raw < 0 ? raw / RUBBER : raw > max ? max + (raw - max) / RUBBER : raw;
+    return { x, i: Math.min(options.length - 1, Math.max(0, Math.round(raw / tabW))) };
   }
 
   function onDown(e: PointerEvent) {
     if (pointer != null || !e.isPrimary || e.button !== 0) return; // one finger at a time
     pointer = e.pointerId;
     startX = e.clientX;
-    startY = e.clientY;
     dragged = false;
     pressed = true;
-    // A mouse switches on press; a finger on lift, so a scroll that starts here doesn't switch.
+    // Telegram's swipe-down-to-minimise would otherwise take a drag that drifts downwards.
+    if (e.pointerType === 'touch') unlockSwipes = lockVerticalSwipes();
+    // A mouse switches on press; a finger on lift, since a sideways drag may still pick another tab.
     if (e.pointerType !== 'touch') {
       const i = buttons.findIndex((b) => b.contains(e.target as Node));
       if (i >= 0) pick(options[i].value);
@@ -85,8 +91,7 @@
   function onMove(e: PointerEvent) {
     if (e.pointerId !== pointer) return;
     if (!dragged) {
-      const dx = Math.abs(e.clientX - startX);
-      if (dx < 6 || dx < Math.abs(e.clientY - startY)) return;
+      if (Math.abs(e.clientX - startX) < 6) return;
       dragged = true;
       bar.setPointerCapture(e.pointerId);
       const first = buttons[0].getBoundingClientRect();
@@ -106,15 +111,19 @@
   }
 
   function release() {
+    unlockSwipes?.();
+    unlockSwipes = null;
     pointer = null;
     dragged = false;
     pressed = false;
     dragX = null;
     hoverIndex = null;
   }
+  onDestroy(release);
 
 </script>
 
+<!-- A cancel means the system took the touch (a call, Control Center): nothing is picked. -->
 <svelte:window onpointerup={onUp} onpointercancel={(e) => e.pointerId === pointer && release()} />
 
 <!-- Keeps the page's last card clear of the floating bar. -->
@@ -209,7 +218,9 @@
       0 8px 24px rgba(0, 0, 0, 0.12),
       0 1px 3px rgba(0, 0, 0, 0.08);
     isolation: isolate;
-    touch-action: pan-y; /* the page keeps vertical scrolling; a sideways drag is ours */
+    /* Every touch on the bar is ours, like a native tab bar: if the page could scroll from here,
+       iOS would take over a sideways drag that drifts a little and cancel it. */
+    touch-action: none;
     -webkit-user-select: none;
     user-select: none;
     -webkit-touch-callout: none;
