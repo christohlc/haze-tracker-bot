@@ -1,10 +1,15 @@
 // @ts-check
 // Inline mode: typing @bot in any chat offers the haze picture and a text summary. Pure.
 
-import { REGIONS } from './config.js';
+import { MINI_APP_URL, REGIONS } from './config.js';
 import { bandWords, formatHaze, formatShareCaption } from './format.js';
 import { psiBand } from './psi.js';
 import { readingsFor } from './snapshot.js';
+
+/** The text result's thumbnail: the logo the Mini App serves (public/logo-640.png). Without one Telegram shows a grey letter. */
+const LOGO = { thumbnail_url: `${MINI_APP_URL}logo-640.png`, thumbnail_width: 640, thumbnail_height: 640 };
+
+const TITLE = 'Singapore haze update';
 
 /** How long Telegram may reuse an answer, in seconds: NEA's readings change hourly. */
 export const INLINE_CACHE_S = 300;
@@ -26,19 +31,30 @@ export function inlineResults(snap, { fileId, region, reply_markup }) {
   const band = psiBand(area?.psi24h);
   const title = area
     ? `${area.name}: 24-hr PSI ${area.psi24h == null ? 'no reading' : `${Math.round(area.psi24h)} · ${band?.label}`}`
-    : 'Singapore haze update';
+    : TITLE;
   const description = `${area ? 'NEA’s reading' : bandWords(snap, 'psi24h')}. Tap to send.`;
   const extra = reply_markup ? { reply_markup } : {};
   /** @type {any[]} */
   const results = [];
   if (fileId && !region) {
-    results.push({ type: 'photo', id: `card:${snap.asOf}`, photo_file_id: fileId, caption: formatShareCaption(snap), parse_mode: 'HTML', ...extra });
+    // A list shows a photo's title, or “Untitled” without one.
+    results.push({
+      type: 'photo',
+      id: `card:${snap.asOf}`,
+      photo_file_id: fileId,
+      title: `Picture: ${TITLE}`,
+      description: `${bandWords(snap, 'psi24h')}. Tap to send.`,
+      caption: formatShareCaption(snap),
+      parse_mode: 'HTML',
+      ...extra,
+    });
   }
   results.push({
     type: 'article',
     id: `text:${region ?? 'all'}:${snap.asOf}`,
     title,
     description,
+    ...LOGO,
     input_message_content: { message_text: formatHaze(snap, null, { region }), parse_mode: 'HTML', link_preview_options: { is_disabled: true } },
     ...extra,
   });
