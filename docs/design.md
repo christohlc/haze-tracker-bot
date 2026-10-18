@@ -123,6 +123,10 @@ messages is the same short form, for the general public.
   released, it settles in 200ms. A tap slides it to the tab (200ms `--ease-in-out`); a keyboard switch jumps.
   It's frosted glass and a scale, not refraction: Telegram on iOS runs WebKit, which can't bend
   the page behind it. Reduced motion: no swell or slide.
+- A picked tab's icon plays one short move, like Telegram's tab bar (`TabIcon.svelte`): Now's
+  dot beats and its waves ripple out, Outlook's needle swings in from the left and settles,
+  More's squares each slide one corner round. Once per switch (a tap, a drag, the back arrow, a link to
+  another tab), never on load or a keyboard switch, under half a second. Reduced motion: the icons stay still.
 - The hero sky is alive but calm: two haze banks drift on slow loops (28 s and 40 s), more
   opaque as the band rises (`--haze-density`), and a clear day gets a breathing sun (never in
   the dark theme). The banks are light haze behind dark ink and dark smoke behind light ink, so
