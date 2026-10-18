@@ -5,7 +5,7 @@ import { crc32 as zlibCrc32, inflateSync } from 'node:zlib';
 import { runBatched } from '../tgcloud/lib/alert-rules.js';
 import { CARD_H, CARD_W } from '../tgcloud/lib/card/geometry.js';
 import { crc32, encodePng } from '../tgcloud/lib/card/png.js';
-import { bandRanges, CARD_AT, cardDate, drawSummaryCard, summaryCardPng } from '../tgcloud/lib/card/summary.js';
+import { bandRanges, CARD_AT, cardDate, drawSummaryCard, SUMMARY_H, summaryCardPng } from '../tgcloud/lib/card/summary.js';
 import { formatBandAlert, formatHazeCaption } from '../tgcloud/lib/format.js';
 import { PM25_BANDS, PSI_BANDS } from '../tgcloud/lib/psi.js';
 import { worstCase } from '../src/dev/worst.ts';
@@ -71,7 +71,7 @@ test('the card decodes to the drawn pixels', () => {
   assert.ok(png.length < 1_000_000, 'well under Telegram’s 10 MB photo limit');
   const back = decodePng(png);
   assert.equal(back.width, CARD_W);
-  assert.equal(back.height, CARD_H);
+  assert.equal(back.height, SUMMARY_H);
   assert.deepEqual(back.data, drawSummaryCard(fixture).data);
 });
 

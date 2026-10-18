@@ -192,12 +192,48 @@ export function backdrop(height, snap, { island = true, mapY = 0 } = {}) {
   return { c, sky };
 }
 
+const FLAG = { red: rgb('#ee2536'), white: rgb('#ffffff'), edge: rgb('#d9d4cc') };
+
+/**
+ * Singapore's flag, `h` tall at (x, y): red over white, the crescent and five stars in the red
+ * half's hoist, placed as in the flag's construction sheet (scaled from a 4320 × 2880 drawing).
+ * @param {Canvas} c @param {number} x @param {number} y @param {number} h @returns {number} its width
+ */
+function drawFlag(c, x, y, h) {
+  const w = Math.round(h * 1.5);
+  const k = w / 4320;
+  const r = Math.round(h * 0.12);
+  c.fillRoundRect(x - 2, y - 2, w + 4, h + 4, r + 2, FLAG.edge);
+  c.fillRoundRect(x, y, w, Math.ceil(h / 2), [r, r, 0, 0], FLAG.red);
+  c.fillRoundRect(x, y + Math.ceil(h / 2), w, Math.floor(h / 2), [0, 0, r, r], FLAG.white);
+  /** A disc, as a zero-length round-ended segment. @param {number} cx @param {number} radius @param {Rgb} colour */
+  const disc = (cx, radius, colour) => c.fillSegment(x + cx * k, y + 723.5 * k, x + cx * k, y + 723.5 * k, radius * 2 * k, colour);
+  disc(923.5, 530, FLAG.white);
+  disc(1158.6, 562.5, FLAG.red);
+  for (let i = 0; i < 5; i++) {
+    const a = -Math.PI / 2 + (i * 2 * Math.PI) / 5;
+    const sx = x + (1440 + 290 * Math.cos(a)) * k;
+    const sy = y + (723.5 + 290 * Math.sin(a)) * k;
+    /** @type {Array<[number, number]>} */
+    const star = Array.from({ length: 10 }, (_, j) => {
+      const b = -Math.PI / 2 + (j * Math.PI) / 5;
+      const len = (j % 2 ? 0.382 : 1) * 150 * k;
+      return [sx + len * Math.cos(b), sy + len * Math.sin(b)];
+    });
+    c.fillPolygon(star, FLAG.white);
+  }
+  return w;
+}
+
 /** @param {any} snap a snapshot (lib/snapshot.js) @returns {Canvas} */
 export function drawSummaryCard(snap) {
   // Brand, then what the card shows. No band for the whole island: each region's card has its
   // own, and the caption says where each applies.
   const { c, sky } = backdrop(SUMMARY_H, snap, { mapY: -LIFT });
-  c.text('Singapore haze update', 56, 236, 'title', sky.ink);
+  // The flag, its middle on the title's capitals.
+  const flagH = 52;
+  const flagW = drawFlag(c, 56, Math.round(236 - c.capHeight('title') / 2 - flagH / 2), flagH);
+  c.text('Singapore haze update', 56 + flagW + 22, 236, 'title', sky.ink);
   if (snap.stale) {
     c.fillRoundRect(56, 262, Math.ceil(c.measure(STALE_NOTE, 'body')) + 36, 40, 20, C.stale);
     c.text(STALE_NOTE, 74, 282 + c.capHeight('body') / 2, 'body', C.ink);

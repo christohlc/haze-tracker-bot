@@ -199,6 +199,33 @@ export class Canvas {
     }
   }
 
+  /**
+   * A filled polygon (even-odd), anti-aliased by 4 × 4 samples a pixel. For small shapes: it
+   * tests every sample against every edge.
+   * @param {Array<[number, number]>} pts @param {Rgb} color
+   */
+  fillPolygon(pts, color) {
+    const xs = pts.map((p) => p[0]);
+    const ys = pts.map((p) => p[1]);
+    /** @param {number} px @param {number} py */
+    const inside = (px, py) => {
+      let odd = false;
+      for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+        const [xi, yi] = pts[i];
+        const [xj, yj] = pts[j];
+        if (yi > py !== yj > py && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) odd = !odd;
+      }
+      return odd;
+    };
+    for (let y = Math.floor(Math.min(...ys)); y < Math.ceil(Math.max(...ys)); y++) {
+      for (let x = Math.floor(Math.min(...xs)); x < Math.ceil(Math.max(...xs)); x++) {
+        let hits = 0;
+        for (let sy = 0; sy < 4; sy++) for (let sx = 0; sx < 4; sx++) if (inside(x + (sx + 0.5) / 4, y + (sy + 0.5) / 4)) hits++;
+        if (hits) this.blend(x, y, color, Math.round((hits / 16) * 255));
+      }
+    }
+  }
+
   /** Fill the whole canvas with a top-to-bottom gradient. @param {Rgb} top @param {Rgb} bottom */
   verticalGradient(top, bottom) {
     for (let y = 0; y < this.height; y++) {
