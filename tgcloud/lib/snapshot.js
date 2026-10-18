@@ -58,6 +58,11 @@ export function neaRefetchEveryS(snap, nowMs, revisedEveryS = REVISED_EVERY_S) {
   return awaited ? AWAITED_EVERY_S : revisedEveryS;
 }
 
+/** A snapshot this old (from its latest hour) is `stale`: NEA publishes ~15 min past the hour. */
+const STALE_MS = 80 * 60_000;
+/** @param {string} asOf @param {number} [nowMs] */
+export const isStale = (asOf, nowMs = Date.now()) => nowMs - Date.parse(asOf) >= STALE_MS;
+
 /** What /haze, the summary card and the Mini App say when `snap.stale`. */
 export const STALE_NOTE = 'No new NEA reading lately. May be out of date.';
 

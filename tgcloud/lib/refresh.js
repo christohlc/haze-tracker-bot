@@ -4,12 +4,11 @@
 // publishing it, whoever asks first (the tick only runs every 15 min, and can be late).
 
 import { getLatestPsi, getPm25History } from './nea.js';
-import { buildSnapshot, neaRefetchEveryS, REVISED_EVERY_S, USER_REVISED_EVERY_S } from './snapshot.js';
+import { buildSnapshot, isStale, neaRefetchEveryS, REVISED_EVERY_S, USER_REVISED_EVERY_S } from './snapshot.js';
 import { HISTORY_HOURS, latestRange } from './range.js';
 import { claimEvery, getState, getStates, lastHours, recentReadings, recordSource, setState, upsertReadings } from './store.js';
 import { sgtDateOf, sgtDayStart, unixHour } from './time.js';
 
-const STALE_MS = 80 * 60_000; // NEA publishes ~15 min past the hour
 /** A refetch someone is waiting for gets one try (the platform's fetch gives up after ~5 s): a
  *  deadline already past means retryOnce() never retries. */
 const NO_RETRY = 0;
@@ -83,7 +82,7 @@ export async function refreshNeaIfDue({ now = Date.now(), deadline, revisedEvery
 /** Latest snapshot, refetched if due (one try). `stale: true` means NEA's latest reading is over 80 min old. */
 export async function getSnapshot() {
   const snap = await refreshNeaIfDue({ deadline: NO_RETRY, revisedEveryS: USER_REVISED_EVERY_S });
-  return { ...snap, stale: Date.now() - Date.parse(snap.asOf) >= STALE_MS };
+  return { ...snap, stale: isStale(snap.asOf) };
 }
 
 /**

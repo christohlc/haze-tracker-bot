@@ -173,9 +173,11 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   snapshot; none yet, or no `ops_chat_id`: text only, since an inline answer can't upload), and a
   text summary (`@bot west` leads with West). It answers from `storedSnapshot()`, never a refetch. Inline mode is switched on in BotFather (`/setinline`, placeholder “PSI now”); after
   the first push with this handler, check `npx tgcloud webhook` lists `inline_query`.
-- **The Mini App keeps the last dashboard** in `localStorage` (`src/lib/cache.ts`, news left out). A
-  failed load shows it with a “Couldn’t refresh / You’re offline” banner and retries on `online`;
-  the error screen is only for a first load with nothing saved.
+- **The Mini App keeps the last dashboard** in `localStorage` (`src/lib/cache.ts`, news left out)
+  and paints it the moment it opens, rechecked for age (`stale`, range, forecast), with “checking…”
+  in the header until the fresh one lands. A failed load keeps it up with a “Couldn’t refresh /
+  You’re offline” banner and retries on `online`; the error screen is only for a first load with
+  nothing saved. Hashed `/assets/*` are served `immutable` (`tgcloud.jsonc`).
 - **Outside Telegram**, `npm run dev` serves fixture data (`src/dev/`), with a
   `?demo=worst|empty|error|loading` toggle. Use it to check UI changes in the preview.
 - **User-facing changes get a “What’s new” entry** in `src/lib/changelog.ts`
