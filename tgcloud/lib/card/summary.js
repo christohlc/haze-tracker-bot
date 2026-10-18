@@ -39,7 +39,6 @@ export const C = {
   none: rgb('#dcdcdc'),
   noneInk: rgb('#3d3d3d'),
   stale: rgb('#e2b84a'),
-  chip: rgb('#efeae3'),
 };
 
 /** --band-<id> and --band-<id>-ink. */
@@ -51,14 +50,15 @@ export const BAND = {
   hazardous: [rgb('#8e3a9e'), rgb('#ffffff')],
 };
 
-const CARD = { w: 262, h: 156, r: 24 };
+/** `foot` is the white strip at the bottom of each card that holds the PM2.5. */
+const CARD = { w: 262, h: 192, r: 24, foot: 36 };
 
 /** Each region's card is centred on NEA's reference point for it, with three nudges: North and
  *  South are closer to Central than a card is tall, so they're pushed out just enough to clear it;
  *  the middle column sits a little east (103.83°) and East further toward Changi (103.96°), so the
  *  row is balanced over the island. */
 const centres = Object.fromEntries(REGIONS.map((r) => [r.id, project(r.lon, r.lat)]));
-const PITCH = CARD.h + 32;
+const PITCH = CARD.h + 24;
 for (const id of ['north', 'central', 'south']) centres[id][0] = project(103.83, 0)[0];
 centres.east[0] = project(103.96, 0)[0];
 centres.north[1] = Math.min(centres.north[1], centres.central[1] - PITCH);
@@ -113,23 +113,11 @@ function regionCard(c, region) {
   const value = fmt(region.psi24h);
   c.text(value, x + 22, y + 104, c.measure(value, 'num') <= CARD.w - 44 ? 'num' : 'numSmall', ink);
   c.text(band?.label ?? 'No reading', x + 24, y + 138, 'body', ink);
-}
-
-/**
- * The last hour's PM2.5, kept apart from the PSI so the region cards say one thing: each
- * region's number on a plain chip (no unit, no colour: on the card, colour only means the PSI band).
- * @param {Canvas} c @param {number} y title baseline @param {Map<string, any>} byId
- */
-function pm25Row(c, y, byId) {
-  const x0 = 64;
-  const gap = 12;
-  const w = Math.floor((CARD_W - 36 - 28 - x0 - gap * (REGIONS.length - 1)) / REGIONS.length);
-  c.text('Last hour’s PM2.5', x0, y, 'head', C.ink);
-  REGIONS.forEach(({ id, name }, i) => {
-    const x = x0 + i * (w + gap);
-    c.fillRoundRect(x, y + 14, w, 40, 20, C.chip);
-    c.text(`${name} ${fmt(byId.get(id)?.pm25)}`, x + w / 2, y + 34 + c.capHeight('body') / 2, 'body', C.ink, 'center');
-  });
+  // The last hour's PM2.5 in a white footer, apart from the band colour (which only means the
+  // PSI band). No unit: the Mini App has the detail.
+  const footY = y + CARD.h - CARD.foot;
+  c.fillRoundRect(x, footY, CARD.w, CARD.foot, [0, 0, CARD.r, CARD.r], C.card);
+  c.text(`1-hr PM2.5: ${fmt(region.pm25)}`, x + 24, footY + CARD.foot / 2 + c.capHeight('label') / 2, 'label', C.ink);
 }
 
 /**
@@ -194,8 +182,7 @@ export function drawSummaryCard(snap) {
   const byId = new Map(snap.regions.map((/** @type {any} */ r) => [r.id, r]));
   for (const { id, name } of REGIONS) regionCard(c, byId.get(id) ?? { id, name, pm25: null, psi24h: null });
 
-  c.fillRoundRect(36, 1010, CARD_W - 72, 240, CARD.r, C.card);
-  pm25Row(c, 1056, byId);
+  c.fillRoundRect(36, 1124, CARD_W - 72, 126, CARD.r, C.card);
   legendRow(c, 1170, 'Card colour: 24-hr PSI band', PSI_BANDS, PSI_BANDS.map((b) => b.id));
 
   const psiNote = snap.psiAsOf && snap.psiAsOf !== snap.asOf ? ` 24-hr PSI as at ${sgtHour(snap.psiAsOf)}.` : '';

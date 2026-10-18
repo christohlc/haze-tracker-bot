@@ -12,7 +12,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     id: '2026-10-18-where-its-worst',
     date: '2026-10-18',
     title: 'Updates say where it’s worst',
-    body: 'The haze picture shows each region’s own band instead of one for the whole island, with the last hour’s PM2.5 in a row of its own at the bottom. The message under it says which regions are in which band, like “Very unhealthy in West, Unhealthy elsewhere”.',
+    body: 'The haze picture shows each region’s own band instead of one for the whole island, with the last hour’s PM2.5 in a small strip at the foot of each region. The message under it says which regions are in which band, like “Very unhealthy in West, Unhealthy elsewhere”.',
   },
   {
     id: '2026-10-18-region-morph',

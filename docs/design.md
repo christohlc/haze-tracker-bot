@@ -211,10 +211,9 @@ newspaper graphic:
   newspapers’ graphics do). A single headline band read as island-wide when only one region had it.
 - **One card per region**, centred on NEA’s reference point for it (`REGIONS`), nudged so the
   cards don’t overlap and the row sits balanced over the island: name, the 24-hour PSI as the big
-  number and the band in words. Nothing else, so each card says one thing.
-- **The last hour’s PM2.5 sits apart**, in the panel at the bottom: one plain chip per region
-  (“West 123”), no unit and no colour. The Mini App has the detail.
-- **One legend row** under it, of band chips (“Card colour: 24-hr PSI band”), ranges from `PSI_BANDS`.
+  number and the band in words. The last hour’s PM2.5 sits apart in a white footer strip at the
+  bottom of the card (“1-hr PM2.5: 123”), with no unit; the Mini App has the detail.
+- **One legend row** of band chips (“Card colour: 24-hr PSI band”), ranges from `PSI_BANDS`.
 - Both numbers are NEA’s, so no “our calculation” note; the 3-hour PSI stays out of the picture.
   Missing readings show “–” on a grey card; a stale snapshot gets the amber note.
 - The card is always light (it’s shared into other people’s chats), and its colours mirror the
