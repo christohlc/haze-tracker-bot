@@ -4,7 +4,7 @@
 
 import { getAhead } from '../lib/ahead.js';
 import { getNews } from '../lib/news.js';
-import { getSnapshot } from '../lib/refresh.js';
+import { getSnapshot, NO_RETRY } from '../lib/refresh.js';
 import { allSourceStatus, recentReadings } from '../lib/store.js';
 
 const HISTORY_HOURS = 8 * 24;
@@ -13,7 +13,8 @@ export default async function () {
   const refreshed = getSnapshot();
   const [{ history: _recent, ...snapshot }, ahead, history, sources, news] = await Promise.all([
     refreshed,
-    getAhead(refreshed),
+    // One try at NEA's forecast: the user is waiting, and a miss falls back to the stored copy.
+    getAhead(refreshed, NO_RETRY),
     // 7 days, plus a day so the chart can draw 24h rolling averages across all of them.
     refreshed.then(() => recentReadings(HISTORY_HOURS)),
     allSourceStatus(),

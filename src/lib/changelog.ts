@@ -9,6 +9,12 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-18-opens-faster',
+    date: '2026-10-18',
+    title: 'Opens straight away',
+    body: 'The dashboard now shows the last readings it loaded on your phone the moment you open it, then swaps in the newest ones. While it says “checking…” at the top, the update is still on its way.',
+  },
+  {
     id: '2026-10-18-pass-it-on',
     date: '2026-10-18',
     title: 'Pass the bot on',

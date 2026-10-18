@@ -2,8 +2,13 @@
   import type { Snapshot } from '../lib/api';
   import { sgtHour } from '../lib/format';
 
-  // onsecret: tapping the logo or the name opens the hidden game.
-  let { snapshot, onsecret }: { snapshot: Snapshot | null; onsecret?: () => void } = $props();
+  // onsecret: tapping the logo or the name opens the hidden game. updating: the snapshot is the
+  // one saved on this device, and a fresh one is on its way.
+  let {
+    snapshot,
+    updating = false,
+    onsecret,
+  }: { snapshot: Snapshot | null; updating?: boolean; onsecret?: () => void } = $props();
 </script>
 
 <header>
@@ -16,7 +21,7 @@
     <p class="status">
       {#if snapshot}
         <span class="status-dot" class:stale={snapshot.stale} aria-hidden="true"></span>
-        NEA · {snapshot.stale ? 'last reading' : 'updated'} {sgtHour(snapshot.asOf)} SGT
+        NEA · {snapshot.stale ? 'last reading' : 'updated'} {sgtHour(snapshot.asOf)} SGT{#if updating}<span class="updating">&nbsp;· checking…</span>{/if}
       {:else}
         Haze in Singapore, hour by hour
       {/if}
@@ -85,7 +90,18 @@
     font-size: 0.8125rem;
     color: var(--muted);
   }
+  .updating {
+    animation: fade-in 200ms var(--ease-out) both;
+  }
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+  }
   @media (prefers-reduced-motion: reduce) {
+    .updating {
+      animation: none;
+    }
     .logo,
     .name {
       transition: none;

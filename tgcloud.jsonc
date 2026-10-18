@@ -3,8 +3,9 @@
   "static": {
     // Serve index.html for unknown paths (client-side routing):
     // "spa": true,
-    // Let browsers cache content-hashed files for a year (Vite puts them here):
-    // "immutable": ["/assets/*"],
+    // Let browsers cache content-hashed files for a year (Vite puts them here), so reopening
+    // the Mini App doesn't revalidate its JS and CSS:
+    "immutable": ["/assets/*"],
     // The build output folder, hosted as the Mini App:
     "source": "dist"
   }
