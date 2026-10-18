@@ -64,10 +64,13 @@
   let origin = 0;
   let tabW = 0;
 
-  // Where the thumb goes under the finger: its left edge, and the tab it's mostly over.
+  // Where the thumb goes under the finger: its left edge, and the tab it's mostly over. Past
+  // either end it follows at a fifth of the finger's travel, like a rubber band.
   function dragSlot(clientX: number) {
-    const x = Math.min(Math.max(clientX - origin - tabW / 2, 0), (options.length - 1) * tabW);
-    return { x, i: Math.round(x / tabW) };
+    const max = (options.length - 1) * tabW;
+    const raw = clientX - origin - tabW / 2;
+    const x = raw < 0 ? raw / 5 : raw > max ? max + (raw - max) / 5 : raw;
+    return { x, i: Math.min(options.length - 1, Math.max(0, Math.round(raw / tabW))) };
   }
 
   function onDown(e: PointerEvent) {
