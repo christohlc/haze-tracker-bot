@@ -37,7 +37,6 @@
 
   let pointer: number | null = null;
   let startX = 0;
-  let startY = 0;
   let dragged = false;
   let unlockSwipes: (() => void) | null = null;
 
@@ -78,12 +77,11 @@
     if (pointer != null || !e.isPrimary || e.button !== 0) return; // one finger at a time
     pointer = e.pointerId;
     startX = e.clientX;
-    startY = e.clientY;
     dragged = false;
     pressed = true;
     // Telegram's swipe-down-to-minimise would otherwise take a drag that drifts downwards.
     if (e.pointerType === 'touch') unlockSwipes = lockVerticalSwipes();
-    // A mouse switches on press; a finger on lift, so a scroll that starts here doesn't switch.
+    // A mouse switches on press; a finger on lift, since a sideways drag may still pick another tab.
     if (e.pointerType !== 'touch') {
       const i = buttons.findIndex((b) => b.contains(e.target as Node));
       if (i >= 0) pick(options[i].value);
@@ -93,14 +91,9 @@
   function onMove(e: PointerEvent) {
     if (e.pointerId !== pointer) return;
     if (!dragged) {
-      const dx = Math.abs(e.clientX - startX);
-      if (dx < 6 || dx < Math.abs(e.clientY - startY)) return;
+      if (Math.abs(e.clientX - startX) < 6) return;
       dragged = true;
-      try {
-        bar.setPointerCapture(e.pointerId);
-      } catch {
-        // the pointer already ended; the window still hears its pointerup
-      }
+      bar.setPointerCapture(e.pointerId);
       const first = buttons[0].getBoundingClientRect();
       origin = first.left;
       tabW = first.width;
@@ -110,8 +103,7 @@
     hoverIndex = s.i;
   }
 
-  // Heard on the window: a mouse pressed here can be let go anywhere. A cancel (the system took
-  // the touch) still lands on the tab under the finger rather than snapping back.
+  // Heard on the window: a mouse pressed here can be let go anywhere.
   function onUp(e: PointerEvent) {
     if (e.pointerId !== pointer) return;
     if (dragged && hoverIndex != null) pick(options[hoverIndex].value);
@@ -131,7 +123,8 @@
 
 </script>
 
-<svelte:window onpointerup={onUp} onpointercancel={onUp} />
+<!-- A cancel means the system took the touch (a call, Control Center): nothing is picked. -->
+<svelte:window onpointerup={onUp} onpointercancel={(e) => e.pointerId === pointer && release()} />
 
 <!-- Keeps the page's last card clear of the floating bar. -->
 <div class="room" aria-hidden="true"></div>

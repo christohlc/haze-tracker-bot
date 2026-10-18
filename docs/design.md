@@ -118,8 +118,8 @@ messages is the same short form, for the general public.
   up once on first load (600ms, from the bottom of its band, so it never reads lower than the band shown) and moves quickly when the period changes (220ms). In Around the island, rows slide to their new places when the area changes (220ms). Buttons
   scale to 0.97 when pressed.
 - The tab bar's thumb is a lens: pressed, it swells to 1.12 (160ms `--ease-out`) with a lit rim,
-  like iOS's tab bar; dragged sideways it follows the finger and switches on lift (also if the
-  system cancels the touch), with a rubber band past either end (a fifth of the finger's travel);
+  like iOS's tab bar; dragged sideways it follows the finger and switches on lift, with a rubber
+  band past either end (a fifth of the finger's travel);
   released, it settles in 200ms. A tap slides it to the tab (200ms `--ease-in-out`); a keyboard switch jumps.
   It's frosted glass and a scale, not refraction: Telegram on iOS runs WebKit, which can't bend
   the page behind it. Reduced motion: no swell or slide.
