@@ -46,10 +46,9 @@
   const DevToggle = import.meta.env.DEV && !inTelegram ? import('./dev/DevDataToggle.svelte') : null;
 
   // The last dashboard saved on this device paints at once, so opening the app doesn't wait on
-  // the network; the fresh one replaces it when it lands (`updating` until then).
+  // the network; the fresh one replaces it when it lands (`updating` until then: loadedAt is still 0).
   const saved = cachedDashboard();
   let data = $state<Dashboard | null>(saved);
-  let fromCache = $state(saved != null);
   let error = $state<string | null>(null);
   let period = $state<Period>('3h');
   // Who What to do advises; the hero's mask line is the same verdict's short form, so they agree.
@@ -61,7 +60,7 @@
     group = g;
     setStored(GROUP_KEY, g);
   }
-  let loadedAt = 0;
+  let loadedAt = $state(0);
   // Started alongside the dashboard rather than when its card mounts, so it isn't a second round trip.
   let weatherFirst = $state<Promise<WeatherResult> | null>(null);
 
@@ -146,7 +145,6 @@
     loading = true;
     try {
       data = await loadDashboard();
-      fromCache = false;
       error = null;
       loadedAt = Date.now();
       saveDashboard(data);
@@ -178,7 +176,7 @@
 </script>
 
 <main>
-  <BrandHeader snapshot={data?.snapshot ?? null} updating={fromCache && !error} onsecret={() => (ninja = true)} />
+  <BrandHeader snapshot={data?.snapshot ?? null} updating={loadedAt === 0 && !error} onsecret={() => (ninja = true)} />
 
   {#if error && !data}
     <div class="card state">

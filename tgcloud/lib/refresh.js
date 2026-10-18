@@ -11,7 +11,7 @@ import { sgtDateOf, sgtDayStart, unixHour } from './time.js';
 
 /** A refetch someone is waiting for gets one try (the platform's fetch gives up after ~5 s): a
  *  deadline already past means retryOnce() never retries. */
-export const NO_RETRY = 0;
+const NO_RETRY = 0;
 /** NEA may still revise yesterday's last hours until this SGT hour; after it, yesterday is fetched
  *  only if some of its hours aren't stored (one request fewer per refetch: data.gov.sg rate-limits). */
 const YESTERDAY_UNTIL_H = 3;

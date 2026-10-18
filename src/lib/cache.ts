@@ -1,6 +1,6 @@
 import type { Dashboard } from './api';
 import { isCurrent } from '../../tgcloud/lib/outlook-parse.js';
-import { STALE_H } from '../../tgcloud/lib/range.js';
+import { currentRange } from '../../tgcloud/lib/range.js';
 import { isStale } from '../../tgcloud/lib/snapshot.js';
 import { unixHour } from '../../tgcloud/lib/time.js';
 
@@ -26,7 +26,7 @@ export function cachedDashboard(now = Date.now()): Dashboard | null {
     const { asOf } = d.snapshot;
     const ahead = d.ahead && {
       outlook: d.ahead.outlook && isCurrent(d.ahead.outlook, now) ? d.ahead.outlook : null,
-      range: now / 3_600_000 - unixHour(asOf) <= STALE_H ? d.ahead.range : null,
+      range: d.ahead.range && currentRange({ hour: unixHour(asOf), range: d.ahead.range }, now),
     };
     return { ...d, snapshot: { ...d.snapshot, stale: isStale(asOf, now) }, ahead };
   } catch {

@@ -11,9 +11,10 @@ const OUTLOOK_EVERY_S = 10 * 60;
 
 /**
  * Today's or tomorrow's forecast, or null when NEA hasn't issued one (outside haze episodes). Never throws.
- * @param {number} [deadline] a caller's time budget (getJson): no retry past it
+ * @param {number} [deadline] a caller's time budget (getJson): no retry past it. Every caller has
+ *   someone waiting (/haze, /forecast, the dashboard, the tick's alerts), so by default one try.
  */
-export async function getOutlook(deadline) {
+export async function getOutlook(deadline = 0) {
   const outlook = await cachedFeed('outlook', OUTLOOK_EVERY_S, 'nea_outlook', async () => {
     // The last path segment only busts caches, as on haze.gov.sg.
     const json = await getJson(`${OUTLOOK_FEED}/${Math.floor(Date.now() / 1000)}`, 'NEA haze update', deadline);

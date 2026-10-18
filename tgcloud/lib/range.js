@@ -13,7 +13,7 @@ export const AHEAD = [1, 3, 6];
 // With fewer hours of readings (three days) the range would be a guess.
 const MIN_HOURS = 72;
 // A latest reading older than this isn't "now" any more (NEA publishes hourly).
-export const STALE_H = 3;
+const STALE_H = 3;
 
 /** How often it held, from `node scripts/range-backtest.mjs` on NEA's readings for 2022–2026. */
 export const RANGE_RECORD = 'Right about 8 times in 10 on four years of NEA readings.';
