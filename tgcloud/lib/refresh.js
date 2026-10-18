@@ -69,21 +69,36 @@ export async function storedSnapshot() {
  * @param {{ now?: number, deadline?: number, revisedEveryS?: number }} [opts]
  */
 export async function refreshNeaIfDue({ now = Date.now(), deadline, revisedEveryS = REVISED_EVERY_S } = {}) {
-  // One read for both rows: a snapshot that isn't due costs a single query.
+  const { stored, every, due } = await refetchDue(now, revisedEveryS);
+  if (!stored) return refreshNea({ deadline });
+  if (!due || !(await claimEvery('last_fetch_attempt', every))) return stored;
+  return refreshNea({ deadline, claimed: true }).catch(() => stored);
+}
+
+/** The stored snapshot and whether a refetch is due. One read for both rows: a snapshot that isn't due costs a single query. */
+async function refetchDue(/** @type {number} */ now, /** @type {number} */ revisedEveryS) {
   const rows = await getStates(['snapshot', 'last_fetch_attempt']);
   const stored = rows.get('snapshot')?.value;
-  if (!stored) return refreshNea({ deadline });
-  const every = neaRefetchEveryS(stored, now, revisedEveryS);
-  const tried = now / 1000 - (rows.get('last_fetch_attempt')?.updatedAt ?? 0) < every;
-  if (tried || !(await claimEvery('last_fetch_attempt', every))) return stored;
-  return refreshNea({ deadline, claimed: true }).catch(() => stored);
+  const every = stored ? neaRefetchEveryS(stored, now, revisedEveryS) : 0;
+  const due = now / 1000 - (rows.get('last_fetch_attempt')?.updatedAt ?? 0) >= every;
+  return { stored, every, due };
 }
 
 /** Latest snapshot, refetched if due (one try). `stale: true` means NEA's latest reading is over 80 min old. */
 export async function getSnapshot() {
-  const snap = await refreshNeaIfDue({ deadline: NO_RETRY, revisedEveryS: USER_REVISED_EVERY_S });
-  return { ...snap, stale: isStale(snap.asOf) };
+  return withStale(await refreshNeaIfDue({ deadline: NO_RETRY, revisedEveryS: USER_REVISED_EVERY_S }));
 }
+
+/**
+ * getSnapshot() without the refetch: the stored snapshot, and `due` if getSnapshot() would refetch
+ * it now (see getDashboard.js). Fetches only when nothing is stored yet.
+ */
+export async function peekSnapshot() {
+  const { stored, due } = await refetchDue(Date.now(), USER_REVISED_EVERY_S);
+  return stored ? { snap: withStale(stored), due } : { snap: await getSnapshot(), due: false };
+}
+
+const withStale = (/** @type {any} */ snap) => ({ ...snap, stale: isStale(snap.asOf) });
 
 /**
  * Work the next-hours range out from two weeks of readings and keep it in state('range'), so a

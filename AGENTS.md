@@ -178,6 +178,11 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   in the header until the fresh one lands. A failed load keeps it up with a “Couldn’t refresh /
   You’re offline” banner and retries on `online`; the error screen is only for a first load with
   nothing saved. Hashed `/assets/*` are served `immutable` (`tgcloud.jsonc`).
+  **`getDashboard` answers from what's stored first** (`peekSnapshot`, `peekAhead`: a few DB reads,
+  so a first-ever open is quick; it fetches only when no snapshot is stored at all) with
+  `refreshDue` when NEA's readings, or during haze its forecast, are due; the app then calls again
+  with `{ refresh: true }` to refetch (claimed as before). Not a timer race in one call: work left
+  running after a response is stopped (why in `getDashboard.js`).
 - **Outside Telegram**, `npm run dev` serves fixture data (`src/dev/`), with a
   `?demo=worst|empty|error|loading` toggle. Use it to check UI changes in the preview.
 - **User-facing changes get a “What’s new” entry** in `src/lib/changelog.ts`

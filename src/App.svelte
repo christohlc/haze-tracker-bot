@@ -144,10 +144,13 @@
     if (loading) return;
     loading = true;
     try {
+      // The first answer is what the server has stored; if NEA was due, the second waits for the
+      // refetch while the first is on screen (getDashboard.js).
       data = await loadDashboard();
       error = null;
-      loadedAt = Date.now();
       saveDashboard(data);
+      if (data.refreshDue) saveDashboard((data = await loadDashboard(true)));
+      loadedAt = Date.now();
     } catch (e) {
       error = e instanceof Error ? e.message : 'Couldn’t load the latest readings.';
     } finally {
