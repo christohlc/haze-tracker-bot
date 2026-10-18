@@ -78,8 +78,9 @@ or, outside Telegram, from the OS. A new colour token needs both a light and a d
   the last card, and it steps aside while the game is open (slides down and fades, 200ms).
   Like a native tab bar, touches on it never scroll the page (`touch-action: none`), and while a
   finger is on it Telegram's swipe-down-to-minimise is off, so a drag that drifts still holds.
-  Its labels are 0.6875rem, under an icon, like a native tab bar. Telegram’s MainButton isn’t used, so the bottom
-  edge is the bar’s alone: “Get haze alerts” is a button in the Alerts card.
+  Its labels are 0.6875rem, under a 28px icon, like Telegram's tab bar; the picked tab's icon and
+  label are in `--accent` (Telegram's button colour, its blue by default), the others `--ink-2`.
+  Telegram’s MainButton isn’t used, so the bottom edge is the bar’s alone: “Get haze alerts” is a button in the Alerts card.
   - **Now:** hero, regions, advice, alerts, share. The hero's area pill (a native select over a
     pill) picks the region the hero, advice and alerts follow, and Around the island lists it first on a
     tinted row tagged “Your area”; until someone picks, it's the highest.
@@ -123,10 +124,11 @@ messages is the same short form, for the general public.
   released, it settles in 200ms. A tap slides it to the tab (200ms `--ease-in-out`); a keyboard switch jumps.
   It's frosted glass and a scale, not refraction: Telegram on iOS runs WebKit, which can't bend
   the page behind it. Reduced motion: no swell or slide.
-- A picked tab's icon plays one short move, like Telegram's tab bar (`TabIcon.svelte`): Now's
-  dot beats and its waves ripple out, Outlook's needle swings in from the left and settles,
-  More's squares each slide one corner round. Once per switch (a tap, a drag, the back arrow, a link to
-  another tab), never on load or a keyboard switch, under half a second. Reduced motion: the icons stay still.
+- A picked tab's icon plays one move, like Telegram's tab bar (`TabIcon.svelte`): Now's
+  dot beats twice and its waves ripple out with each beat, Outlook's needle swings in from the left,
+  overshoots and rocks back to rest, More's squares each slide one corner round. Once per switch (a tap, a drag, the back arrow, a link to
+  another tab), never on load or a keyboard switch. They run 720–900ms, longer than other UI motion,
+  because they're the bar's flourish and never hold anything up. Reduced motion: the icons stay still.
 - The hero sky is alive but calm: two haze banks drift on slow loops (28 s and 40 s), more
   opaque as the band rises (`--haze-density`), and a clear day gets a breathing sun (never in
   the dark theme). The banks are light haze behind dark ink and dark smoke behind light ink, so
