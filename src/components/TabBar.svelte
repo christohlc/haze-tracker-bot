@@ -1,7 +1,8 @@
 <script lang="ts" generics="T extends string">
   import { rovingTarget } from '../lib/roving';
-  import { onDestroy } from 'svelte';
+  import { onDestroy, untrack } from 'svelte';
   import { lockVerticalSwipes, selectionHaptic } from '../lib/telegram';
+  import TabIcon, { type TabIconName } from './TabIcon.svelte';
 
   let {
     options,
@@ -11,9 +12,8 @@
     controls,
     hidden = false,
   }: {
-    /** `icon` is the `d` of a 24×24 stroked path. `dot` shows an unseen marker; its text is read
-        out to screen readers ("new updates"). */
-    options: { value: T; label: string; icon: string; dot?: string }[];
+    /** `dot` shows an unseen marker; its text is read out to screen readers ("new updates"). */
+    options: { value: T; label: string; icon: TabIconName; dot?: string }[];
     value: T;
     label: string;
     /** Each tab gets the id `${id}-${value}`; `controls(v)` names its panel (undefined while the
@@ -39,6 +39,17 @@
   let startX = 0;
   let dragged = false;
   let unlockSwipes: (() => void) | null = null;
+
+  // The tab whose icon plays its move: the one just picked, by a tap, a drag or from elsewhere
+  // (Telegram's back arrow, a link to Outlook). Not on load, and not from the keyboard, where
+  // switches are instant.
+  let played = $state<T | null>(null);
+  let primed = false; // the effect's first run is the load
+  $effect(() => {
+    const v = value;
+    if (primed) played = untrack(() => instant) ? null : v;
+    primed = true;
+  });
 
   function pick(v: T, fromKeys = false) {
     // Only this switch jumps; the next one from elsewhere (Telegram's back arrow) slides again.
@@ -164,7 +175,7 @@
         onkeydown={onKey}
       >
         <span class="icon">
-          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d={o.icon} /></svg>
+          <TabIcon name={o.icon} play={played === o.value} />
           {#if o.dot}<span class="dot" aria-hidden="true"></span>{/if}
         </span>
         <span class="label">{o.label}</span>
@@ -311,17 +322,11 @@
     position: relative;
     display: block;
     height: 22px;
+    /* Its own layer: the icon's moves repaint 22px, not the whole frosted bar. */
+    will-change: transform;
   }
-  svg {
-    display: block;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 1.8;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-  }
-  button.lit svg {
-    stroke-width: 2.2;
+  button.lit {
+    --icon-stroke: 2.2;
   }
   .label {
     font-size: 0.6875rem;

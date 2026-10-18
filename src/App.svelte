@@ -14,6 +14,7 @@
   import ShareCard from './components/ShareCard.svelte';
   import Sources from './components/Sources.svelte';
   import TabBar from './components/TabBar.svelte';
+  import type { TabIconName } from './components/TabIcon.svelte';
   import WhatsNew from './components/WhatsNew.svelte';
   import WindRain from './components/WindRain.svelte';
   import { loadDashboard, loadWeather, type Dashboard, type RegionId, type WeatherResult } from './lib/api';
@@ -28,16 +29,12 @@
   import { getSeen, markSeen } from './lib/whats-new';
 
   type Tab = 'now' | 'outlook' | 'more';
-  // Icons are 24×24 stroked paths: live (a dot sending out waves), a gauge (Outlook leads with
-  // the forecast meter), a grid.
-  const TABS: { value: Tab; label: string; icon: string }[] = [
-    {
-      value: 'now',
-      label: 'Now',
-      icon: 'M12 10.5a1.5 1.5 0 1 1 0 3a1.5 1.5 0 1 1 0-3zM8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7M5.6 5.6a9 9 0 0 0 0 12.8M18.4 5.6a9 9 0 0 1 0 12.8',
-    },
-    { value: 'outlook', label: 'Outlook', icon: 'M4 16a8 8 0 0 1 16 0M12 16l3.5-4.5' },
-    { value: 'more', label: 'More', icon: 'M5 5h5v5H5zM14 5h5v5h-5zM5 14h5v5H5zM14 14h5v5h-5z' },
+  // Icons (TabIcon): live, a dot sending out waves; a gauge, since Outlook leads with the
+  // forecast meter; a grid.
+  const TABS: { value: Tab; label: string; icon: TabIconName }[] = [
+    { value: 'now', label: 'Now', icon: 'live' },
+    { value: 'outlook', label: 'Outlook', icon: 'gauge' },
+    { value: 'more', label: 'More', icon: 'grid' },
   ];
 
   // The hidden game behind the header; loaded only once someone finds it.
