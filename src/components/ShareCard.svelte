@@ -88,7 +88,7 @@
       {#if url}<img src={url} alt="" />{/if}
     </button>
     <div class="body">
-      <h2 id="share-title" class="section-title">Share the haze picture</h2>
+      <h2 id="share-title" class="section-title">Share the haze update</h2>
       <p class="note">Every region’s NEA readings on one picture, as the bot sends it.</p>
       {#if empty}
         <p class="note">You can share it once NEA publishes a reading.</p>
