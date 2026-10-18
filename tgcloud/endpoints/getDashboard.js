@@ -19,7 +19,7 @@ const HISTORY_HOURS = 8 * 24;
  * @param {{ refresh?: boolean }} input
  */
 export default async function ({ refresh = false } = {}) {
-  const latest = refresh ? refetchDue() : fromStore();
+  const latest = refresh ? refetchNow() : fromStore();
   const [{ snap, ahead, refreshDue }, history, sources, news] = await Promise.all([
     latest,
     // 7 days, plus a day so the chart can draw 24h rolling averages across all of them.
@@ -51,8 +51,8 @@ async function fromStore() {
   return { snap, ahead, refreshDue: due || (outlookDue && hazeGateOpen(snap)) };
 }
 
-async function refetchDue() {
+async function refetchNow() {
   const refreshed = getSnapshot();
   const [snap, ahead] = await Promise.all([refreshed, getAhead(refreshed)]);
-  return { snap, ahead, refreshDue: false };
+  return { snap, ahead };
 }

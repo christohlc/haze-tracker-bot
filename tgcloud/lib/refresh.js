@@ -95,7 +95,7 @@ export async function getSnapshot() {
  */
 export async function peekSnapshot() {
   const { stored, due } = await refetchDue(Date.now(), USER_REVISED_EVERY_S);
-  return { snap: withStale(stored ?? (await refreshNea({ deadline: NO_RETRY }))), due: !!stored && due };
+  return stored ? { snap: withStale(stored), due } : { snap: await getSnapshot(), due: false };
 }
 
 const withStale = (/** @type {any} */ snap) => ({ ...snap, stale: isStale(snap.asOf) });

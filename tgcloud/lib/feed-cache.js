@@ -4,6 +4,8 @@
 import { errorText } from './http.js';
 import { claimEvery, getStates, recordSource, setState } from './store.js';
 
+const attemptKey = (/** @type {string} */ key) => `${key}_attempt`;
+
 /**
  * The feed kept in state(key) as `{ [key]: value }`, refetched at most once per `everyS` seconds:
  * the attempt is claimed in state(key_attempt) first (atomically, claimEvery), so Mini Apps opened
@@ -20,7 +22,7 @@ export async function cachedFeed(key, everyS, source, load) {
     const stored = await readFeed(key, everyS);
     cached = stored.value;
     if (!stored.due) return cached; // skips the claim's write
-    if (!(await claimEvery(`${key}_attempt`, everyS))) return cached; // someone else is fetching it
+    if (!(await claimEvery(attemptKey(key), everyS))) return cached; // someone else is fetching it
     try {
       const { value, error, detail } = await load();
       const status = error ? { ok: false, error } : { ok: true, detail };
@@ -46,8 +48,8 @@ export async function peekFeed(key, everyS) {
 
 /** The stored copy and whether a fetch is due. One read for both rows: a warm hit costs a single query. */
 async function readFeed(/** @type {string} */ key, /** @type {number} */ everyS) {
-  const rows = await getStates([key, `${key}_attempt`]);
-  const attempt = rows.get(`${key}_attempt`);
+  const rows = await getStates([key, attemptKey(key)]);
+  const attempt = rows.get(attemptKey(key));
   const due = !attempt || Date.now() / 1000 - attempt.updatedAt >= everyS;
   return { value: rows.get(key)?.value?.[key] ?? null, due };
 }
