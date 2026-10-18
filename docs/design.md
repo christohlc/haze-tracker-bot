@@ -170,7 +170,9 @@ messages is the same short form, for the general public.
   applies (“🟠 Very unhealthy in West · 24-hr PSI 228”, “🟡 Unhealthy elsewhere · 129–186”; the
   chat’s area leads), then the last hour’s PM2.5 band by place with the time, then the advice,
   NEA’s forecast and the cigarette count. Never one band for the whole island; “elsewhere” only
-  when every region has a reading. The share caption is the same PSI lines.
+  when every region has a reading, “⚪️ No reading in North” when one hasn’t, “too” on a band the
+  chat’s area shares, and “;” between PM2.5 bands. The share caption is the same PSI lines, and
+  inline mode’s result says “Singapore haze update” with the same words (`bandWords`).
   One closing note; the table (with our 1h/3h) only in the text version.
 - Advice lines (`adviceLines`) go in one order in every message, each with its own emoji:
   👉 Outside now, 🧓 Vulnerable people (only when their advice is stricter), 😷 the short form.

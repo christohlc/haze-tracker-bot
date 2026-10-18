@@ -2,7 +2,7 @@
 // Inline mode: typing @bot in any chat offers the haze picture and a text summary. Pure.
 
 import { REGIONS } from './config.js';
-import { formatHaze, formatShareCaption } from './format.js';
+import { bandWords, formatHaze, formatShareCaption } from './format.js';
 import { psiBand } from './psi.js';
 import { readingsFor } from './snapshot.js';
 
@@ -21,10 +21,13 @@ export function regionFromQuery(q) {
  * @param {any} snap @param {{ fileId: string | null, region: string | null, reply_markup?: any }} o
  */
 export function inlineResults(snap, { fileId, region, reply_markup }) {
-  const r = readingsFor(snap, region);
-  const psi = r.psi3h?.value ?? null;
-  const band = psiBand(psi);
-  const where = r.area?.name ?? (r.psi3h ? `highest, ${r.psi3h.name}` : 'Singapore');
+  // NEA's 24-hr PSI, as the card and caption give it: the typed region's, else each band and where.
+  const area = readingsFor(snap, region).area;
+  const band = psiBand(area?.psi24h);
+  const title = area
+    ? `${area.name}: 24-hr PSI ${area.psi24h == null ? 'no reading' : `${Math.round(area.psi24h)} · ${band?.label}`}`
+    : 'Singapore haze update';
+  const description = `${area ? 'NEA’s reading' : bandWords(snap, 'psi24h')}. Tap to send.`;
   const extra = reply_markup ? { reply_markup } : {};
   /** @type {any[]} */
   const results = [];
@@ -34,8 +37,8 @@ export function inlineResults(snap, { fileId, region, reply_markup }) {
   results.push({
     type: 'article',
     id: `text:${region ?? 'all'}:${snap.asOf}`,
-    title: psi == null ? 'Singapore haze: no reading yet' : `PSI ${psi} · ${band?.label ?? ''}`,
-    description: `Our 3-hr PSI, ${where}. Tap to send.`,
+    title,
+    description,
     input_message_content: { message_text: formatHaze(snap, null, { region }), parse_mode: 'HTML', link_preview_options: { is_disabled: true } },
     ...extra,
   });

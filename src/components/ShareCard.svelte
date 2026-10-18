@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { CARD_H, CARD_W } from '../../tgcloud/lib/card/geometry.js';
   import type { Snapshot } from '../lib/api';
   import { renderCardUrl, shareCard, type ShareResult } from '../lib/share';
   import { inTelegram, notifyHaptic } from '../lib/telegram';
@@ -78,6 +79,7 @@
     <button
       type="button"
       class="thumb"
+      style:aspect-ratio="{CARD_W} / {CARD_H}"
       onclick={() => (expanded = !expanded)}
       disabled={!url}
       aria-expanded={expanded}
@@ -125,7 +127,6 @@
   .thumb {
     flex: none;
     width: 96px;
-    aspect-ratio: 1080 / 1294; /* SUMMARY_H in tgcloud/lib/card/summary.js */
     padding: 0;
     border: 0;
     border-radius: 10px;

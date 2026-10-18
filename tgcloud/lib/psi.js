@@ -83,29 +83,17 @@ export function pm25Band(pm25) {
  * Regions grouped by the band of their `key` reading, worst band first, regions in the order
  * given. Regions without a reading are left out. `lo`/`hi` are the group's lowest and highest
  * readings, rounded.
- * @template {{ id: string, label: string }} B
- * @param {Array<any>} regions @param {string} key @param {(v: number) => B | null} bandOf @param {B[]} bands
+ * @template {{ id: string, label: string, max: number }} B
+ * @param {Array<any>} regions @param {string} key @param {B[]} bands PSI_BANDS or PM25_BANDS
  * @returns {Array<{ band: B, names: string[], lo: number, hi: number }>}
  */
-export function bandGroups(regions, key, bandOf, bands) {
-  /** @type {Map<B, { band: B, names: string[], lo: number, hi: number }>} */
-  const groups = new Map();
-  for (const r of regions) {
-    if (r[key] == null) continue;
-    const v = Math.round(r[key]);
-    const band = bandOf(v);
-    if (!band) continue;
-    const g = groups.get(band) ?? { band, names: [], lo: v, hi: v };
-    g.names.push(r.name);
-    g.lo = Math.min(g.lo, v);
-    g.hi = Math.max(g.hi, v);
-    groups.set(band, g);
-  }
-  return [...groups.values()].sort((a, b) => bands.indexOf(b.band) - bands.indexOf(a.band));
+export function bandGroups(regions, key, bands) {
+  return [...bands].reverse().flatMap((band, i, worstFirst) => {
+    const floor = worstFirst[i + 1]?.max ?? -Infinity;
+    const vals = regions.filter((r) => r[key] != null).map((r) => ({ name: r.name, v: Math.round(r[key]) })).filter(({ v }) => v > floor && v <= band.max);
+    return vals.length ? [{ band, names: vals.map((x) => x.name), lo: Math.min(...vals.map((x) => x.v)), hi: Math.max(...vals.map((x) => x.v)) }] : [];
+  });
 }
-
-/** "174" or "129–186". @param {{ lo: number, hi: number }} g */
-export const groupRange = (g) => (g.lo === g.hi ? String(g.lo) : `${g.lo}–${g.hi}`);
 
 /**
  * Mean of the last `n` numbers (ignoring nulls); null if none.

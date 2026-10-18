@@ -217,8 +217,9 @@ export class Canvas {
       }
       return odd;
     };
-    for (let y = Math.floor(Math.min(...ys)); y < Math.ceil(Math.max(...ys)); y++) {
-      for (let x = Math.floor(Math.min(...xs)); x < Math.ceil(Math.max(...xs)); x++) {
+    const [x0, x1, y0, y1] = [Math.floor(Math.min(...xs)), Math.ceil(Math.max(...xs)), Math.floor(Math.min(...ys)), Math.ceil(Math.max(...ys))];
+    for (let y = y0; y < y1; y++) {
+      for (let x = x0; x < x1; x++) {
         let hits = 0;
         for (let sy = 0; sy < 4; sy++) for (let sx = 0; sx < 4; sx++) if (inside(x + (sx + 0.5) / 4, y + (sy + 0.5) / 4)) hits++;
         if (hits) this.blend(x, y, color, Math.round((hits / 16) * 255));
