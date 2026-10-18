@@ -23,7 +23,8 @@
   import { LATEST_ID } from './lib/changelog';
   import { readingTime } from './lib/format';
   import type { Period } from './lib/period';
-  import { getStored, impactHaptic, inTelegram, setStored, showBackButton } from './lib/telegram';
+  import { STORE_KEYS } from './lib/store-keys';
+  import { STORAGE_WAIT_MS, getStored, impactHaptic, inTelegram, setStored, showBackButton } from './lib/telegram';
   import { snapshotVerdict, type Group } from '../tgcloud/lib/advice.js';
   import { STALE_NOTE } from '../tgcloud/lib/snapshot.js';
   import { area } from './lib/area.svelte';
@@ -43,12 +44,11 @@
   const loadNinja = () => import('./components/HazelnutNinja.svelte');
   // The purifier pet: loaded once the dashboard is up, so it never holds up the first paint.
   const loadPet = () => import('./components/PurifierPet.svelte');
-  const PET_HIDDEN_KEY = 'pet_hidden';
-  let petHidden = $state<boolean | null>(null); // null until storage answers
-  getStored(PET_HIDDEN_KEY).then((v) => (petHidden = v === '1'));
+  let petHidden = $state<boolean | null>(null); // null until storage answers (STORAGE_WAIT_MS at most)
+  getStored(STORE_KEYS.petHidden, STORAGE_WAIT_MS).then((v) => (petHidden = v === '1'));
   function showPet(shown: boolean) {
     petHidden = !shown;
-    setStored(PET_HIDDEN_KEY, shown ? '0' : '1');
+    setStored(STORE_KEYS.petHidden, shown ? '0' : '1');
   }
   // The haze map and its land outline are only fetched once Outlook is opened.
   const loadHazeMapCard = () => import('./components/HazeMap.svelte');
@@ -62,7 +62,7 @@
   let error = $state<string | null>(null);
   let period = $state<Period>('3h');
   // Who What to do advises; the hero's mask line is the same verdict's short form, so they agree.
-  const GROUP_KEY = 'advice_group';
+  const GROUP_KEY = STORE_KEYS.adviceGroup;
   let group = $state<Group>('general');
   const outside = $derived(data ? snapshotVerdict(data.snapshot, group, area.id) : null);
   getStored(GROUP_KEY).then((g) => g === 'vulnerable' && (group = g));

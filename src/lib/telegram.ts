@@ -1,5 +1,7 @@
 // Thin typed wrapper over the official telegram-web-app.js (loaded in index.html).
 
+import type { StoreKey } from './store-keys';
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const tg: any = (window as any).Telegram?.WebApp;
 
@@ -80,22 +82,18 @@ export function showBackButton(onClick: () => void): () => void {
 // CloudStorage needs Bot API 6.9+; older clients throw, so they use localStorage too.
 const cloudStorage = inTelegram && tg.isVersionAtLeast?.('6.9') ? tg.CloudStorage : null;
 
-// CloudStorage keys: 1–128 of A–Z, a–z, 0–9, _ and - (no colons). Telegram refuses any other key.
-const KEY_RE = /^[A-Za-z0-9_-]{1,128}$/;
-function checkKey(key: string) {
-  if (import.meta.env.DEV && !KEY_RE.test(key)) throw new Error(`Invalid CloudStorage key: ${key}`);
-}
+/** How long a read that holds something on screen back waits for Telegram (see getStored). */
+export const STORAGE_WAIT_MS = 2000;
 
-// A read that gets no answer in time counts as nothing stored, so a slow or silent client can't
-// hold up whatever waits on it.
-const READ_WAIT_MS = 2000;
-
-/** Read a small per-user value: Telegram CloudStorage in Telegram, localStorage otherwise. */
-export async function getStored(key: string): Promise<string | null> {
-  checkKey(key);
+/**
+ * Read a small per-user value: Telegram CloudStorage in Telegram, localStorage otherwise.
+ * `waitMs`: give up after that long (nothing stored), for reads that hold something on screen
+ * back. Not for a value that's later written back (a best score): a late answer would be lost.
+ */
+export async function getStored(key: StoreKey, waitMs?: number): Promise<string | null> {
   if (cloudStorage) {
     return new Promise((resolve) => {
-      const timer = setTimeout(() => resolve(null), READ_WAIT_MS);
+      const timer = waitMs == null ? undefined : setTimeout(() => resolve(null), waitMs);
       const done = (v: string | null) => {
         clearTimeout(timer);
         resolve(v);
@@ -115,8 +113,7 @@ export async function getStored(key: string): Promise<string | null> {
 }
 
 /** Write a small per-user value. Best effort: failures are ignored. */
-export function setStored(key: string, value: string) {
-  checkKey(key);
+export function setStored(key: StoreKey, value: string) {
   try {
     if (cloudStorage) cloudStorage.setItem(key, value);
     else localStorage.setItem(key, value);
