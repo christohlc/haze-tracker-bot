@@ -9,6 +9,12 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-18-pass-it-on',
+    date: '2026-10-18',
+    title: 'Pass the bot on',
+    body: 'Send /start to the bot for two new buttons: add it to a group so everyone there gets the alerts, or share the haze in any chat. The pictures now carry the bot’s name, so anyone they’re forwarded to can find it.',
+  },
+  {
     id: '2026-10-18-bottom-tabs',
     date: '2026-10-18',
     title: 'Tabs within thumb reach',

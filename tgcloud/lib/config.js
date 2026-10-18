@@ -4,6 +4,13 @@
 /** Mini App host printed by `tgcloud push` (the app id is public). */
 export const MINI_APP_URL = 'https://app8809761337.tgcloud.ai/';
 
+/**
+ * The bot's @username, printed on the cards so a forwarded one says where it came from. The cards
+ * are drawn without the SDK (the Mini App draws them too), so it can't come from getMe: keep it
+ * in step with BotFather.
+ */
+export const BOT_USERNAME = 'hazelnutellabot';
+
 /** data.gov.sg's v2 real-time API, where NEA's readings come from. */
 export const NEA_API = 'https://api-open.data.gov.sg/v2/real-time/api';
 

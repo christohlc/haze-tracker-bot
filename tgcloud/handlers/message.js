@@ -4,14 +4,15 @@
 import { getAhead } from '../lib/ahead.js';
 import { cigarettes } from '../lib/cigs.js';
 import { renderAlertSettings } from '../lib/alert-settings.js';
-import { dashboardButton } from '../lib/buttons.js';
-import { ADMINS_ONLY, COMMANDS, isGroupChat, parseCommand, topicOf } from '../lib/chat-rules.js';
+import { dashboardButton, startButtons } from '../lib/buttons.js';
+import { ADMINS_ONLY, COMMANDS, isGroupChat, parseCommand, startSource, topicOf } from '../lib/chat-rules.js';
 import { REGIONS } from '../lib/config.js';
 import { sendCardOrText, sendForecastCardOrText } from '../lib/card/send.js';
 import { botInfo, canManageAlerts } from '../lib/groups.js';
 import { answer, sendHtml } from '../lib/messages.js';
 import { forecastMessage, formatCigs, formatHaze, formatHazeCaption } from '../lib/format.js';
 import { getSnapshot } from '../lib/refresh.js';
+import { countStart } from '../lib/store.js';
 import { deleteSubscriber, getSubscriber, moveSubscriber, saveSubscriber } from '../lib/subscriptions.js';
 
 /** Copy that depends on whether the chat is a group. */
@@ -49,8 +50,14 @@ export default async function (message) {
 
   switch (cmd) {
     case 'start':
-    case 'help':
-      return reply(message, help(copy, (await botInfo())?.username), await dashboardButton(message.chat.id));
+    case 'help': {
+      const source = cmd === 'start' && !group ? startSource(args) : null;
+      // Counted alongside building the reply, and finished before it (an unawaited write may be lost).
+      const counting = source && countStart(source).catch((e) => console.error('countStart failed', String(e)));
+      const [bot, reply_markup] = await Promise.all([botInfo(), startButtons(message.chat.id)]);
+      await counting;
+      return reply(message, help(copy, bot?.username), reply_markup);
+    }
     case 'haze': {
       const refreshed = getSnapshot();
       const [snap, ahead, reply_markup, sub] = await Promise.all([refreshed, getAhead(refreshed), dashboardButton(message.chat.id), getSubscriber(message.chat.id)]);

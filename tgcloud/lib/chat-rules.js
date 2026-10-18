@@ -51,6 +51,22 @@ export function parseCommand(text, botUsername) {
   return { cmd: cmd.toLowerCase(), args };
 }
 
+/**
+ * Where a private /start came from: its parameter (t.me/<bot>?start=reddit), lowercased, if it
+ * looks like a source name. Not `dashboard` (groupDashboardUrl's own) or anything longer than a tag.
+ * @param {string[]} args @returns {string | null}
+ */
+export function startSource(args) {
+  const s = args[0]?.toLowerCase();
+  return s && s !== 'dashboard' && /^[a-z0-9_-]{1,32}$/.test(s) ? s : null;
+}
+
+/** "Add to a group" and "Share" buttons, under the dashboard button in a private /start. @param {string} username */
+export const shareRow = (username) => [
+  { text: '➕ Add to a group', url: `https://t.me/${username}?startgroup=true` },
+  { text: '📤 Share', switch_inline_query: '' },
+];
+
 /** The forum topic a message is in, or null (General, a reply thread, or not a forum). @param {any} message */
 export const topicOf = (message) => (message?.is_topic_message && message.message_thread_id) || null;
 

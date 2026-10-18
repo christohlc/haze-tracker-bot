@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { answerTargets, groupDashboardUrl, isAnonymousAdmin, parseCommand, subscriberTarget, topicOf } from '../tgcloud/lib/chat-rules.js';
+import { answerTargets, groupDashboardUrl, isAnonymousAdmin, parseCommand, shareRow, startSource, subscriberTarget, topicOf } from '../tgcloud/lib/chat-rules.js';
 
 test('commands addressed to another bot are ignored', () => {
   assert.deepEqual(parseCommand('/haze@HazeBot east 30', 'hazebot'), { cmd: 'haze', args: ['east', '30'] });
@@ -46,4 +46,19 @@ test('anonymous admins post as the group', () => {
 test('group dashboard link opens the main Mini App if there is one', () => {
   assert.equal(groupDashboardUrl({ username: 'HazeBot', has_main_web_app: true }), 'https://t.me/HazeBot?startapp');
   assert.equal(groupDashboardUrl({ username: 'HazeBot' }), 'https://t.me/HazeBot?start=dashboard');
+});
+
+test('a /start parameter counts as a source only if it looks like one', () => {
+  assert.equal(startSource(['Reddit']), 'reddit');
+  assert.equal(startSource(['hwz_edmw']), 'hwz_edmw');
+  assert.equal(startSource([]), null);
+  assert.equal(startSource(['dashboard']), null); // groupDashboardUrl's own
+  assert.equal(startSource(['a'.repeat(33)]), null);
+  assert.equal(startSource(['<b>']), null);
+});
+
+test('the share row adds the bot to a group or shares the inline card', () => {
+  const [group, share] = shareRow('HazeBot');
+  assert.equal(group.url, 'https://t.me/HazeBot?startgroup=true');
+  assert.equal(share.switch_inline_query, '');
 });
