@@ -1,5 +1,5 @@
 // @ts-check
-// @bot in any chat: share the haze picture or a text summary (lib/inline-rules.js).
+// @bot in any chat: share the haze update, as the picture or a text summary (lib/inline-rules.js).
 // Inline mode is switched on in BotFather (/setinline).
 
 import { api } from 'sdk';

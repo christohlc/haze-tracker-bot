@@ -27,7 +27,7 @@ const help = (copy, username) =>
   [
     '<b>I’m going hazelnuts!</b>',
     ...COMMANDS.filter((c) => c.help).map((c) => `/${c.command}${c.usage ? ` ${c.usage}` : ''}: ${c.help}`),
-    ...(username ? [`In any chat, type @${username} to share the haze, or @${username} west for one region.`] : []),
+    ...(username ? [`In any chat, type @${username} to share the haze update, or @${username} west for one region.`] : []),
     '',
     `<i>Privacy: ${copy.note} /stop deletes them.</i>`,
   ].join('\n');

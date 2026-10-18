@@ -64,7 +64,7 @@ export function startSource(args) {
 /** "Add to a group" and "Share" buttons, under the dashboard button in a private /start. @param {string} username */
 export const shareRow = (username) => [
   { text: '➕ Add to a group', url: `https://t.me/${username}?startgroup=true` },
-  { text: '📤 Share the haze', switch_inline_query: '' },
+  { text: '📤 Share haze update', switch_inline_query: '' },
 ];
 
 /** The forum topic a message is in, or null (General, a reply thread, or not a forum). @param {any} message */
