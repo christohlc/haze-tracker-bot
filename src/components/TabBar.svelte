@@ -1,6 +1,6 @@
 <script lang="ts" generics="T extends string">
   import { rovingTarget } from '../lib/roving';
-  import { onMount } from 'svelte';
+  import { onDestroy } from 'svelte';
   import { lockVerticalSwipes, selectionHaptic } from '../lib/telegram';
 
   let {
@@ -64,12 +64,13 @@
   let origin = 0;
   let tabW = 0;
 
-  // Where the thumb goes under the finger: its left edge, and the tab it's mostly over. Past
-  // either end it follows at a fifth of the finger's travel, like a rubber band.
+  const RUBBER = 5; // past either end the thumb follows at a fifth of the finger's travel
+
+  // Where the thumb goes under the finger: its left edge, and the tab it's mostly over.
   function dragSlot(clientX: number) {
     const max = (options.length - 1) * tabW;
     const raw = clientX - origin - tabW / 2;
-    const x = raw < 0 ? raw / 5 : raw > max ? max + (raw - max) / 5 : raw;
+    const x = raw < 0 ? raw / RUBBER : raw > max ? max + (raw - max) / RUBBER : raw;
     return { x, i: Math.min(options.length - 1, Math.max(0, Math.round(raw / tabW))) };
   }
 
@@ -109,21 +110,8 @@
     hoverIndex = s.i;
   }
 
-  // `touch-action: pan-y` keeps the page scrolling over the bar, but a sideways drag that drifts
-  // a little vertically would then be taken over (pointercancel). Once a touch is mostly
-  // sideways, keep it: a non-passive touchmove that prevents the scroll.
-  onMount(() => {
-    const hold = (e: TouchEvent) => {
-      const t = e.touches[0];
-      if (pointer == null || !t) return;
-      if (dragged || Math.abs(t.clientX - startX) > Math.abs(t.clientY - startY)) e.preventDefault();
-    };
-    bar.addEventListener('touchmove', hold, { passive: false });
-    return () => bar.removeEventListener('touchmove', hold);
-  });
-
-  // Heard on the window: a mouse pressed here can be let go anywhere. A cancel (the browser took
-  // the touch after all) still lands on the tab under the finger rather than snapping back.
+  // Heard on the window: a mouse pressed here can be let go anywhere. A cancel (the system took
+  // the touch) still lands on the tab under the finger rather than snapping back.
   function onUp(e: PointerEvent) {
     if (e.pointerId !== pointer) return;
     if (dragged && hoverIndex != null) pick(options[hoverIndex].value);
@@ -139,6 +127,7 @@
     dragX = null;
     hoverIndex = null;
   }
+  onDestroy(release);
 
 </script>
 
@@ -236,7 +225,9 @@
       0 8px 24px rgba(0, 0, 0, 0.12),
       0 1px 3px rgba(0, 0, 0, 0.08);
     isolation: isolate;
-    touch-action: pan-y; /* the page keeps vertical scrolling; a sideways drag is ours */
+    /* Every touch on the bar is ours, like a native tab bar: if the page could scroll from here,
+       iOS would take over a sideways drag that drifts a little and cancel it. */
+    touch-action: none;
     -webkit-user-select: none;
     user-select: none;
     -webkit-touch-callout: none;
