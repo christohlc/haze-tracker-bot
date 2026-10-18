@@ -63,11 +63,22 @@ export const PM25_BAND = {
 /** `foot` is the white strip at the bottom of each card that holds the PM2.5. */
 const CARD = { w: 262, h: 192, r: 24, foot: 36 };
 
+/** How far the map and cards sit above where the map asset puts them, so they start just under
+ *  the title. The summary card is that much shorter than CARD_H. */
+const LIFT = 56;
+/** The summary card's height. */
+export const SUMMARY_H = CARD_H - LIFT;
+
 /** Each region's card is centred on NEA's reference point for it, with three nudges: North and
  *  South are closer to Central than a card is tall, so they're pushed out just enough to clear it;
  *  the middle column sits a little east (103.83°) and East further toward Changi (103.96°), so the
  *  row is balanced over the island. */
-const centres = Object.fromEntries(REGIONS.map((r) => [r.id, project(r.lon, r.lat)]));
+const centres = Object.fromEntries(
+  REGIONS.map((r) => {
+    const [x, y] = project(r.lon, r.lat);
+    return [r.id, [x, y - LIFT]];
+  }),
+);
 const PITCH = CARD.h + 24;
 for (const id of ['north', 'central', 'south']) centres[id][0] = project(103.83, 0)[0];
 centres.east[0] = project(103.96, 0)[0];
@@ -161,10 +172,10 @@ let logoRgba = /** @type {Uint8Array | null} */ (null);
  * A card's background and brand: the hero sky for today's worst 24-hour PSI band, the island,
  * the logo and name, and the time. Shared with the forecast card, which leaves
  * out the island: its panels would cover nearly all of it.
- * @param {number} height @param {any} snap @param {{ island?: boolean }} [opts]
+ * @param {number} height @param {any} snap @param {{ island?: boolean, mapY?: number }} [opts] `mapY` moves the island up or down
  * @returns {{ c: Canvas, sky: typeof SKY.none }}
  */
-export function backdrop(height, snap, { island = true } = {}) {
+export function backdrop(height, snap, { island = true, mapY = 0 } = {}) {
   const sky = SKY[psiBand(snap.worst?.psi24h?.value)?.id ?? 'none'] ?? SKY.none;
   const c = new Canvas(CARD_W, height);
   c.verticalGradient(sky.top, sky.bottom);
@@ -172,7 +183,7 @@ export function backdrop(height, snap, { island = true } = {}) {
   c.glow(CARD_W * 0.2, height * 1.05, CARD_W * 1.2, height * 0.6, sky.haze, sky.hazeAlpha, 0.7);
   if (island) {
     mapAlpha ??= decodeMask(fromBase64(MAP_MASK.data), 0, MAP_MASK.w * MAP_MASK.h);
-    c.blitMask(mapAlpha, MAP_MASK.w, MAP_MASK.h, 0, 0, C.card, sky.land);
+    c.blitMask(mapAlpha, MAP_MASK.w, MAP_MASK.h, 0, mapY, C.card, sky.land);
   }
   logoRgba ??= fromBase64(LOGO.data);
   c.blitRgba(logoRgba, LOGO.w, LOGO.h, 56, 48);
@@ -185,22 +196,22 @@ export function backdrop(height, snap, { island = true } = {}) {
 export function drawSummaryCard(snap) {
   // Brand, then what the card shows. No band for the whole island: each region's card has its
   // own, and the caption says where each applies.
-  const { c, sky } = backdrop(CARD_H, snap);
+  const { c, sky } = backdrop(SUMMARY_H, snap, { mapY: -LIFT });
   c.text('Singapore haze update', 56, 236, 'title', sky.ink);
   if (snap.stale) {
-    c.fillRoundRect(56, 314, Math.ceil(c.measure(STALE_NOTE, 'body')) + 36, 44, 22, C.stale);
-    c.text(STALE_NOTE, 74, 336 + c.capHeight('body') / 2, 'body', C.ink);
+    c.fillRoundRect(56, 262, Math.ceil(c.measure(STALE_NOTE, 'body')) + 36, 40, 20, C.stale);
+    c.text(STALE_NOTE, 74, 282 + c.capHeight('body') / 2, 'body', C.ink);
   }
 
   const byId = new Map(snap.regions.map((/** @type {any} */ r) => [r.id, r]));
   for (const { id, name } of REGIONS) regionCard(c, byId.get(id) ?? { id, name, pm25: null, psi24h: null });
 
-  c.fillRoundRect(36, 1030, CARD_W - 72, 226, CARD.r, C.card);
-  legendRow(c, 1074, 'Card: 24-hr PSI band', PSI_BANDS, PSI_BANDS.map((b) => BAND[/** @type {keyof typeof BAND} */ (b.id)]));
-  legendRow(c, 1170, 'Footer: 1-hr PM2.5 band', PM25_BANDS, PM25_BANDS.map((b) => PM25_BAND[/** @type {keyof typeof PM25_BAND} */ (b.id)]));
+  c.fillRoundRect(36, 1030 - LIFT, CARD_W - 72, 226, CARD.r, C.card);
+  legendRow(c, 1074 - LIFT, 'Card: 24-hr PSI band', PSI_BANDS, PSI_BANDS.map((b) => BAND[/** @type {keyof typeof BAND} */ (b.id)]));
+  legendRow(c, 1170 - LIFT, 'Footer: 1-hr PM2.5 band', PM25_BANDS, PM25_BANDS.map((b) => PM25_BAND[/** @type {keyof typeof PM25_BAND} */ (b.id)]));
 
   const psiNote = snap.psiAsOf && snap.psiAsOf !== snap.asOf ? ` 24-hr PSI as at ${sgtHour(snap.psiAsOf)}.` : '';
-  c.text(`Readings from NEA.${psiNote} Advisories: haze.gov.sg`, 56, 1300, 'label', sky.ink);
+  c.text(`Readings from NEA.${psiNote} Advisories: haze.gov.sg`, 56, 1300 - LIFT, 'label', sky.ink);
   return c;
 }
 

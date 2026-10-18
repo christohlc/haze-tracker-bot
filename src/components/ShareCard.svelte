@@ -125,7 +125,7 @@
   .thumb {
     flex: none;
     width: 96px;
-    aspect-ratio: 1080 / 1350;
+    aspect-ratio: 1080 / 1294; /* SUMMARY_H in tgcloud/lib/card/summary.js */
     padding: 0;
     border: 0;
     border-radius: 10px;
