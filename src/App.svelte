@@ -43,7 +43,7 @@
   const loadNinja = () => import('./components/HazelnutNinja.svelte');
   // The purifier pet: loaded once the dashboard is up, so it never holds up the first paint.
   const loadPet = () => import('./components/PurifierPet.svelte');
-  const PET_HIDDEN_KEY = 'hazelnuts:pet:hidden';
+  const PET_HIDDEN_KEY = 'pet_hidden';
   let petHidden = $state<boolean | null>(null); // null until storage answers
   getStored(PET_HIDDEN_KEY).then((v) => (petHidden = v === '1'));
   function showPet(shown: boolean) {

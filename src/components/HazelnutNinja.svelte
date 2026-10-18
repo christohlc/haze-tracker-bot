@@ -9,7 +9,7 @@
 
   let { onclose }: { onclose: () => void } = $props();
 
-  const BEST_KEY = 'hazelnuts:ninja:best';
+  const BEST_KEY = 'ninja_best';
 
   let status = $state<'idle' | 'playing' | 'over'>('idle');
   let score = $state(0);

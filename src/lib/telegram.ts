@@ -80,12 +80,32 @@ export function showBackButton(onClick: () => void): () => void {
 // CloudStorage needs Bot API 6.9+; older clients throw, so they use localStorage too.
 const cloudStorage = inTelegram && tg.isVersionAtLeast?.('6.9') ? tg.CloudStorage : null;
 
+// CloudStorage keys: 1–128 of A–Z, a–z, 0–9, _ and - (no colons). Telegram refuses any other key.
+const KEY_RE = /^[A-Za-z0-9_-]{1,128}$/;
+function checkKey(key: string) {
+  if (import.meta.env.DEV && !KEY_RE.test(key)) throw new Error(`Invalid CloudStorage key: ${key}`);
+}
+
+// A read that gets no answer in time counts as nothing stored, so a slow or silent client can't
+// hold up whatever waits on it.
+const READ_WAIT_MS = 2000;
+
 /** Read a small per-user value: Telegram CloudStorage in Telegram, localStorage otherwise. */
 export async function getStored(key: string): Promise<string | null> {
+  checkKey(key);
   if (cloudStorage) {
-    return new Promise((resolve) =>
-      cloudStorage.getItem(key, (err: unknown, value?: string) => resolve(err ? null : value || null)),
-    );
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => resolve(null), READ_WAIT_MS);
+      const done = (v: string | null) => {
+        clearTimeout(timer);
+        resolve(v);
+      };
+      try {
+        cloudStorage.getItem(key, (err: unknown, value?: string) => done(err ? null : value || null));
+      } catch {
+        done(null);
+      }
+    });
   }
   try {
     return localStorage.getItem(key);
@@ -96,6 +116,7 @@ export async function getStored(key: string): Promise<string | null> {
 
 /** Write a small per-user value. Best effort: failures are ignored. */
 export function setStored(key: string, value: string) {
+  checkKey(key);
   try {
     if (cloudStorage) cloudStorage.setItem(key, value);
     else localStorage.setItem(key, value);

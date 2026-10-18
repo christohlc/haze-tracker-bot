@@ -39,7 +39,7 @@
     onhide,
   }: { snapshot: Snapshot; period: Period; hidden: boolean; onhide: () => void } = $props();
 
-  const POS_KEY = 'hazelnuts:pet:pos';
+  const POS_KEY = 'pet_pos';
   const TAP_SLOP = 10; // px; hedgehog-mode's click threshold
 
   // The same band as the hero, so the pet and the big number agree.
