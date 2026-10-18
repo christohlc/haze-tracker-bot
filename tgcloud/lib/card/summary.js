@@ -6,7 +6,7 @@
 // Pure (no SDK): tests and the Mini App use it too.
 
 import { REGIONS } from '../config.js';
-import { PSI_BANDS, psiBand } from '../psi.js';
+import { PM25_BANDS, pm25Band, PSI_BANDS, psiBand } from '../psi.js';
 import { STALE_NOTE } from '../snapshot.js';
 import { LOGO, MAP_MASK } from './art.js';
 import { sgtDayMonth, sgtHour } from '../time.js';
@@ -41,13 +41,23 @@ export const C = {
   stale: rgb('#e2b84a'),
 };
 
-/** --band-<id> and --band-<id>-ink. */
+/** --band-<id> and --band-<id>-ink. @type {Record<'good' | 'moderate' | 'unhealthy' | 'very_unhealthy' | 'hazardous', [Rgb, Rgb]>} */
 export const BAND = {
   good: [rgb('#0ca30c'), rgb('#0b0b0b')],
   moderate: [rgb('#2a78d6'), rgb('#ffffff')],
   unhealthy: [rgb('#dcab00'), rgb('#0b0b0b')],
   very_unhealthy: [rgb('#e0481f'), rgb('#0b0b0b')],
   hazardous: [rgb('#8e3a9e'), rgb('#ffffff')],
+};
+
+/** The 1-hour PM2.5 bands' colours [fill, ink], as the newspapers' graphics use: the PSI palette's
+ *  green, yellow and orange for the same severity, and a red of its own for Very high.
+ *  @type {Record<'I' | 'II' | 'III' | 'IV', [Rgb, Rgb]>} */
+export const PM25_BAND = {
+  I: BAND.good,
+  II: BAND.unhealthy,
+  III: BAND.very_unhealthy,
+  IV: [rgb('#b3201c'), rgb('#ffffff')],
 };
 
 /** `foot` is the white strip at the bottom of each card that holds the PM2.5. */
@@ -113,19 +123,22 @@ function regionCard(c, region) {
   const value = fmt(region.psi24h);
   c.text(value, x + 22, y + 104, c.measure(value, 'num') <= CARD.w - 44 ? 'num' : 'numSmall', ink);
   c.text(band?.label ?? 'No reading', x + 24, y + 138, 'body', ink);
-  // The last hour's PM2.5 in a white footer, apart from the band colour (which only means the
-  // PSI band). No unit: the Mini App has the detail.
+  // The last hour's PM2.5 in a footer of its own band's colour, under a white rule. No unit: the
+  // Mini App has the detail.
+  const pm = pm25Band(shown(region.pm25));
+  const [pmFill, pmInk] = pm ? PM25_BAND[/** @type {keyof typeof PM25_BAND} */ (pm.id)] : [C.none, C.noneInk];
   const footY = y + CARD.h - CARD.foot;
-  c.fillRoundRect(x, footY, CARD.w, CARD.foot, [0, 0, CARD.r, CARD.r], C.card);
-  c.text(`1-hr PM2.5: ${fmt(region.pm25)}`, x + 24, footY + CARD.foot / 2 + c.capHeight('label') / 2, 'label', C.ink);
+  c.fillRect(x, footY - 3, CARD.w, 3, C.card);
+  c.fillRoundRect(x, footY, CARD.w, CARD.foot, [0, 0, CARD.r, CARD.r], pmFill);
+  c.text(`1-hr PM2.5: ${fmt(region.pm25)}`, x + 24, footY + CARD.foot / 2 + c.capHeight('label') / 2, 'label', pmInk);
 }
 
 /**
  * A row of band chips under a title, squeezed to fit the panel.
  * @param {Canvas} c @param {number} y title baseline @param {string} title
- * @param {Array<{ label: string, max: number }>} bands @param {string[]} colourIds
+ * @param {Array<{ label: string, max: number }>} bands @param {Array<[Rgb, Rgb]>} colours
  */
-function legendRow(c, y, title, bands, colourIds) {
+function legendRow(c, y, title, bands, colours) {
   const x0 = 64;
   const avail = CARD_W - 36 - 28 - x0;
   const gap = 10;
@@ -135,7 +148,7 @@ function legendRow(c, y, title, bands, colourIds) {
   c.text(title, x0, y, 'head', C.ink);
   let x = x0;
   labels.forEach((l, i) => {
-    const [fill, ink] = BAND[/** @type {keyof typeof BAND} */ (colourIds[i])];
+    const [fill, ink] = colours[i];
     x += pill(c, x, y + 14, l, fill, ink, { h: 40, pad }) + gap;
   });
 }
@@ -182,8 +195,9 @@ export function drawSummaryCard(snap) {
   const byId = new Map(snap.regions.map((/** @type {any} */ r) => [r.id, r]));
   for (const { id, name } of REGIONS) regionCard(c, byId.get(id) ?? { id, name, pm25: null, psi24h: null });
 
-  c.fillRoundRect(36, 1124, CARD_W - 72, 126, CARD.r, C.card);
-  legendRow(c, 1170, 'Card colour: 24-hr PSI band', PSI_BANDS, PSI_BANDS.map((b) => b.id));
+  c.fillRoundRect(36, 1030, CARD_W - 72, 226, CARD.r, C.card);
+  legendRow(c, 1074, 'Card: 24-hr PSI band', PSI_BANDS, PSI_BANDS.map((b) => BAND[/** @type {keyof typeof BAND} */ (b.id)]));
+  legendRow(c, 1170, 'Footer: 1-hr PM2.5 band', PM25_BANDS, PM25_BANDS.map((b) => PM25_BAND[/** @type {keyof typeof PM25_BAND} */ (b.id)]));
 
   const psiNote = snap.psiAsOf && snap.psiAsOf !== snap.asOf ? ` 24-hr PSI as at ${sgtHour(snap.psiAsOf)}.` : '';
   c.text(`Readings from NEA.${psiNote} Advisories: haze.gov.sg`, 56, 1300, 'label', sky.ink);

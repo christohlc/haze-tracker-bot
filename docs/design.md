@@ -204,16 +204,17 @@ newspaper graphic:
 - **The hero sky** for the worst 24-hour PSI band is the background, with the island as a soft
   light silhouette. Text on the sky uses that sky’s fixed ink, as in the hero.
 - **Severity at a glance:** each region’s card is filled with its own 24-hour PSI band colour and
-  outlined in white, so it stands off a sky of a similar colour. No region colours and no second
-  palette for PM2.5: on the cards, colour only ever means the band.
+  outlined in white, so it stands off a sky of a similar colour. No region colours: colour only
+  ever means a band.
 - **No band for the whole island.** Logo and name, then “24-hr PSI by region” as the title; each
   region’s card carries its own band, and the caption says where each band applies (as the
   newspapers’ graphics do). A single headline band read as island-wide when only one region had it.
 - **One card per region**, centred on NEA’s reference point for it (`REGIONS`), nudged so the
   cards don’t overlap and the row sits balanced over the island: name, the 24-hour PSI as the big
-  number and the band in words. The last hour’s PM2.5 sits apart in a white footer strip at the
-  bottom of the card (“1-hr PM2.5: 123”), with no unit; the Mini App has the detail.
-- **One legend row** of band chips (“Card colour: 24-hr PSI band”), ranges from `PSI_BANDS`.
+  number and the band in words. Under a white rule, a footer gives the last hour’s PM2.5
+  (“1-hr PM2.5: 123”, no unit) in its own band’s colour (`PM25_BAND`: the PSI palette’s green,
+  yellow and orange for the same severity, a red for Very high), as ST’s and CNA’s graphics do.
+- **Two legend rows** of band chips: “Card: 24-hr PSI band” and “Footer: 1-hr PM2.5 band”, ranges from `PSI_BANDS` and `PM25_BANDS`.
 - Both numbers are NEA’s, so no “our calculation” note; the 3-hour PSI stays out of the picture.
   Missing readings show “–” on a grey card; a stale snapshot gets the amber note.
 - The card is always light (it’s shared into other people’s chats), and its colours mirror the
