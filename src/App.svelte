@@ -144,8 +144,8 @@
     if (loading) return;
     loading = true;
     try {
-      // The first answer is what the server has stored, so it's quick; if NEA was due, the second
-      // waits for the refetch while the first is on screen (still “checking…”: loadedAt is unset).
+      // The first answer is what the server has stored; if NEA was due, the second waits for the
+      // refetch while the first is on screen (getDashboard.js).
       data = await loadDashboard();
       error = null;
       saveDashboard(data);

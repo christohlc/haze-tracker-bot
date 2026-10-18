@@ -15,15 +15,12 @@ import { claimEvery, getStates, recordSource, setState } from './store.js';
  * @returns {Promise<T | null>}
  */
 export async function cachedFeed(key, everyS, source, load) {
-  const attemptKey = `${key}_attempt`;
   let cached = null;
   try {
-    // One read for both rows: a warm hit costs a single query.
-    const rows = await getStates([key, attemptKey]);
-    const attempt = rows.get(attemptKey);
-    cached = rows.get(key)?.value?.[key] ?? null;
-    if (attempt && Date.now() / 1000 - attempt.updatedAt < everyS) return cached; // skips the claim's write
-    if (!(await claimEvery(attemptKey, everyS))) return cached; // someone else is fetching it
+    const stored = await readFeed(key, everyS);
+    cached = stored.value;
+    if (!stored.due) return cached; // skips the claim's write
+    if (!(await claimEvery(`${key}_attempt`, everyS))) return cached; // someone else is fetching it
     try {
       const { value, error, detail } = await load();
       const status = error ? { ok: false, error } : { ok: true, detail };
@@ -39,16 +36,18 @@ export async function cachedFeed(key, everyS, source, load) {
 }
 
 /**
- * What cachedFeed(key, everyS) would return, without fetching, and `due` if it would fetch now:
- * for a caller that answers at once and fetches in a later call. Never throws.
+ * What cachedFeed(key, everyS) would return, without fetching, and `due` if it would fetch now.
+ * Never throws.
  * @param {string} key @param {number} everyS
  */
 export async function peekFeed(key, everyS) {
-  try {
-    const rows = await getStates([key, `${key}_attempt`]);
-    const attempt = rows.get(`${key}_attempt`);
-    return { value: rows.get(key)?.value?.[key] ?? null, due: !attempt || Date.now() / 1000 - attempt.updatedAt >= everyS };
-  } catch {
-    return { value: null, due: true };
-  }
+  return readFeed(key, everyS).catch(() => ({ value: null, due: true }));
+}
+
+/** The stored copy and whether a fetch is due. One read for both rows: a warm hit costs a single query. */
+async function readFeed(/** @type {string} */ key, /** @type {number} */ everyS) {
+  const rows = await getStates([key, `${key}_attempt`]);
+  const attempt = rows.get(`${key}_attempt`);
+  const due = !attempt || Date.now() / 1000 - attempt.updatedAt >= everyS;
+  return { value: rows.get(key)?.value?.[key] ?? null, due };
 }

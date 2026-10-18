@@ -22,14 +22,14 @@ export async function getOutlook(deadline = 0) {
     const value = parseOutlook(json);
     return { value, detail: value ? `latest for ${value.forDate}` : 'no forecast we could read' };
   });
-  return current(outlook);
+  return ifCurrent(outlook);
 }
 
 /** getOutlook() without fetching: the stored forecast, and `due` if getOutlook() would fetch it now. */
 export async function peekOutlook() {
   const { value, due } = await peekFeed('outlook', OUTLOOK_EVERY_S);
-  return { outlook: current(value), due };
+  return { outlook: ifCurrent(value), due };
 }
 
 // NEA leaves its last update up between episodes, and a stored copy ages while NEA is unreachable.
-const current = (/** @type {import('./outlook-parse.js').Outlook | null} */ o) => (o && isCurrent(o) ? o : null);
+const ifCurrent = (/** @type {import('./outlook-parse.js').Outlook | null} */ o) => (o && isCurrent(o) ? o : null);

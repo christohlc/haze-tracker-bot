@@ -86,21 +86,19 @@ async function refetchDue(/** @type {number} */ now, /** @type {number} */ revis
 
 /** Latest snapshot, refetched if due (one try). `stale: true` means NEA's latest reading is over 80 min old. */
 export async function getSnapshot() {
-  const snap = await refreshNeaIfDue({ deadline: NO_RETRY, revisedEveryS: USER_REVISED_EVERY_S });
-  return { ...snap, stale: isStale(snap.asOf) };
+  return withStale(await refreshNeaIfDue({ deadline: NO_RETRY, revisedEveryS: USER_REVISED_EVERY_S }));
 }
 
 /**
  * getSnapshot() without the refetch: the stored snapshot, and `due` if getSnapshot() would refetch
- * it now. For a caller that answers at once and refetches in a later call (the runtime has no
- * timers to cut a slow fetch short, and stops work left running after a response). Fetches only
- * when nothing is stored yet.
+ * it now (see getDashboard.js). Fetches only when nothing is stored yet.
  */
 export async function peekSnapshot() {
   const { stored, due } = await refetchDue(Date.now(), USER_REVISED_EVERY_S);
-  const snap = stored ?? (await refreshNea({ deadline: NO_RETRY }));
-  return { snap: { ...snap, stale: isStale(snap.asOf) }, due: !!stored && due };
+  return { snap: withStale(stored ?? (await refreshNea({ deadline: NO_RETRY }))), due: !!stored && due };
 }
+
+const withStale = (/** @type {any} */ snap) => ({ ...snap, stale: isStale(snap.asOf) });
 
 /**
  * Work the next-hours range out from two weeks of readings and keep it in state('range'), so a
