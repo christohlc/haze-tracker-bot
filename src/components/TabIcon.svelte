@@ -9,7 +9,7 @@
   let { name, play = false }: { name: TabIconName; play?: boolean } = $props();
 </script>
 
-<svg viewBox="0 0 24 24" width="22" height="22" class:play aria-hidden="true">
+<svg viewBox="0 0 24 24" width="28" height="28" class:play aria-hidden="true">
   {#if name === 'live'}
     <path class="core" d="M12 10.5a1.5 1.5 0 1 1 0 3a1.5 1.5 0 1 1 0-3z" />
     <path class="wave near" d="M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7" />
@@ -31,7 +31,7 @@
     overflow: visible;
     fill: none;
     stroke: currentColor;
-    stroke-width: var(--icon-stroke, 1.8);
+    stroke-width: var(--icon-stroke, 1.6);
     stroke-linecap: round;
     stroke-linejoin: round;
   }
@@ -41,28 +41,45 @@
     transform-box: view-box;
   }
 
-  /* Live: the dot beats, then the waves ripple out from it, near before far. */
+  /* Live: the dot beats twice, like a heart, and the waves ripple out with each beat, near before far. */
   .core,
   .wave {
     transform-origin: 12px 12px;
   }
   @keyframes beat {
-    40% {
-      transform: scale(1.35);
+    22% {
+      transform: scale(1.45);
+    }
+    44% {
+      transform: scale(1);
+    }
+    64% {
+      transform: scale(1.25);
     }
   }
   @keyframes ripple {
     0% {
-      transform: scale(0.7);
+      transform: scale(0.6);
       opacity: 0;
     }
-    55% {
-      transform: scale(1.06);
+    28% {
+      transform: scale(1.1);
+      opacity: 1;
+    }
+    46% {
+      transform: scale(1);
+    }
+    56% {
+      transform: scale(0.88);
+      opacity: 0.5;
+    }
+    76% {
+      transform: scale(1.05);
       opacity: 1;
     }
   }
 
-  /* Gauge: the needle swings in from the left, a touch past where it rests, and settles. */
+  /* Gauge: the needle swings in from the left, past where it rests, and rocks back to it. */
   .needle {
     transform-origin: 12px 16px;
   }
@@ -70,8 +87,14 @@
     0% {
       transform: rotate(-90deg);
     }
-    65% {
-      transform: rotate(12deg);
+    45% {
+      transform: rotate(18deg);
+    }
+    66% {
+      transform: rotate(-7deg);
+    }
+    84% {
+      transform: rotate(3deg);
     }
   }
 
@@ -99,7 +122,7 @@
   }
   @keyframes slide {
     50% {
-      transform: translate(calc(var(--dx) / 2), calc(var(--dy) / 2)) scale(0.75);
+      transform: translate(calc(var(--dx) / 2), calc(var(--dy) / 2)) scale(0.7);
     }
     100% {
       transform: translate(var(--dx), var(--dy));
@@ -108,19 +131,19 @@
   /* Reduced motion: the icons stay still. */
   @media (prefers-reduced-motion: no-preference) {
     .play .core {
-      animation: beat 360ms var(--ease-out);
+      animation: beat 820ms var(--ease-out);
     }
     .play .wave {
-      animation: ripple 420ms var(--ease-out) backwards;
+      animation: ripple 820ms var(--ease-out) backwards;
     }
     .play .far {
-      animation-delay: 50ms;
+      animation-delay: 80ms;
     }
     .play .needle {
-      animation: sweep 480ms var(--ease-out);
+      animation: sweep 900ms var(--ease-out);
     }
     .play .sq {
-      animation: slide 420ms var(--ease-in-out);
+      animation: slide 720ms var(--ease-in-out);
     }
   }
 </style>

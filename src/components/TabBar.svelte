@@ -186,10 +186,10 @@
 </div>
 
 <style>
-  /* About the bar's height (52px tabs, 8px padding, a label that grows with the text size),
+  /* About the bar's height (56px tabs, 8px padding, a label that grows with the text size),
      so with the page's bottom padding the last card clears it. */
   .room {
-    height: calc(52px + 1.125rem);
+    height: calc(56px + 1.125rem);
   }
   .dock {
     position: fixed;
@@ -293,8 +293,8 @@
     display: grid;
     justify-items: center;
     gap: 1px;
-    min-height: 52px;
-    padding: 5px 4px 4px;
+    min-height: 56px;
+    padding: 4px 4px 3px;
     border: 0;
     border-radius: 999px;
     background: none;
@@ -303,8 +303,10 @@
     cursor: pointer;
     transition: color 150ms ease;
   }
+  /* The picked tab is in the theme's accent, Telegram's own blue by default, like its tab bar. */
   button.lit {
-    color: var(--ink);
+    color: var(--accent);
+    --icon-stroke: 1.9;
   }
   button:focus-visible {
     outline: 2px solid var(--accent);
@@ -321,12 +323,9 @@
   .icon {
     position: relative;
     display: block;
-    height: 22px;
-    /* Its own layer: the icon's moves repaint 22px, not the whole frosted bar. */
+    height: 28px; /* TabIcon's size; without it the line box adds a few px */
+    /* Its own layer: the icon's moves repaint the icon, not the whole frosted bar. */
     will-change: transform;
-  }
-  button.lit {
-    --icon-stroke: 2.2;
   }
   .label {
     font-size: 0.6875rem;
