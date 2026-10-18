@@ -25,7 +25,7 @@ import { getSnapshot, saveRange, storedSnapshot } from '../lib/refresh.js';
 import { ALERT_SCOPES } from '../lib/alert-rules.js';
 import { breakingClaimedChats, countSubscribers, setAllLastBand } from '../lib/subscriptions.js';
 import { sgtDatesBack, sgtDayStart } from '../lib/time.js';
-import { allSourceStatus, countReadings, countReadingsBetween, deleteSetting, getAlertBands, getSetting, getState, setAlertBands, setSetting, setState, toSgtIso, upsertReadings } from '../lib/store.js';
+import { allSourceStatus, countReadings, countReadingsBetween, deleteSetting, getAlertBands, getSetting, getState, setAlertBands, setSetting, setState, startCounts, toSgtIso, upsertReadings } from '../lib/store.js';
 
 // datagov_api_key: data.gov.sg's (free, data.gov.sg sign-in), sent only to its v2 API for a higher rate limit.
 // ops_chat_id: the operator's chat (a user or group id, so maybe negative), for lib/ops.js.
@@ -116,6 +116,8 @@ export default async function (input, ctx) {
       status.snapshot = snap ? { asOf: snap.asOf, psi3h: snap.worst.psi3h } : 'none';
       status.readings = await countReadings();
       status.subscribers = await countSubscribers();
+      // Before `npx tgcloud migrate` there's no table yet; the rest of the status still matters.
+      status.startSources = await startCounts().then((rows) => Object.fromEntries(rows.map((r) => [r.source, r.count])), () => 'not migrated');
       status.alertBands = await getAlertBands();
       const breaking = await getBreaking();
       status.breaking = {

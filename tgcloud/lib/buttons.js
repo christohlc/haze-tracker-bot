@@ -1,6 +1,6 @@
 // @ts-check
-import { groupDashboardUrl, isGroupChat } from './chat-rules.js';
-import { MINI_APP_URL } from './config.js';
+import { groupDashboardUrl, isGroupChat, shareRow } from './chat-rules.js';
+import { BOT_USERNAME, MINI_APP_URL } from './config.js';
 import { botInfo } from './groups.js';
 
 const DASHBOARD = '📊 Open dashboard';
@@ -19,4 +19,15 @@ export async function dashboardButton(chatId) {
 export async function linkDashboardButton() {
   const bot = await botInfo();
   return bot?.username ? { inline_keyboard: [[{ text: DASHBOARD, url: groupDashboardUrl(bot) }]] } : undefined;
+}
+
+/**
+ * /start and /help: the dashboard button, and in a private chat ways to pass the bot on (to a
+ * group, or as the inline card). @param {number} chatId
+ */
+export async function startButtons(chatId) {
+  const dashboard = await dashboardButton(chatId);
+  if (isGroupChat(chatId)) return dashboard;
+  const username = (await botInfo())?.username ?? BOT_USERNAME;
+  return { inline_keyboard: [...(dashboard?.inline_keyboard ?? []), shareRow(username)] };
 }

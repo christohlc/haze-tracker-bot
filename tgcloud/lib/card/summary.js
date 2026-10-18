@@ -5,7 +5,7 @@
 // NEA's, so the card needs no "our calculation" caption. Rules: docs/design.md#summary-card.
 // Pure (no SDK): tests and the Mini App use it too.
 
-import { REGIONS } from '../config.js';
+import { BOT_USERNAME, REGIONS } from '../config.js';
 import { PM25_BANDS, pm25Band, PSI_BANDS, psiBand } from '../psi.js';
 import { STALE_NOTE } from '../snapshot.js';
 import { LOGO, MAP_MASK } from './art.js';
@@ -184,6 +184,8 @@ export function backdrop(height, snap, { island = true } = {}) {
   c.blitRgba(logoRgba, LOGO.w, LOGO.h, 56, 48);
   c.text('I’m going hazelnuts!', 164, 84, 'head', sky.ink);
   c.text(cardDate(snap.asOf), 164, 122, 'body', sky.ink);
+  // Where to get it, for a card forwarded away from the bot.
+  c.text(`@${BOT_USERNAME}`, CARD_W - 56, 122, 'label', sky.ink, 'right');
   return { c, sky };
 }
 

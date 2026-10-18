@@ -54,3 +54,10 @@ export const alertsSent = table(
   },
   (t) => ({ sentIdx: index('idx_alerts_sent_at').on(t.sentAt) }),
 );
+
+// How many times a t.me/<bot>?start=<source> link was opened into a private /start, for `admin`
+// `status`. Taps, not people (no chat ids are kept, so a repeat tap counts again).
+export const startSources = table('start_sources', {
+  source: text('source').primaryKey(),
+  count: integer('count').notNull(),
+});

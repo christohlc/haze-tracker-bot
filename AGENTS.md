@@ -161,6 +161,13 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   requests claimed once across isolates (`claimEvery`), and a failed one falls back to the stored copy.
 - **1-hour and 3-hour PSI and the next-hours range are our own calculations**, not NEA's.
   Copy must keep saying so; only the 24-hour PSI and NEA's forecast are official.
+- **Where users came from.** A private `/start <source>` (links like `t.me/<bot>?start=reddit`)
+  adds one to that source in `start_sources` (`startSource` in `lib/chat-rules.js`), shown by
+  `admin` `status` as `startSources`. It counts taps, not people: no chat ids are kept. Promo links
+  must use `?start=`, since `?startapp=` opens the Mini App and isn't counted. A private /start and
+  /help also get “Add to a group” and “Share” (inline card) buttons; /subscribe doesn't, because
+  its keyboard is the alert settings, which callbacks redraw. **Run `npx tgcloud migrate` before pushing** a build that
+  reads `start_sources`.
 - **Inline mode** (`handlers/inline_query.js`, `lib/inline-rules.js`): `@bot` in any chat offers
   the summary card, by the file id `card/send` cached (the tick uploads one to the ops chat each
   snapshot; none yet, or no `ops_chat_id`: text only, since an inline answer can't upload), and a

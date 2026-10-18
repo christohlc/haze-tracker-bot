@@ -3,7 +3,7 @@
 
 import { db } from 'sdk';
 import { and, desc, eq, gte, inArray, lt, sql } from 'sdk/db';
-import { readings, settings, sourceStatus, state } from '../schema.js';
+import { readings, settings, sourceStatus, startSources, state } from '../schema.js';
 import { toSgtIso } from './time.js';
 
 const nowSec = () => Math.floor(Date.now() / 1000);
@@ -128,4 +128,18 @@ export async function recordSource(source, result) {
 
 export async function allSourceStatus() {
   return db.select().from(sourceStatus).all();
+}
+
+/** One more /start from `source` (chat-rules.js startSource). @param {string} source */
+export async function countStart(source) {
+  await db
+    .insert(startSources)
+    .values({ source, count: 1 })
+    .onConflictDoUpdate({ target: startSources.source, set: { count: sql`${startSources.count} + 1` } })
+    .run();
+}
+
+/** Every source's count, most first. */
+export async function startCounts() {
+  return db.select().from(startSources).orderBy(desc(startSources.count)).all();
 }
