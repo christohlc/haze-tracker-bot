@@ -11,9 +11,9 @@
   import NewsCard from './components/NewsCard.svelte';
   import RegionDetail from './components/RegionDetail.svelte';
   import RegionTable from './components/RegionTable.svelte';
-  import Segmented from './components/Segmented.svelte';
   import ShareCard from './components/ShareCard.svelte';
   import Sources from './components/Sources.svelte';
+  import TabBar from './components/TabBar.svelte';
   import WhatsNew from './components/WhatsNew.svelte';
   import WindRain from './components/WindRain.svelte';
   import { loadDashboard, loadWeather, type Dashboard, type RegionId, type WeatherResult } from './lib/api';
@@ -29,10 +29,11 @@
   import { getSeen, markSeen } from './lib/whats-new';
 
   type Tab = 'now' | 'outlook' | 'more';
-  const TABS: { value: Tab; label: string }[] = [
-    { value: 'now', label: 'Now' },
-    { value: 'outlook', label: 'Outlook' },
-    { value: 'more', label: 'More' },
+  // Icons are 24×24 stroked paths: a gauge, a rising line, a grid.
+  const TABS: { value: Tab; label: string; icon: string }[] = [
+    { value: 'now', label: 'Now', icon: 'M4 16a8 8 0 0 1 16 0M12 16l3.5-4.5' },
+    { value: 'outlook', label: 'Outlook', icon: 'M4 17l5-5 4 3 7-7M15 8h5v5' },
+    { value: 'more', label: 'More', icon: 'M5 5h5v5H5zM14 5h5v5h-5zM5 14h5v5H5zM14 14h5v5h-5z' },
   ];
 
   // The hidden game behind the header; loaded only once someone finds it.
@@ -69,7 +70,6 @@
     visited[tab] = true;
   });
   let tabsAnchor = $state<HTMLElement>();
-  let tabbar = $state<HTMLElement>();
 
   // Latest What's new id the user had seen when the app opened; undefined until storage answers.
   let seen = $state<string | null | undefined>(undefined);
@@ -128,9 +128,9 @@
   $effect(() => {
     tab;
     untrack(() => {
-      if (!tabsAnchor || !tabbar) return;
-      // The anchor sits right above the bar, so it's only higher than the bar once the bar is stuck.
-      if (tabsAnchor.getBoundingClientRect().top < tabbar.getBoundingClientRect().top) {
+      if (!tabsAnchor) return;
+      // Scrolled past the anchor (the top of the tabs, under Telegram's buttons): back to it.
+      if (tabsAnchor.getBoundingClientRect().top < parseFloat(getComputedStyle(tabsAnchor).scrollMarginTop)) {
         tabsAnchor.scrollIntoView({ block: 'start', behavior: 'instant' });
       }
     });
@@ -185,9 +185,8 @@
       <button type="button" class="primary" onclick={load}>Try again</button>
     </div>
   {:else if !data}
-    <!-- Shaped like the loaded page (tab bar, then a hero-sized card), so nothing jumps when it arrives. -->
+    <!-- Shaped like the loaded page (a hero-sized card first), so nothing jumps when it arrives. -->
     <div class="skeleton" aria-busy="true" aria-label="Loading">
-      <div class="sk tabs-sk"></div>
       <div class="card sk tall"></div>
       <div class="card sk"></div>
       <div class="card sk"></div>
@@ -206,16 +205,6 @@
       </div>
     {/if}
     <div class="tabs-anchor" bind:this={tabsAnchor}></div>
-    <div class="tabbar" bind:this={tabbar}>
-      <Segmented
-        kind="tab"
-        id="tab"
-        label="Sections"
-        bind:value={tab}
-        controls={(t) => (visited[t] ? `panel-${t}` : undefined)}
-        options={TABS.map((t) => (t.value === 'more' && unseen ? { ...t, dot: 'new updates' } : t))}
-      />
-    </div>
     {#if detail}
       <div class="sections" role="region" aria-labelledby="region-title">
         <RegionDetail snapshot={data.snapshot} history={data.history} region={detail} {group} onback={closeRegion} />
@@ -247,6 +236,14 @@
         <Sources sources={data.sources} />
       </div>
     {/if}
+    <TabBar
+      id="tab"
+      label="Sections"
+      bind:value={tab}
+      hidden={ninja}
+      controls={(t) => (visited[t] ? `panel-${t}` : undefined)}
+      options={TABS.map((t) => (t.value === 'more' && unseen ? { ...t, dot: 'new updates' } : t))}
+    />
   {/if}
 </main>
 
@@ -264,7 +261,7 @@
     margin: 0 auto;
     padding: calc(12px + var(--inset-top)) var(--pad-right) calc(24px + var(--inset-bottom)) var(--pad-left);
   }
-  /* Scrolled to, the tab lands just below the stuck bar, which sits below the inset. */
+  /* Scrolled to, the tab starts just below Telegram's buttons. */
   .tabs-anchor {
     scroll-margin-top: var(--inset-top);
   }
@@ -273,23 +270,6 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: 12px;
-  }
-  .tabbar {
-    position: sticky;
-    top: var(--inset-top);
-    z-index: 2;
-    margin: 0 calc(-1 * var(--gutter)) 12px;
-    padding: 6px var(--gutter);
-    background: var(--page);
-  }
-  /* Cards scrolling under the stuck bar fade out instead of being cut off by a hard edge. */
-  .tabbar::after {
-    content: '';
-    position: absolute;
-    inset: 100% 0 auto;
-    height: 10px;
-    background: linear-gradient(var(--page), transparent);
-    pointer-events: none;
   }
   /* Showing a tab fades it in. */
   .sections {
@@ -327,12 +307,6 @@
   }
   .sk.tall {
     height: 300px; /* plus the card padding: about the hero’s height on a phone */
-  }
-  .skeleton .tabs-sk {
-    height: 48px;
-    margin: 6px 0;
-    border-radius: 10px;
-    background: var(--control);
   }
   .stale {
     margin-bottom: 12px;

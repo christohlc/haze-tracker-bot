@@ -13,7 +13,7 @@
   import type { RegionId } from '../lib/api';
   import { saveAlerts, type AlertSettings } from '../lib/alerts';
   import { area, areaFromAlerts, onAreaPicked, pickedHere, revertArea } from '../lib/area.svelte';
-  import { confirmAction, inTelegram, notifyHaptic, setMainButtonBusy, showMainButton } from '../lib/telegram';
+  import { confirmAction, notifyHaptic } from '../lib/telegram';
 
   // The advice group picked in the Advice card: vulnerable people get a nudge towards every band.
   let { group = 'general' }: { group?: Group } = $props();
@@ -42,8 +42,6 @@
     );
     return stop;
   });
-
-  $effect(() => setMainButtonBusy(busy));
 
   // A change shows straight away (all off switches the card to its off state) and is undone if
   // the save fails. While it saves the controls are locked but not dimmed.
@@ -84,13 +82,6 @@
   }
 
   const turnOn = () => save({ ...TURNED_ON, region: area.id });
-
-  // Alerts off: the Telegram MainButton is the call to action. Not after a failed load: we
-  // don't know the current settings, and turning on would reset an existing daily update.
-  $effect(() => {
-    if (status !== 'ready' || settings) return;
-    return showMainButton('🔔 Get haze alerts', turnOn);
-  });
 
   // The success buzz after saving is the haptic; no extra selection tick.
   function pickDaily(h: number | null) {
@@ -150,7 +141,9 @@
     </div>
   </div>
 
-  {#if import.meta.env.DEV && !inTelegram && status === 'ready' && !settings}
+  <!-- Alerts off: the call to action. Not after a failed load: we don't know the current
+       settings, and turning on would reset an existing daily update. -->
+  {#if status === 'ready' && !settings}
     <button type="button" class="primary" onclick={turnOn} disabled={busy}>
       {busy ? 'Turning on…' : '🔔 Get haze alerts'}
     </button>
