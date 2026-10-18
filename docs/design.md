@@ -214,7 +214,7 @@ newspaper graphic:
   number and the band in words. Under a white rule, a footer gives the last hour’s PM2.5
   (“1-hr PM2.5: 123”, no unit) in its own band’s colour (`PM25_BAND`: the PSI palette’s green,
   yellow and orange for the same severity, a red for Very high), as ST’s and CNA’s graphics do.
-- **Two legend rows** of band chips: “Card: 24-hr PSI band” and “Footer: 1-hr PM2.5 band”, ranges from `PSI_BANDS` and `PM25_BANDS`.
+- **Two legend rows** of band chips: “24-hr PSI band” and “1-hr PM2.5 band”, ranges from `PSI_BANDS` and `PM25_BANDS`.
 - Both numbers are NEA’s, so no “our calculation” note; the 3-hour PSI stays out of the picture.
   Missing readings show “–” on a grey card; a stale snapshot gets the amber note.
 - The card is always light (it’s shared into other people’s chats), and its colours mirror the

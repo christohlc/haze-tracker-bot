@@ -243,8 +243,8 @@ export function drawSummaryCard(snap) {
   for (const { id, name } of REGIONS) regionCard(c, byId.get(id) ?? { id, name, pm25: null, psi24h: null });
 
   c.fillRoundRect(36, 1030 - LIFT, CARD_W - 72, 226, CARD.r, C.card);
-  legendRow(c, 1074 - LIFT, 'Card: 24-hr PSI band', PSI_BANDS, PSI_BANDS.map((b) => BAND[/** @type {keyof typeof BAND} */ (b.id)]));
-  legendRow(c, 1170 - LIFT, 'Footer: 1-hr PM2.5 band', PM25_BANDS, PM25_BANDS.map((b) => PM25_BAND[/** @type {keyof typeof PM25_BAND} */ (b.id)]));
+  legendRow(c, 1074 - LIFT, '24-hr PSI band', PSI_BANDS, PSI_BANDS.map((b) => BAND[/** @type {keyof typeof BAND} */ (b.id)]));
+  legendRow(c, 1170 - LIFT, '1-hr PM2.5 band', PM25_BANDS, PM25_BANDS.map((b) => PM25_BAND[/** @type {keyof typeof PM25_BAND} */ (b.id)]));
 
   const psiNote = snap.psiAsOf && snap.psiAsOf !== snap.asOf ? ` 24-hr PSI as at ${sgtHour(snap.psiAsOf)}.` : '';
   c.text(`Readings from NEA.${psiNote} Advisories: haze.gov.sg`, 56, 1300 - LIFT, 'label', sky.ink);
