@@ -39,6 +39,7 @@ export const C = {
   none: rgb('#dcdcdc'),
   noneInk: rgb('#3d3d3d'),
   stale: rgb('#e2b84a'),
+  chip: rgb('#efeae3'),
 };
 
 /** --band-<id> and --band-<id>-ink. */
@@ -50,7 +51,7 @@ export const BAND = {
   hazardous: [rgb('#8e3a9e'), rgb('#ffffff')],
 };
 
-const CARD = { w: 262, h: 182, r: 24 };
+const CARD = { w: 262, h: 156, r: 24 };
 
 /** Each region's card is centred on NEA's reference point for it, with three nudges: North and
  *  South are closer to Central than a card is tall, so they're pushed out just enough to clear it;
@@ -110,9 +111,25 @@ function regionCard(c, region) {
   c.text(region.name, x + 24, y + 40, 'head', ink);
   c.text('24-hr PSI', x + CARD.w - 24, y + 38, 'label', ink, 'right');
   const value = fmt(region.psi24h);
-  c.text(value, x + 22, y + 106, c.measure(value, 'num') <= CARD.w - 44 ? 'num' : 'numSmall', ink);
-  c.text(band?.label ?? 'No reading', x + 24, y + 141, 'body', ink);
-  c.text(`1-hr PM2.5: ${region.pm25 == null ? '–' : `${fmt(region.pm25)} µg/m³`}`, x + 24, y + 168, 'label', ink);
+  c.text(value, x + 22, y + 104, c.measure(value, 'num') <= CARD.w - 44 ? 'num' : 'numSmall', ink);
+  c.text(band?.label ?? 'No reading', x + 24, y + 138, 'body', ink);
+}
+
+/**
+ * The last hour's PM2.5, kept apart from the PSI so the region cards say one thing: each
+ * region's number on a plain chip (no unit, no colour: on the card, colour only means the PSI band).
+ * @param {Canvas} c @param {number} y title baseline @param {Map<string, any>} byId
+ */
+function pm25Row(c, y, byId) {
+  const x0 = 64;
+  const gap = 12;
+  const w = Math.floor((CARD_W - 36 - 28 - x0 - gap * (REGIONS.length - 1)) / REGIONS.length);
+  c.text('Last hour’s PM2.5', x0, y, 'head', C.ink);
+  REGIONS.forEach(({ id, name }, i) => {
+    const x = x0 + i * (w + gap);
+    c.fillRoundRect(x, y + 14, w, 40, 20, C.chip);
+    c.text(`${name} ${fmt(byId.get(id)?.pm25)}`, x + w / 2, y + 34 + c.capHeight('body') / 2, 'body', C.ink, 'center');
+  });
 }
 
 /**
@@ -177,7 +194,8 @@ export function drawSummaryCard(snap) {
   const byId = new Map(snap.regions.map((/** @type {any} */ r) => [r.id, r]));
   for (const { id, name } of REGIONS) regionCard(c, byId.get(id) ?? { id, name, pm25: null, psi24h: null });
 
-  c.fillRoundRect(36, 1124, CARD_W - 72, 126, CARD.r, C.card);
+  c.fillRoundRect(36, 1010, CARD_W - 72, 240, CARD.r, C.card);
+  pm25Row(c, 1056, byId);
   legendRow(c, 1170, 'Card colour: 24-hr PSI band', PSI_BANDS, PSI_BANDS.map((b) => b.id));
 
   const psiNote = snap.psiAsOf && snap.psiAsOf !== snap.asOf ? ` 24-hr PSI as at ${sgtHour(snap.psiAsOf)}.` : '';
