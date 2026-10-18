@@ -37,3 +37,18 @@ export async function cachedFeed(key, everyS, source, load) {
     return cached;
   }
 }
+
+/**
+ * What cachedFeed(key, everyS) would return, without fetching, and `due` if it would fetch now:
+ * for a caller that answers at once and fetches in a later call. Never throws.
+ * @param {string} key @param {number} everyS
+ */
+export async function peekFeed(key, everyS) {
+  try {
+    const rows = await getStates([key, `${key}_attempt`]);
+    const attempt = rows.get(`${key}_attempt`);
+    return { value: rows.get(key)?.value?.[key] ?? null, due: !attempt || Date.now() / 1000 - attempt.updatedAt >= everyS };
+  } catch {
+    return { value: null, due: true };
+  }
+}

@@ -63,6 +63,8 @@ export interface Dashboard {
   ahead?: Ahead | null;
   /** Haze headlines, newest first; null until the hourly job has fetched them once. */
   news?: NewsItem[] | null;
+  /** NEA's readings or forecast are due a refetch: load again with `refresh` (getDashboard.js). */
+  refreshDue?: boolean;
   serverTime: number;
 }
 
@@ -160,8 +162,8 @@ export async function loadHazeMap(): Promise<HazeMapResult> {
   throw new Error('Open this dashboard from the bot in Telegram.');
 }
 
-export async function loadDashboard(): Promise<Dashboard> {
-  if (inTelegram) return callEndpoint<Dashboard>('getDashboard');
+export async function loadDashboard(refresh = false): Promise<Dashboard> {
+  if (inTelegram) return callEndpoint<Dashboard>('getDashboard', { refresh });
   if (import.meta.env.DEV) {
     // Dev-only data switch (see DevDataToggle): ?demo=worst | empty | error | loading
     const demo = new URLSearchParams(location.search).get('demo');

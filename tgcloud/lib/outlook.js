@@ -2,7 +2,7 @@
 // NEA's 24-hr PSI forecast, cached in state('outlook'). Fetched when someone asks (/haze, /forecast,
 // the Mini App, and the tick only when a daily update is due): NEA issues it once a day at most.
 
-import { cachedFeed } from './feed-cache.js';
+import { cachedFeed, peekFeed } from './feed-cache.js';
 import { getJson } from './http.js';
 import { isCurrent, OUTLOOK_FEED, parseOutlook } from './outlook-parse.js';
 
@@ -22,6 +22,14 @@ export async function getOutlook(deadline = 0) {
     const value = parseOutlook(json);
     return { value, detail: value ? `latest for ${value.forDate}` : 'no forecast we could read' };
   });
-  // NEA leaves its last update up between episodes, and a stored copy ages while NEA is unreachable.
-  return outlook && isCurrent(outlook) ? outlook : null;
+  return current(outlook);
 }
+
+/** getOutlook() without fetching: the stored forecast, and `due` if getOutlook() would fetch it now. */
+export async function peekOutlook() {
+  const { value, due } = await peekFeed('outlook', OUTLOOK_EVERY_S);
+  return { outlook: current(value), due };
+}
+
+// NEA leaves its last update up between episodes, and a stored copy ages while NEA is unreachable.
+const current = (/** @type {import('./outlook-parse.js').Outlook | null} */ o) => (o && isCurrent(o) ? o : null);
