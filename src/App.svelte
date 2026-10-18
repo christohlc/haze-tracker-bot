@@ -28,10 +28,15 @@
   import { getSeen, markSeen } from './lib/whats-new';
 
   type Tab = 'now' | 'outlook' | 'more';
-  // Icons are 24×24 stroked paths: a gauge, a rising line, a grid.
+  // Icons are 24×24 stroked paths: live (a dot sending out waves), a gauge (Outlook leads with
+  // the forecast meter), a grid.
   const TABS: { value: Tab; label: string; icon: string }[] = [
-    { value: 'now', label: 'Now', icon: 'M4 16a8 8 0 0 1 16 0M12 16l3.5-4.5' },
-    { value: 'outlook', label: 'Outlook', icon: 'M4 17l5-5 4 3 7-7M15 8h5v5' },
+    {
+      value: 'now',
+      label: 'Now',
+      icon: 'M12 10.5a1.5 1.5 0 1 1 0 3a1.5 1.5 0 1 1 0-3zM8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7M5.6 5.6a9 9 0 0 0 0 12.8M18.4 5.6a9 9 0 0 1 0 12.8',
+    },
+    { value: 'outlook', label: 'Outlook', icon: 'M4 16a8 8 0 0 1 16 0M12 16l3.5-4.5' },
     { value: 'more', label: 'More', icon: 'M5 5h5v5H5zM14 5h5v5h-5zM5 14h5v5H5zM14 14h5v5h-5z' },
   ];
 

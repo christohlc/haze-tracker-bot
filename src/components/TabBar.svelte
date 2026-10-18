@@ -1,6 +1,7 @@
 <script lang="ts" generics="T extends string">
   import { rovingTarget } from '../lib/roving';
-  import { selectionHaptic } from '../lib/telegram';
+  import { onMount } from 'svelte';
+  import { lockVerticalSwipes, selectionHaptic } from '../lib/telegram';
 
   let {
     options,
@@ -38,6 +39,7 @@
   let startX = 0;
   let startY = 0;
   let dragged = false;
+  let unlockSwipes: (() => void) | null = null;
 
   function pick(v: T, fromKeys = false) {
     // Only this switch jumps; the next one from elsewhere (Telegram's back arrow) slides again.
@@ -75,6 +77,8 @@
     startY = e.clientY;
     dragged = false;
     pressed = true;
+    // Telegram's swipe-down-to-minimise would otherwise take a drag that drifts downwards.
+    if (e.pointerType === 'touch') unlockSwipes = lockVerticalSwipes();
     // A mouse switches on press; a finger on lift, so a scroll that starts here doesn't switch.
     if (e.pointerType !== 'touch') {
       const i = buttons.findIndex((b) => b.contains(e.target as Node));
@@ -88,7 +92,11 @@
       const dx = Math.abs(e.clientX - startX);
       if (dx < 6 || dx < Math.abs(e.clientY - startY)) return;
       dragged = true;
-      bar.setPointerCapture(e.pointerId);
+      try {
+        bar.setPointerCapture(e.pointerId);
+      } catch {
+        // the pointer already ended; the window still hears its pointerup
+      }
       const first = buttons[0].getBoundingClientRect();
       origin = first.left;
       tabW = first.width;
@@ -98,7 +106,21 @@
     hoverIndex = s.i;
   }
 
-  // Heard on the window: a mouse pressed here can be let go anywhere.
+  // `touch-action: pan-y` keeps the page scrolling over the bar, but a sideways drag that drifts
+  // a little vertically would then be taken over (pointercancel). Once a touch is mostly
+  // sideways, keep it: a non-passive touchmove that prevents the scroll.
+  onMount(() => {
+    const hold = (e: TouchEvent) => {
+      const t = e.touches[0];
+      if (pointer == null || !t) return;
+      if (dragged || Math.abs(t.clientX - startX) > Math.abs(t.clientY - startY)) e.preventDefault();
+    };
+    bar.addEventListener('touchmove', hold, { passive: false });
+    return () => bar.removeEventListener('touchmove', hold);
+  });
+
+  // Heard on the window: a mouse pressed here can be let go anywhere. A cancel (the browser took
+  // the touch after all) still lands on the tab under the finger rather than snapping back.
   function onUp(e: PointerEvent) {
     if (e.pointerId !== pointer) return;
     if (dragged && hoverIndex != null) pick(options[hoverIndex].value);
@@ -106,6 +128,8 @@
   }
 
   function release() {
+    unlockSwipes?.();
+    unlockSwipes = null;
     pointer = null;
     dragged = false;
     pressed = false;
@@ -115,7 +139,7 @@
 
 </script>
 
-<svelte:window onpointerup={onUp} onpointercancel={(e) => e.pointerId === pointer && release()} />
+<svelte:window onpointerup={onUp} onpointercancel={onUp} />
 
 <!-- Keeps the page's last card clear of the floating bar. -->
 <div class="room" aria-hidden="true"></div>
