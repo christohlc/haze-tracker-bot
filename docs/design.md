@@ -206,7 +206,7 @@ newspaper graphic:
 - **Severity at a glance:** each region’s card is filled with its own 24-hour PSI band colour and
   outlined in white, so it stands off a sky of a similar colour. No region colours: colour only
   ever means a band.
-- **No band for the whole island.** Logo and name, then “24-hr PSI by region” as the title; each
+- **No band for the whole island.** Logo, name and time, then “Singapore haze update” as the title; each
   region’s card carries its own band, and the caption says where each band applies (as the
   newspapers’ graphics do). A single headline band read as island-wide when only one region had it.
 - **One card per region**, centred on NEA’s reference point for it (`REGIONS`), nudged so the

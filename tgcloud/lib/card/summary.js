@@ -159,7 +159,7 @@ let logoRgba = /** @type {Uint8Array | null} */ (null);
 
 /**
  * A card's background and brand: the hero sky for today's worst 24-hour PSI band, the island,
- * the logo and name, and "Singapore haze · <time>". Shared with the forecast card, which leaves
+ * the logo and name, and the time. Shared with the forecast card, which leaves
  * out the island: its panels would cover nearly all of it.
  * @param {number} height @param {any} snap @param {{ island?: boolean }} [opts]
  * @returns {{ c: Canvas, sky: typeof SKY.none }}
@@ -177,7 +177,7 @@ export function backdrop(height, snap, { island = true } = {}) {
   logoRgba ??= fromBase64(LOGO.data);
   c.blitRgba(logoRgba, LOGO.w, LOGO.h, 56, 48);
   c.text('I’m going hazelnuts!', 164, 84, 'head', sky.ink);
-  c.text(`Singapore haze · ${cardDate(snap.asOf)}`, 164, 122, 'body', sky.ink);
+  c.text(cardDate(snap.asOf), 164, 122, 'body', sky.ink);
   return { c, sky };
 }
 
@@ -186,7 +186,7 @@ export function drawSummaryCard(snap) {
   // Brand, then what the card shows. No band for the whole island: each region's card has its
   // own, and the caption says where each applies.
   const { c, sky } = backdrop(CARD_H, snap);
-  c.text('24-hr PSI by region', 56, 236, 'title', sky.ink);
+  c.text('Singapore haze update', 56, 236, 'title', sky.ink);
   if (snap.stale) {
     c.fillRoundRect(56, 314, Math.ceil(c.measure(STALE_NOTE, 'body')) + 36, 44, 22, C.stale);
     c.text(STALE_NOTE, 74, 336 + c.capHeight('body') / 2, 'body', C.ink);
