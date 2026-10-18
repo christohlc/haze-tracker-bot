@@ -165,9 +165,13 @@ messages is the same short form, for the general public.
   large preview above), then the official 24-hour PSI. It says the bot picked the story itself.
   The PSI version says “Official 24-hr PSI now Hazardous”: only NEA’s 24-hour PSI is ever
   called official.
-- `/haze` and the card caption (`formatHaze`): the band and the chat’s area first (“🟡 Unhealthy ·
-  3-hr PSI 170 in East”), then “Our calculation from PM2.5” with the time, then the advice, then
-  NEA’s forecast and the cigarette count. One closing note; the table only in the text version.
+- `/haze`, the daily update and the card caption (`formatHaze`) tell the picture’s story with
+  NEA’s numbers only: the official 24-hr PSI, one line per band, worst first, saying where each
+  applies (“🟠 Very unhealthy in West · 24-hr PSI 228”, “🟡 Unhealthy elsewhere · 129–186”; the
+  chat’s area leads), then the last hour’s PM2.5 band by place with the time, then the advice,
+  NEA’s forecast and the cigarette count. Never one band for the whole island; “elsewhere” only
+  when every region has a reading. The share caption is the same PSI lines.
+  One closing note; the table (with our 1h/3h) only in the text version.
 - Advice lines (`adviceLines`) go in one order in every message, each with its own emoji:
   👉 Outside now, 🧓 Vulnerable people (only when their advice is stricter), 😷 the short form.
 - Band alerts (`formatBandAlert`) name the chat’s area (“Haze in East down to Unhealthy”), say
@@ -202,9 +206,9 @@ newspaper graphic:
 - **Severity at a glance:** each region’s card is filled with its own 24-hour PSI band colour and
   outlined in white, so it stands off a sky of a similar colour. No region colours and no second
   palette for PM2.5: on the cards, colour only ever means the band.
-- **Answer first:** logo and name, then the band in big type on a pill of its own colour (as in
-  the legend; band-coloured text on that band’s sky would be too faint) and “24-hr PSI up to N in
-  Region”.
+- **No band for the whole island.** Logo and name, then “24-hr PSI by region” as the title; each
+  region’s card carries its own band, and the caption says where each band applies (as the
+  newspapers’ graphics do). A single headline band read as island-wide when only one region had it.
 - **One card per region**, centred on NEA’s reference point for it (`REGIONS`), nudged so the
   cards don’t overlap and the row sits balanced over the island: name, the 24-hour PSI as the big
   number, the band in words, and the 1-hour PM2.5 as plain text.

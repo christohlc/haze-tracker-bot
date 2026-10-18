@@ -5,7 +5,8 @@ import { verdict } from './advice.js';
 import { escapeHtml } from './html.js';
 import { PUBLISHERS } from './news-parse.js';
 import { outlookLabel, psiRangeText } from './outlook-parse.js';
-import { bandById, PSI_BANDS, psiBand } from './psi.js';
+import { REGIONS } from './config.js';
+import { bandById, bandGroups, groupRange, PM25_BANDS, pm25Band, PSI_BANDS, psiBand } from './psi.js';
 import { RANGE_RECORD } from './range.js';
 import { readingsFor, STALE_NOTE } from './snapshot.js';
 import { sgtDayMonth, sgtDayName, sgtHour } from './time.js';
@@ -54,15 +55,9 @@ function focus(snap, region) {
  */
 export function formatHaze(snap, ahead, { table = true, region = null } = {}) {
   const f = focus(snap, region);
-  const band = psiBand(f.psi3h);
-  const worst = snap.worst.psi3h;
-  // " in East", or for a chat without an area " in West, the highest"; nothing without a reading.
-  const place = f.area ? ` in ${f.area.name}` : worst ? ` in ${worst.name}, the highest` : '';
-  const top = highestElsewhere(snap, f.area, 'psi3h');
-
   const lines = [
-    `${band?.emoji ?? '⚪️'} <b>${band?.label ?? 'No data'}</b> · 3-hr PSI ${n(f.psi3h)}${place}`,
-    `<i>Our calculation from PM2.5 · ${sgtHour(snap.asOf)} SGT${top ? ` · ${top.name} highest at ${n(top.value)}` : ''}</i>`,
+    ...psiLines(snap, f.area),
+    `💨 Last hour’s PM2.5: ${pm25Words(snap)} · ${sgtHour(snap.asOf)} SGT`,
     ...(snap.stale ? [`⚠️ <i>${STALE_NOTE}</i>`] : []),
     '',
     ...adviceLines(f.psi24h, f.pm25),
@@ -76,8 +71,51 @@ export function formatHaze(snap, ahead, { table = true, region = null } = {}) {
       `<pre>${regionTable(snap)}</pre>`,
       '<i>PM2.5 in µg/m³. 1h/3h PSI: ours. 24h: NEA’s. Advisories: haze.gov.sg.</i>',
     );
-  else lines.push('<i>The picture is NEA’s official 24-hr PSI. Advisories: haze.gov.sg.</i>');
+  else lines.push('<i>PSI and PM2.5: NEA’s. Advisories: haze.gov.sg.</i>');
   return lines.join('\n');
+}
+
+/**
+ * Where each band group is: "in West, East"; "island-wide" for a group with every region; and for
+ * the last of several groups "elsewhere", but only when every region has a reading, so it never
+ * covers a region we know nothing about.
+ * @param {Array<{ names: string[] }>} groups from bandGroups (psi.js) @param {number} [named] regions named before these (a chat's area)
+ */
+function groupPlaces(groups, named = 0) {
+  const total = groups.reduce((sum, g) => sum + g.names.length, named);
+  return groups.map((g, i) =>
+    (named || i) && i === groups.length - 1 && total === REGIONS.length
+      ? 'elsewhere'
+      : g.names.length === REGIONS.length
+        ? 'island-wide'
+        : `in ${g.names.join(', ')}`,
+  );
+}
+
+/**
+ * The official 24-hour PSI, one line per band, worst first, the chat's area leading:
+ * "🟠 <b>Very unhealthy in West</b> · 24-hr PSI 228" then "🟡 Unhealthy elsewhere · 129–186".
+ * There's no band for the whole island: the summary card gives each region's, and this says where
+ * each applies.
+ * @param {any} snap @param {any} area
+ */
+function psiLines(snap, area) {
+  const [lead] = area ? bandGroups([area], 'psi24h', psiBand, PSI_BANDS) : [];
+  const groups = bandGroups(lead ? snap.regions.filter((/** @type {any} */ r) => r !== area) : snap.regions, 'psi24h', psiBand, PSI_BANDS);
+  const places = groupPlaces(groups, lead ? 1 : 0);
+  const rows = groups.map((g, i) => ({ g, where: places[i] === 'elsewhere' && g.band === lead?.band ? 'elsewhere too' : places[i] }));
+  if (lead) rows.unshift({ g: lead, where: `in ${area.name}` });
+  if (!rows.length) return ['⚪️ <b>No 24-hr PSI yet</b>'];
+  return rows.map(({ g, where }, i) =>
+    i ? `${g.band.emoji} ${g.band.label} ${where} · ${groupRange(g)}` : `${g.band.emoji} <b>${g.band.label} ${where}</b> · 24-hr PSI ${groupRange(g)}`,
+  );
+}
+
+/** "High in West, Elevated elsewhere", "Elevated island-wide". @param {any} snap */
+function pm25Words(snap) {
+  const groups = bandGroups(snap.regions, 'pm25', pm25Band, PM25_BANDS);
+  const places = groupPlaces(groups);
+  return groups.length ? groups.map((g, i) => `${g.band.label} ${places[i]}`).join(', ') : 'no reading';
 }
 
 /**
@@ -102,9 +140,7 @@ export const formatHazeCaption = (snap, ahead, region = null) => formatHaze(snap
 
 /** Short caption for a card shared from the Mini App into another chat. @param {any} snap */
 export function formatShareCaption(snap) {
-  const worst = snap.worst.psi24h;
-  const band = psiBand(worst?.value);
-  return `${band?.emoji ?? '⚪️'} <b>Singapore haze</b> · ${sgtHour(snap.asOf)} SGT\n24-hr PSI up to <b>${n(worst?.value)}</b> (${band?.label ?? 'no reading'}), NEA’s reading.`;
+  return [`<b>Singapore haze</b> · ${sgtHour(snap.asOf)} SGT`, ...psiLines(snap, null), '<i>NEA’s readings.</i>'].join('\n');
 }
 
 /**

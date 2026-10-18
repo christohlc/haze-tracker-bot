@@ -165,19 +165,10 @@ export function backdrop(height, snap, { island = true } = {}) {
 
 /** @param {any} snap a snapshot (lib/snapshot.js) @returns {Canvas} */
 export function drawSummaryCard(snap) {
-  const worst = snap.worst?.psi24h ?? null;
-  const band = psiBand(worst?.value);
-  // Brand, then the answer: the worst official reading and its band.
+  // Brand, then what the card shows. No band for the whole island: each region's card has its
+  // own, and the caption says where each applies.
   const { c, sky } = backdrop(CARD_H, snap);
-  // The band as a chip in its own colour, as in the legend: band-coloured text on the sky of the
-  // same band would be too faint to read.
-  if (band) {
-    const [fill, ink] = BAND[/** @type {keyof typeof BAND} */ (band.id)];
-    const w = Math.ceil(c.measure(band.label, 'title')) + 64;
-    c.fillRoundRect(56, 158, w, 84, 42, fill);
-    c.text(band.label, 88, 200 + c.capHeight('title') / 2, 'title', ink);
-  } else c.text('No reading yet', 56, 236, 'title', sky.ink);
-  if (worst) c.text(`24-hr PSI up to ${fmt(worst.value)} in ${worst.name}`, 56, 296, 'subtitle', sky.ink);
+  c.text('24-hr PSI by region', 56, 236, 'title', sky.ink);
   if (snap.stale) {
     c.fillRoundRect(56, 314, Math.ceil(c.measure(STALE_NOTE, 'body')) + 36, 44, 22, C.stale);
     c.text(STALE_NOTE, 74, 336 + c.capHeight('body') / 2, 'body', C.ink);

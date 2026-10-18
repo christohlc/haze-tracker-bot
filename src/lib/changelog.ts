@@ -9,6 +9,12 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-18-where-its-worst',
+    date: '2026-10-18',
+    title: 'Updates say where it’s worst',
+    body: 'The haze picture shows each region’s own band instead of one for the whole island, and the message under it says which regions are in which, like “Very unhealthy in West, Unhealthy elsewhere”. Both use NEA’s readings.',
+  },
+  {
     id: '2026-10-18-region-morph',
     date: '2026-10-18',
     title: 'Smoother moves into a region',
