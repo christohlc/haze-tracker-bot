@@ -371,48 +371,6 @@
   .row-title {
     font-weight: 600;
   }
-  /* The same drawn switch as the alert settings. */
-  input[type='checkbox'] {
-    flex: none;
-    position: relative;
-    width: 46px;
-    height: 28px;
-    margin: 0;
-    border-radius: 999px;
-    background: var(--control);
-    box-shadow: inset 0 0 0 1px var(--hairline);
-    appearance: none;
-    -webkit-appearance: none;
-    cursor: pointer;
-    transition: background-color 200ms var(--ease-in-out);
-  }
-  input[type='checkbox']::before {
-    content: '';
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    background: var(--switch-thumb);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
-    transition: transform 200ms var(--ease-in-out);
-  }
-  input[type='checkbox']:checked {
-    background: var(--accent);
-    box-shadow: none;
-  }
-  input[type='checkbox']:checked::before {
-    transform: translateX(18px);
-  }
-  input[type='checkbox']:disabled {
-    opacity: 0.5;
-    cursor: default;
-  }
-  input[type='checkbox']:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-  }
   details {
     border-top: 1px solid var(--hairline);
   }
@@ -456,11 +414,5 @@
   }
   .frame.sk {
     margin-top: 12px;
-  }
-  @media (prefers-reduced-motion: reduce) {
-    input[type='checkbox'],
-    input[type='checkbox']::before {
-      transition: none;
-    }
   }
 </style>

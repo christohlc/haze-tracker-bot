@@ -9,6 +9,7 @@
   import HistoryChart from './components/HistoryChart.svelte';
   import LiveViews from './components/LiveViews.svelte';
   import NewsCard from './components/NewsCard.svelte';
+  import PetCard from './components/PetCard.svelte';
   import RegionDetail from './components/RegionDetail.svelte';
   import RegionTable from './components/RegionTable.svelte';
   import ShareCard from './components/ShareCard.svelte';
@@ -40,6 +41,15 @@
   // The hidden game behind the header; loaded only once someone finds it.
   let ninja = $state(false);
   const loadNinja = () => import('./components/HazelnutNinja.svelte');
+  // The purifier pet: loaded once the dashboard is up, so it never holds up the first paint.
+  const loadPet = () => import('./components/PurifierPet.svelte');
+  const PET_HIDDEN_KEY = 'hazelnuts:pet:hidden';
+  let petHidden = $state<boolean | null>(null); // null until storage answers
+  getStored(PET_HIDDEN_KEY).then((v) => (petHidden = v === '1'));
+  function showPet(shown: boolean) {
+    petHidden = !shown;
+    setStored(PET_HIDDEN_KEY, shown ? '0' : '1');
+  }
   // The haze map and its land outline are only fetched once Outlook is opened.
   const loadHazeMapCard = () => import('./components/HazeMap.svelte');
 
@@ -234,6 +244,7 @@
         <LiveViews />
         {#if data.news}<NewsCard news={data.news} serverTime={data.serverTime} />{/if}
         <CigCalc snapshot={data.snapshot} />
+        <PetCard shown={petHidden === false} onchange={showPet} />
         <WhatsNew {seen} />
         <Sources sources={data.sources} />
       </div>
@@ -248,6 +259,12 @@
     />
   {/if}
 </main>
+
+{#if data && petHidden != null}
+  {#await loadPet() then m}
+    <m.default snapshot={data.snapshot} {period} hidden={petHidden || ninja} onhide={() => showPet(false)} />
+  {/await}
+{/if}
 
 {#if ninja}
   {#await loadNinja() then m}<m.default onclose={() => (ninja = false)} />{/await}

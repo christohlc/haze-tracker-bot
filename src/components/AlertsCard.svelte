@@ -296,44 +296,6 @@
     color: var(--ink);
     font-weight: 600;
   }
-  /* A drawn switch: a plain checkbox here reads as a tick box, not on/off. */
-  input[type='checkbox'] {
-    flex: none;
-    position: relative;
-    width: 46px;
-    height: 28px;
-    margin: 0;
-    border-radius: 999px;
-    background: var(--control);
-    box-shadow: inset 0 0 0 1px var(--hairline);
-    appearance: none;
-    -webkit-appearance: none;
-    cursor: pointer;
-    transition: background-color 200ms var(--ease-in-out);
-  }
-  input[type='checkbox']::before {
-    content: '';
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    background: var(--switch-thumb);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
-    transition: transform 200ms var(--ease-in-out);
-  }
-  input[type='checkbox']:checked {
-    background: var(--accent);
-    box-shadow: none;
-  }
-  input[type='checkbox']:checked::before {
-    transform: translateX(18px);
-  }
-  input[type='checkbox']:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-  }
   /* One even row, so “Off” is never left alone on a second line. */
   .chips {
     display: grid;
@@ -368,9 +330,7 @@
     font-weight: 600;
   }
   @media (prefers-reduced-motion: reduce) {
-    button,
-    input[type='checkbox'],
-    input[type='checkbox']::before {
+    button {
       transition: none;
     }
   }

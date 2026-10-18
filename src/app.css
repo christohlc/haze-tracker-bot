@@ -47,6 +47,12 @@
   /* Brand: hazelnut-in-haze, from public/logo.svg. */
   --brand-shell: #8a5a2e;
   --brand-haze: #e2b84a;
+  /* The purifier pet: a pale appliance in both schemes, so its face reads on any card. */
+  --pet-body: #ffffff;
+  --pet-vent: #e7e5de;
+  --pet-line: #2b2a27;
+  --pet-blush: rgba(232, 123, 164, 0.45);
+  --pet-sweat: #5aa6e8;
   --font-display: ui-rounded, 'SF Pro Rounded', 'Nunito', system-ui, -apple-system, sans-serif;
 
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
@@ -84,6 +90,11 @@
   --accent-ink: var(--tg-theme-button-text-color, #0b0b0b);
   --switch-thumb: #fff;
   --brand-shell: #c88b4f;
+  --pet-body: #e4e2db;
+  --pet-vent: #c9c6bd;
+  --pet-line: #1a1a19;
+  --pet-blush: rgba(213, 81, 129, 0.45);
+  --pet-sweat: #6fb3ee;
 
   --band-good: #0ca30c;           --band-good-ink: #0b0b0b;
   --band-moderate: #3987e5;       --band-moderate-ink: #0b0b0b;
@@ -293,6 +304,55 @@ summary {
   to {
     transform: scale(3);
     opacity: 0;
+  }
+}
+
+/* The drawn on/off switch (a checkbox with role="switch"): a plain checkbox reads as a tick box. */
+input[type='checkbox'][role='switch'] {
+  flex: none;
+  position: relative;
+  width: 46px;
+  height: 28px;
+  margin: 0;
+  border-radius: 999px;
+  background: var(--control);
+  box-shadow: inset 0 0 0 1px var(--hairline);
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  transition: background-color 200ms var(--ease-in-out);
+}
+input[type='checkbox'][role='switch']::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--switch-thumb);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: transform 200ms var(--ease-in-out);
+}
+input[type='checkbox'][role='switch']:checked {
+  background: var(--accent);
+  box-shadow: none;
+}
+input[type='checkbox'][role='switch']:checked::before {
+  transform: translateX(18px);
+}
+input[type='checkbox'][role='switch']:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+input[type='checkbox'][role='switch']:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  input[type='checkbox'][role='switch'],
+  input[type='checkbox'][role='switch']::before {
+    transition: none;
   }
 }
 
