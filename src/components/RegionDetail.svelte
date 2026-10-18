@@ -31,7 +31,7 @@
 
 {#if r}
   <section class="card" aria-labelledby="region-title">
-    <h2 id="region-title" class="section-title" tabindex="-1" bind:this={title} style:view-transition-name="region-name">{r.name}</h2>
+    <h2 id="region-title" class="section-title" tabindex="-1" bind:this={title} style:width="fit-content" style:view-transition-name="region-name">{r.name}</h2>
     <dl class="stats" aria-label="PSI">
       {#each PERIOD_ORDER as p (p)}
         {@const value = r[psiKey(p)]}

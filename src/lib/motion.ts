@@ -44,6 +44,11 @@ export async function viewTransition(update: () => Promise<void>) {
   // painting), skip the animation rather than hold the tap; a skipped transition still updates.
   const stuck = setTimeout(() => t.skipTransition(), 300);
   await t.updateCallbackDone.finally(() => clearTimeout(stuck)); // rejects if `update` threw
+  // The crossfade is the entrance: skip to the end of any the update started (a panel's fade, its
+  // cards' rise), which would otherwise play under it and trail the tap. Loops are left running.
+  for (const a of document.getAnimations()) {
+    if (a.effect?.getTiming().iterations !== Infinity) a.finish();
+  }
   await t.finished.catch(() => {}); // only the animation, which may have been skipped
 }
 

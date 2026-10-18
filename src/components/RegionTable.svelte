@@ -50,8 +50,8 @@
         animate:flip={{ duration: reducedMotion() ? 0 : 220, easing: quartInOut }}
       >
         <button type="button" class="row" data-region={r.id} onclick={() => select(r.id as RegionId)}>
-        <span class="name" style:view-transition-name={morph === r.id ? 'region-name' : undefined}>
-          {r.name}
+        <span class="name">
+          <span style:display="inline-block" style:view-transition-name={morph === r.id ? 'region-name' : undefined}>{r.name}</span>
           {#if r.mine}<span class="tag">Your area</span>{/if}
         </span>
         <span class="track" aria-hidden="true">

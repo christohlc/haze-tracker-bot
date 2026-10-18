@@ -47,7 +47,7 @@ which is described below.
 | Status | `--status-good`, `--status-critical` | Feed health, errors, “Stop all alerts” |
 | Haze map | `--map-sea`, `--map-land`, `--map-coast`, `--map-label`, `--haze-moderate`, `--haze-dense`, `--map-fire` | Haze hues follow NEA’s map (orange moderate, brown-red dense) so they read the same as haze.gov.sg |
 | Shape | `--radius` 16px, `--gutter` 16px | |
-| Motion | `--ease-out`, `--ease-in-out` | |
+| Motion | `--ease-out`, `--ease-in-out`, `--ease-push` | `--ease-push` only for a view a tap pushes in (the region morph) |
 
 Dark mode sets `:root[data-theme='dark']`. `src/lib/telegram.ts` takes the scheme from Telegram
 or, outside Telegram, from the OS. A new colour token needs both a light and a dark value.
@@ -131,19 +131,24 @@ messages is the same short form, for the general public.
   when the direction is clear; rain falls on the dial while it’s raining anywhere. Reduced
   motion: all of these stay still or hidden.
 - Opening a region from Around the island morphs the row’s name into the region’s title and
-  back (a View Transition, `viewTransition()` in `src/lib/motion.ts`: 280ms `--ease-in-out`,
-  the rest crossfades in 220ms). Without View Transitions, or under reduced motion, it swaps at
-  once. Only one element carries the `region-name` at a time, or the browser skips the morph.
+  back (a View Transition, `viewTransition()` in `src/lib/motion.ts`: 260ms `--ease-push`, which
+  moves at once like an iOS push; the rest crossfades in 180ms). Only the
+  name's text morphs, sized to it on both ends, so it never stretches. Entrances the swap starts
+  (a panel's fade, its cards' rise) skip to their end, since the crossfade already brings them
+  in and they'd trail the tap. Without View
+  Transitions, or under reduced motion, it swaps at once. Only one element carries the
+  `region-name` at a time, or the browser skips the morph.
 - Haptics: a selection tick on picks (tabs, rows, the area); a light impact on other taps
   that move to another view (the Next hours strip, closing a region with either back control);
   success or error after a save. Never unprompted.
 - Looping animations go on an element with `use:ambient` (`src/lib/motion.ts`), which pauses
   them while it’s off screen, the page is hidden or Telegram has the app in the background.
   Loops animate `transform` and `opacity` only. A steady flow (streaks, rain, shimmer) is `linear`;
-  a breathing or drifting loop is plain `ease-in-out`, since the two curve tokens are for UI.
+  a breathing or drifting loop is plain `ease-in-out`, since the curve tokens are for UI.
   Loading skeletons are the exception: they’re gone within seconds, so their shimmer doesn’t
   need pausing.
-- Use `--ease-out` for things entering and `--ease-in-out` for things moving on screen.
+- Use `--ease-out` for things entering and `--ease-in-out` for things moving on screen, except
+  a view a tap pushes in, which uses `--ease-push` so it moves the moment the finger lifts.
 - Every animation has a `prefers-reduced-motion` fallback, either a plain fade or nothing. In
   JS, check `reducedMotion()` from `src/lib/motion.ts`.
 
