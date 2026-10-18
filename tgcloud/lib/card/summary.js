@@ -6,7 +6,7 @@
 // Pure (no SDK): tests and the Mini App use it too.
 
 import { REGIONS } from '../config.js';
-import { PSI_BANDS, psiBand } from '../psi.js';
+import { PM25_BANDS, pm25Band, PSI_BANDS, psiBand } from '../psi.js';
 import { STALE_NOTE } from '../snapshot.js';
 import { LOGO, MAP_MASK } from './art.js';
 import { sgtDayMonth, sgtHour } from '../time.js';
@@ -41,7 +41,7 @@ export const C = {
   stale: rgb('#e2b84a'),
 };
 
-/** --band-<id> and --band-<id>-ink. */
+/** --band-<id> and --band-<id>-ink, by PSI band id. @type {Record<string, [Rgb, Rgb]>} */
 export const BAND = {
   good: [rgb('#0ca30c'), rgb('#0b0b0b')],
   moderate: [rgb('#2a78d6'), rgb('#ffffff')],
@@ -50,14 +50,31 @@ export const BAND = {
   hazardous: [rgb('#8e3a9e'), rgb('#ffffff')],
 };
 
-const CARD = { w: 262, h: 182, r: 24 };
+/** The 1-hour PM2.5 bands' colours [fill, ink], as the newspapers' graphics use: the PSI palette's
+ *  green, yellow and orange for the same severity, and a red of its own for Very high.
+ *  By PM2.5 band id. @type {Record<string, [Rgb, Rgb]>} */
+export const PM25_BAND = {
+  I: BAND.good,
+  II: BAND.unhealthy,
+  III: BAND.very_unhealthy,
+  IV: [rgb('#b3201c'), rgb('#ffffff')],
+};
+
+/** A band's [fill, ink] from `palette`, grey for no reading. @param {Record<string, [Rgb, Rgb]>} palette @param {{ id: string } | null} band @returns {[Rgb, Rgb]} */
+const paint = (palette, band) => (band ? palette[band.id] : [C.none, C.noneInk]);
+
+/** `foot` is the white strip at the bottom of each card that holds the PM2.5. */
+const CARD = { w: 262, h: 192, r: 24, foot: 36 };
+
+/** Top of the legend panel; its rows and the source line hang off it. */
+const LEGEND_Y = 974;
 
 /** Each region's card is centred on NEA's reference point for it, with three nudges: North and
  *  South are closer to Central than a card is tall, so they're pushed out just enough to clear it;
  *  the middle column sits a little east (103.83°) and East further toward Changi (103.96°), so the
  *  row is balanced over the island. */
 const centres = Object.fromEntries(REGIONS.map((r) => [r.id, project(r.lon, r.lat)]));
-const PITCH = CARD.h + 32;
+const PITCH = CARD.h + 24;
 for (const id of ['north', 'central', 'south']) centres[id][0] = project(103.83, 0)[0];
 centres.east[0] = project(103.96, 0)[0];
 centres.north[1] = Math.min(centres.north[1], centres.central[1] - PITCH);
@@ -103,24 +120,31 @@ function pill(c, x, y, text, fill, ink, { h = 34, pad = 14 } = {}) {
 function regionCard(c, region) {
   const [x, y] = CARD_AT[region.id];
   const band = psiBand(shown(region.psi24h));
-  const [fill, ink] = band ? BAND[/** @type {keyof typeof BAND} */ (band.id)] : [C.none, C.noneInk];
+  const [fill, ink] = paint(BAND, band);
   c.fillRoundRect(x - OUTLINE, y - OUTLINE, CARD.w + OUTLINE * 2, CARD.h + OUTLINE * 2, CARD.r + OUTLINE, C.card);
   c.fillRoundRect(x, y, CARD.w, CARD.h, CARD.r, fill);
 
   c.text(region.name, x + 24, y + 40, 'head', ink);
   c.text('24-hr PSI', x + CARD.w - 24, y + 38, 'label', ink, 'right');
   const value = fmt(region.psi24h);
-  c.text(value, x + 22, y + 106, c.measure(value, 'num') <= CARD.w - 44 ? 'num' : 'numSmall', ink);
-  c.text(band?.label ?? 'No reading', x + 24, y + 141, 'body', ink);
-  c.text(`1-hr PM2.5: ${region.pm25 == null ? '–' : `${fmt(region.pm25)} µg/m³`}`, x + 24, y + 168, 'label', ink);
+  c.text(value, x + 22, y + 104, c.measure(value, 'num') <= CARD.w - 44 ? 'num' : 'numSmall', ink);
+  c.text(band?.label ?? 'No reading', x + 24, y + 138, 'body', ink);
+  // The last hour's PM2.5 in a footer of its own band's colour, under a white rule. No unit: the
+  // Mini App has the detail.
+  const pm = pm25Band(shown(region.pm25));
+  const [pmFill, pmInk] = paint(PM25_BAND, pm);
+  const footY = y + CARD.h - CARD.foot;
+  c.fillRect(x, footY - 3, CARD.w, 3, C.card);
+  c.fillRoundRect(x, footY, CARD.w, CARD.foot, [0, 0, CARD.r, CARD.r], pmFill);
+  c.text(`1-hr PM2.5: ${fmt(region.pm25)}`, x + 24, footY + CARD.foot / 2 + c.capHeight('label') / 2, 'label', pmInk);
 }
 
 /**
  * A row of band chips under a title, squeezed to fit the panel.
  * @param {Canvas} c @param {number} y title baseline @param {string} title
- * @param {Array<{ label: string, max: number }>} bands @param {string[]} colourIds
+ * @param {Array<{ id: string, label: string, max: number }>} bands @param {Record<string, [Rgb, Rgb]>} palette
  */
-function legendRow(c, y, title, bands, colourIds) {
+function legendRow(c, y, title, bands, palette) {
   const x0 = 64;
   const avail = CARD_W - 36 - 28 - x0;
   const gap = 10;
@@ -130,7 +154,7 @@ function legendRow(c, y, title, bands, colourIds) {
   c.text(title, x0, y, 'head', C.ink);
   let x = x0;
   labels.forEach((l, i) => {
-    const [fill, ink] = BAND[/** @type {keyof typeof BAND} */ (colourIds[i])];
+    const [fill, ink] = palette[bands[i].id];
     x += pill(c, x, y + 14, l, fill, ink, { h: 40, pad }) + gap;
   });
 }
@@ -141,7 +165,7 @@ let logoRgba = /** @type {Uint8Array | null} */ (null);
 
 /**
  * A card's background and brand: the hero sky for today's worst 24-hour PSI band, the island,
- * the logo and name, and "Singapore haze · <time>". Shared with the forecast card, which leaves
+ * the logo and name, and the time. Shared with the forecast card, which leaves
  * out the island: its panels would cover nearly all of it.
  * @param {number} height @param {any} snap @param {{ island?: boolean }} [opts]
  * @returns {{ c: Canvas, sky: typeof SKY.none }}
@@ -159,38 +183,66 @@ export function backdrop(height, snap, { island = true } = {}) {
   logoRgba ??= fromBase64(LOGO.data);
   c.blitRgba(logoRgba, LOGO.w, LOGO.h, 56, 48);
   c.text('I’m going hazelnuts!', 164, 84, 'head', sky.ink);
-  c.text(`Singapore haze · ${cardDate(snap.asOf)}`, 164, 122, 'body', sky.ink);
+  c.text(cardDate(snap.asOf), 164, 122, 'body', sky.ink);
   return { c, sky };
+}
+
+const FLAG = { red: rgb('#ee2536'), white: rgb('#ffffff'), edge: rgb('#d9d4cc') };
+
+/**
+ * Singapore's flag, `h` tall at (x, y): red over white, the crescent and five stars in the red
+ * half's hoist, placed as in the flag's construction sheet (scaled from a 4320 × 2880 drawing).
+ * @param {Canvas} c @param {number} x @param {number} y @param {number} h @returns {number} its width
+ */
+function drawFlag(c, x, y, h) {
+  const w = Math.round(h * 1.5);
+  const k = w / 4320;
+  const r = Math.round(h * 0.12);
+  c.fillRoundRect(x - 2, y - 2, w + 4, h + 4, r + 2, FLAG.edge);
+  c.fillRoundRect(x, y, w, Math.ceil(h / 2), [r, r, 0, 0], FLAG.red);
+  c.fillRoundRect(x, y + Math.ceil(h / 2), w, Math.floor(h / 2), [0, 0, r, r], FLAG.white);
+  /** A disc, as a zero-length round-ended segment. @param {number} cx @param {number} radius @param {Rgb} colour */
+  const disc = (cx, radius, colour) => c.fillSegment(x + cx * k, y + 723.5 * k, x + cx * k, y + 723.5 * k, radius * 2 * k, colour);
+  disc(923.5, 530, FLAG.white);
+  disc(1158.6, 562.5, FLAG.red);
+  for (let i = 0; i < 5; i++) {
+    const a = -Math.PI / 2 + (i * 2 * Math.PI) / 5;
+    const sx = x + (1440 + 290 * Math.cos(a)) * k;
+    const sy = y + (723.5 + 290 * Math.sin(a)) * k;
+    /** @type {Array<[number, number]>} */
+    const star = Array.from({ length: 10 }, (_, j) => {
+      const b = -Math.PI / 2 + (j * Math.PI) / 5;
+      const len = (j % 2 ? 0.382 : 1) * 150 * k;
+      return [sx + len * Math.cos(b), sy + len * Math.sin(b)];
+    });
+    c.fillPolygon(star, FLAG.white);
+  }
+  return w;
 }
 
 /** @param {any} snap a snapshot (lib/snapshot.js) @returns {Canvas} */
 export function drawSummaryCard(snap) {
-  const worst = snap.worst?.psi24h ?? null;
-  const band = psiBand(worst?.value);
-  // Brand, then the answer: the worst official reading and its band.
+  // Brand, then what the card shows. No band for the whole island: each region's card has its
+  // own, and the caption says where each applies.
   const { c, sky } = backdrop(CARD_H, snap);
-  // The band as a chip in its own colour, as in the legend: band-coloured text on the sky of the
-  // same band would be too faint to read.
-  if (band) {
-    const [fill, ink] = BAND[/** @type {keyof typeof BAND} */ (band.id)];
-    const w = Math.ceil(c.measure(band.label, 'title')) + 64;
-    c.fillRoundRect(56, 158, w, 84, 42, fill);
-    c.text(band.label, 88, 200 + c.capHeight('title') / 2, 'title', ink);
-  } else c.text('No reading yet', 56, 236, 'title', sky.ink);
-  if (worst) c.text(`24-hr PSI up to ${fmt(worst.value)} in ${worst.name}`, 56, 296, 'subtitle', sky.ink);
+  // The flag, its middle on the title's capitals.
+  const flagH = 52;
+  const flagW = drawFlag(c, 56, Math.round(236 - c.capHeight('title') / 2 - flagH / 2), flagH);
+  c.text('Singapore haze update', 56 + flagW + 22, 236, 'title', sky.ink);
   if (snap.stale) {
-    c.fillRoundRect(56, 314, Math.ceil(c.measure(STALE_NOTE, 'body')) + 36, 44, 22, C.stale);
-    c.text(STALE_NOTE, 74, 336 + c.capHeight('body') / 2, 'body', C.ink);
+    c.fillRoundRect(56, 262, Math.ceil(c.measure(STALE_NOTE, 'body')) + 36, 40, 20, C.stale);
+    c.text(STALE_NOTE, 74, 282 + c.capHeight('body') / 2, 'body', C.ink);
   }
 
   const byId = new Map(snap.regions.map((/** @type {any} */ r) => [r.id, r]));
   for (const { id, name } of REGIONS) regionCard(c, byId.get(id) ?? { id, name, pm25: null, psi24h: null });
 
-  c.fillRoundRect(36, 1124, CARD_W - 72, 126, CARD.r, C.card);
-  legendRow(c, 1170, 'Card colour: 24-hr PSI band', PSI_BANDS, PSI_BANDS.map((b) => b.id));
+  c.fillRoundRect(36, LEGEND_Y, CARD_W - 72, 226, CARD.r, C.card);
+  legendRow(c, LEGEND_Y + 44, '24-hr PSI band', PSI_BANDS, BAND);
+  legendRow(c, LEGEND_Y + 140, '1-hr PM2.5 band', PM25_BANDS, PM25_BAND);
 
   const psiNote = snap.psiAsOf && snap.psiAsOf !== snap.asOf ? ` 24-hr PSI as at ${sgtHour(snap.psiAsOf)}.` : '';
-  c.text(`Readings from NEA.${psiNote} Advisories: haze.gov.sg`, 56, 1300, 'label', sky.ink);
+  c.text(`Readings from NEA.${psiNote} Advisories: haze.gov.sg`, 56, LEGEND_Y + 270, 'label', sky.ink);
   return c;
 }
 

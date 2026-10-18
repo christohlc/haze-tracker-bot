@@ -80,6 +80,22 @@ export function pm25Band(pm25) {
 }
 
 /**
+ * Regions grouped by the band of their `key` reading, worst band first, regions in the order
+ * given. Regions without a reading are left out. `lo`/`hi` are the group's lowest and highest
+ * readings, rounded.
+ * @template {{ id: string, label: string, max: number }} B
+ * @param {Array<any>} regions @param {string} key @param {B[]} bands PSI_BANDS or PM25_BANDS
+ * @returns {Array<{ band: B, names: string[], lo: number, hi: number }>}
+ */
+export function bandGroups(regions, key, bands) {
+  return [...bands].reverse().flatMap((band, i, worstFirst) => {
+    const floor = worstFirst[i + 1]?.max ?? -Infinity;
+    const vals = regions.filter((r) => r[key] != null).map((r) => ({ name: r.name, v: Math.round(r[key]) })).filter(({ v }) => v > floor && v <= band.max);
+    return vals.length ? [{ band, names: vals.map((x) => x.name), lo: Math.min(...vals.map((x) => x.v)), hi: Math.max(...vals.map((x) => x.v)) }] : [];
+  });
+}
+
+/**
  * Mean of the last `n` numbers (ignoring nulls); null if none.
  * @param {Array<number | null | undefined>} values
  * @param {number} n

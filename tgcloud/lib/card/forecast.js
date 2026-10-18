@@ -20,7 +20,7 @@ const PANEL = { x: 36, w: CARD_W - 72, r: 24, pad: 36 };
 const BANDS = bandRanges();
 
 /** @param {string} id */
-const bandColour = (id) => BAND[/** @type {keyof typeof BAND} */ (id)];
+const bandColour = (id) => BAND[id];
 /** A band's colour at 24% on white, as the app's faded track (`color-mix(… 24%, transparent)`). @param {string} id @returns {Rgb} */
 const faded = (id) => /** @type {Rgb} */ (bandColour(id)[0].map((v, i) => Math.round(C.card[i] + (v - C.card[i]) * 0.24)));
 const FADED = Object.fromEntries(BANDS.map((b) => [b.id, faded(b.id)]));

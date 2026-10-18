@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { formatHaze, formatHazeCaption } from '../tgcloud/lib/format.js';
+import { formatHaze, formatHazeCaption, formatShareCaption } from '../tgcloud/lib/format.js';
 import { sgtHour } from '../tgcloud/lib/time.js';
 import { AWAITED_EVERY_S, buildSnapshot, neaRefetchEveryS, REVISED_EVERY_S } from '../tgcloud/lib/snapshot.js';
 
@@ -64,10 +64,33 @@ test('the card caption: answer first, each advice line with its own emoji, no ta
     worst: { psi3h: { region: 'west', name: 'West', value: 244 }, psi24h: { region: 'west', name: 'West', value: 215 }, pm25: { region: 'west', name: 'West', value: 199 } },
   };
   const lines = formatHazeCaption(snap, null, 'east').split('\n');
-  assert.equal(lines[0], '🟡 <b>Unhealthy</b> · 3-hr PSI 170 in East');
-  assert.match(lines[1], /West highest at 244/);
+  assert.equal(lines[0], '🟡 <b>Unhealthy in East</b> · 24-hr PSI 182');
+  assert.equal(lines[1], '🟠 Very unhealthy in West · 215');
+  assert.equal(lines[2], '💨 Last hour’s PM2.5: High in West; Elevated in East · 12 am SGT');
   assert.ok(lines.filter((l) => l).every((l) => /^(\p{Extended_Pictographic}|<i>)/u.test(l)), 'every line starts with an emoji or is a note');
   assert.ok(lines.some((l) => l.startsWith('🧓 <b>Vulnerable people:</b>')));
-  assert.doesNotMatch(lines.join('\n'), /<pre>/);
-  assert.match(formatHazeCaption(snap, null, null).split('\n')[0], /PSI 244 in West, the highest/);
+  assert.doesNotMatch(lines.join('\n'), /<pre>|3-hr/, 'no table, and only NEA’s numbers');
+  assert.match(formatHazeCaption(snap, null, null), /^🟠 <b>Very unhealthy in West<\/b> · 24-hr PSI 215\n🟡 Unhealthy in East · 182\n/);
+});
+
+test('the lead says where each 24-hr PSI band applies, never one band for the island', () => {
+  const r = (/** @type {string} */ name, /** @type {number | null} */ psi24h, pm25 = 100) => ({ id: name.toLowerCase(), name, psi24h, pm25 });
+  const at = (/** @type {any[]} */ regions) => {
+    const snap = { asOf: '2026-10-18T08:00:00+08:00', regions, cigs: { past24h: 1 }, worst: { psi3h: null, psi24h: null, pm25: null } };
+    return { lead: formatHazeCaption(snap, null, null).split('\n\n')[0], share: formatShareCaption(snap) };
+  };
+  const all = [r('North', 129), r('West', 228, 170), r('Central', 186), r('East', 179), r('South', 174)];
+  const oct18 = at(all);
+  assert.equal(oct18.lead, '🟠 <b>Very unhealthy in West</b> · 24-hr PSI 228\n🟡 Unhealthy elsewhere · 129–186\n💨 Last hour’s PM2.5: High in West; Elevated elsewhere · 8 am SGT');
+  assert.equal(oct18.share, '<b>Singapore haze</b> · 8 am SGT\n🟠 <b>Very unhealthy in West</b> · 24-hr PSI 228\n🟡 Unhealthy elsewhere · 129–186\n<i>NEA’s readings.</i>');
+  const one = at(all.map((x) => ({ ...x, psi24h: 150, pm25: 80 })));
+  assert.match(one.lead, /^🟡 <b>Unhealthy island-wide<\/b> · 24-hr PSI 150\n💨 Last hour’s PM2.5: Elevated island-wide/);
+  const three = at([r('North', 90), ...all.slice(1)]);
+  assert.match(three.lead, /\n🟡 Unhealthy in Central, East, South · 174–186\n🔵 Moderate elsewhere · 90\n/);
+  const gap = at([r('North', null), r('West', 228), r('Central', 150)]);
+  assert.match(gap.lead, /\n🟡 Unhealthy in Central · 150\n⚪️ No reading in North\n/, 'not “elsewhere”: North has no reading, and it says so');
+  const snap = { asOf: '2026-10-18T08:00:00+08:00', regions: all, cigs: { past24h: 1 }, worst: { psi3h: null, psi24h: null, pm25: null } };
+  const east = formatHazeCaption({ ...snap, regions: [r('North', 129), r('West', 228), r('Central', 205), r('East', 210), r('South', 174)] }, null, 'east');
+  assert.match(east, /^🟠 <b>Very unhealthy in East<\/b> · 24-hr PSI 210\n🟠 Very unhealthy in West, Central too · 205–228\n🟡 Unhealthy elsewhere · 129–174\n/, 'the area’s band again says “too”');
+  assert.equal(at([r('North', null, null)]).lead, '⚪️ <b>No 24-hr PSI yet</b>\n💨 Last hour’s PM2.5: no reading · 8 am SGT');
 });
