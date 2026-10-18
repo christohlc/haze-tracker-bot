@@ -1,7 +1,8 @@
 import { CHANGELOG, LATEST_ID } from './changelog';
+import { STORE_KEYS } from './store-keys';
 import { getStored, setStored } from './telegram';
 
-const SEEN_KEY = 'whats_new_seen';
+const SEEN_KEY = STORE_KEYS.whatsNewSeen;
 
 /** The latest changelog id this user has seen, or null if none. */
 export const getSeen = () => getStored(SEEN_KEY);

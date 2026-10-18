@@ -5,11 +5,12 @@
   import { scale } from 'svelte/transition';
   import { reducedMotion } from '../lib/motion';
   import { ARCADE_TIME, createGame, readTheme, type Game } from '../lib/ninja';
+  import { STORE_KEYS } from '../lib/store-keys';
   import { getStored, lockVerticalSwipes, notifyHaptic, selectionHaptic, setStored } from '../lib/telegram';
 
   let { onclose }: { onclose: () => void } = $props();
 
-  const BEST_KEY = 'hazelnuts:ninja:best';
+  const BEST_KEY = STORE_KEYS.ninjaBest;
 
   let status = $state<'idle' | 'playing' | 'over'>('idle');
   let score = $state(0);

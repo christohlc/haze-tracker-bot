@@ -5,9 +5,10 @@
 import { regionOrNull } from '../../tgcloud/lib/alert-settings.js';
 import { REGIONS } from '../../tgcloud/lib/config.js';
 import type { RegionId } from './api';
+import { STORE_KEYS } from './store-keys';
 import { getStored, setStored, tg } from './telegram';
 
-const KEY = 'area';
+const KEY = STORE_KEYS.area;
 const asRegion = (v: unknown) => regionOrNull(v) as RegionId | null;
 
 export const area = $state<{ id: RegionId | null }>({ id: null });

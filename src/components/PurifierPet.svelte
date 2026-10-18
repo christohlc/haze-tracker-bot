@@ -8,7 +8,8 @@
   import { area } from '../lib/area.svelte';
   import { ambient, appVisible, onAppVisible, onReducedMotion, reducedMotion } from '../lib/motion';
   import { psiKey, type Period } from '../lib/period';
-  import { getStored, lockVerticalSwipes, selectionHaptic, setStored } from '../lib/telegram';
+  import { STORE_KEYS } from '../lib/store-keys';
+  import { STORAGE_WAIT_MS, getStored, lockVerticalSwipes, selectionHaptic, setStored } from '../lib/telegram';
   import {
     PET_H,
     PET_LINES,
@@ -39,7 +40,7 @@
     onhide,
   }: { snapshot: Snapshot; period: Period; hidden: boolean; onhide: () => void } = $props();
 
-  const POS_KEY = 'hazelnuts:pet:pos';
+  const POS_KEY = STORE_KEYS.petPos;
   const TAP_SLOP = 10; // px; hedgehog-mode's click threshold
 
   // The same band as the hero, so the pet and the big number agree.
@@ -259,7 +260,7 @@
       reduce = r;
       start(); // the next step puts it straight down if it was mid-air
     });
-    getStored(POS_KEY).then((raw) => {
+    getStored(POS_KEY, STORAGE_WAIT_MS).then((raw) => {
       measure();
       const saved = parseSaved(raw);
       // First time: on the floor, bottom right, out of the way. Saved: drops from where it was left.
