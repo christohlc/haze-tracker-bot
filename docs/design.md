@@ -47,7 +47,7 @@ which is described below.
 | Status | `--status-good`, `--status-critical` | Feed health, errors, “Stop all alerts” |
 | Haze map | `--map-sea`, `--map-land`, `--map-coast`, `--map-label`, `--haze-moderate`, `--haze-dense`, `--map-fire` | Haze hues follow NEA’s map (orange moderate, brown-red dense) so they read the same as haze.gov.sg |
 | Shape | `--radius` 16px, `--gutter` 16px | |
-| Motion | `--ease-out`, `--ease-in-out`, `--ease-push` | `--ease-push` only for a view a tap pushes in (the region morph) |
+| Motion | `--ease-out`, `--ease-in-out`, `--ease-push` | `--ease-push` only for a view a tap pushes in (a region's page) |
 
 Dark mode sets `:root[data-theme='dark']`. `src/lib/telegram.ts` takes the scheme from Telegram
 or, outside Telegram, from the OS. A new colour token needs both a light and a dark value.
@@ -138,14 +138,11 @@ messages is the same short form, for the general public.
   dial streams in the arrow's direction, faster in a stronger wind (4 s to 1.5 s a pass), only
   when the direction is clear; rain falls on the dial while it’s raining anywhere. Reduced
   motion: all of these stay still or hidden.
-- Opening a region from Around the island morphs the row’s name into the region’s title and
-  back (a View Transition, `viewTransition()` in `src/lib/motion.ts`: 260ms `--ease-push`, which
-  moves at once like an iOS push; the rest crossfades in 180ms). Only the
-  name's text morphs, sized to it on both ends, so it never stretches. Entrances the swap starts
-  (a panel's fade, its cards' rise) skip to their end, since the crossfade already brings them
-  in and they'd trail the tap. Without View
-  Transitions, or under reduced motion, it swaps at once. Only one element carries the
-  `region-name` at a time, or the browser skips the morph.
+- Opening a region from Around the island pushes its page in from the right (a fifth of its width and a fade,
+  260ms `--ease-push`, which moves the moment the finger lifts, like an iOS push); back brings
+  the Now tab in from the left. The page moves as one, so the region's cards don't rise as well.
+  Plain CSS rather than a View Transition, which Telegram's iOS web view didn't play. Reduced
+  motion: a fade.
 - Haptics: a selection tick on picks (tabs, rows, the area); a light impact on other taps
   that move to another view (the Next hours strip, closing a region with either back control);
   success or error after a save. Never unprompted.
