@@ -20,7 +20,6 @@
   import { cachedDashboard, saveDashboard } from './lib/cache';
   import { LATEST_ID } from './lib/changelog';
   import { readingTime } from './lib/format';
-  import { viewTransition } from './lib/motion';
   import type { Period } from './lib/period';
   import { getStored, impactHaptic, inTelegram, setStored, showBackButton } from './lib/telegram';
   import { snapshotVerdict, type Group } from '../tgcloud/lib/advice.js';
@@ -83,36 +82,32 @@
   // Back lands where the list was.
   let detail = $state<RegionId | null>(null);
   let listY = 0;
-  // The row whose name morphs into the region's title (and back): named only while it's on
-  // screen, since a View Transition name must be unique.
-  let namedRow = $state<RegionId | null>(null);
+  // The region's page pushes in from the right, like an iOS screen; back brings Now in from the
+  // left (`popped`, until the next tab switch, which fades as usual). Plain CSS, so it plays in
+  // every web view.
+  let popped = $state(false);
   async function openRegion(id: RegionId) {
     listY = window.scrollY;
-    namedRow = id;
-    await tick();
-    await viewTransition(async () => {
-      namedRow = null;
-      detail = id;
-      await tick(); // the region is shown and the list hidden, so the page is its height
-      tabsAnchor?.scrollIntoView({ block: 'start', behavior: 'instant' });
-    });
+    detail = id;
+    await tick(); // the region is shown and the list hidden, so the page is its height
+    tabsAnchor?.scrollIntoView({ block: 'start', behavior: 'instant' });
   }
   async function closeRegion() {
     const was = detail;
     if (!was) return;
     impactHaptic();
-    await viewTransition(async () => {
-      detail = null;
-      namedRow = was;
-      await tick(); // the Now tab is laid out again
-      window.scrollTo({ top: listY, behavior: 'instant' });
-    });
-    namedRow = null;
+    popped = true;
+    detail = null;
+    await tick(); // the Now tab is laid out again
+    window.scrollTo({ top: listY, behavior: 'instant' });
     // Focus goes back to the row that opened it.
     document.querySelector<HTMLElement>(`[data-region="${was}"]`)?.focus({ preventScroll: true });
   }
   $effect(() => {
-    if (tab !== 'now') detail = null;
+    if (tab !== 'now') {
+      detail = null;
+      popped = false;
+    }
   });
 
   // Away from Now (or in a region), Telegram's back arrow returns to it, like a native screen.
@@ -206,14 +201,14 @@
     {/if}
     <div class="tabs-anchor" bind:this={tabsAnchor}></div>
     {#if detail}
-      <div class="sections" role="region" aria-labelledby="region-title">
+      <div class="sections push" role="region" aria-labelledby="region-title">
         <RegionDetail snapshot={data.snapshot} history={data.history} region={detail} {group} onback={closeRegion} />
       </div>
     {/if}
     {#if visited.now}
-      <div id="panel-now" class="sections" class:off={tab !== 'now' || detail != null} role="tabpanel" aria-labelledby="tab-now">
+      <div id="panel-now" class="sections" class:pop={popped} class:off={tab !== 'now' || detail != null} role="tabpanel" aria-labelledby="tab-now">
         <Hero snapshot={data.snapshot} bind:period mask={outside?.mask} range={data.ahead?.range ?? null} onahead={() => (tab = 'outlook')} />
-        <RegionTable snapshot={data.snapshot} {period} morph={namedRow} onselect={openRegion} />
+        <RegionTable snapshot={data.snapshot} {period} onselect={openRegion} />
         <Advice snapshot={data.snapshot} v={outside} {group} onpick={pickGroup} />
         <AlertsCard {group} />
         <ShareCard snapshot={data.snapshot} />
@@ -259,6 +254,7 @@
   main {
     max-width: 720px;
     margin: 0 auto;
+    overflow-x: clip; /* a page sliding in never scrolls the app sideways */
     padding: calc(12px + var(--inset-top)) var(--pad-right) calc(24px + var(--inset-bottom)) var(--pad-left);
   }
   /* Scrolled to, the tab starts just below Telegram's buttons. */
@@ -274,6 +270,29 @@
   /* Showing a tab fades it in. */
   .sections {
     animation: fade 150ms var(--ease-out);
+  }
+  /* Into a region and back (above). The page moves as one, so the region's cards don't rise too.
+     Before .off, which must win over .pop. */
+  .sections.push {
+    animation: push 260ms var(--ease-push);
+  }
+  .sections.push > :global(*) {
+    animation: none;
+  }
+  .sections.pop {
+    animation: pop 260ms var(--ease-push);
+  }
+  @keyframes push {
+    from {
+      opacity: 0;
+      transform: translateX(20%);
+    }
+  }
+  @keyframes pop {
+    from {
+      opacity: 0;
+      transform: translateX(-20%);
+    }
   }
   /* Hidden tabs keep their layout rather than display: none, so their cards' rise doesn't
      replay on every visit and charts keep their measured width. */
@@ -339,6 +358,10 @@
   @media (prefers-reduced-motion: reduce) {
     .sections > :global(*) {
       animation: fade 200ms ease both;
+    }
+    .sections.push,
+    .sections.pop:not(.off) {
+      animation: fade 200ms ease;
     }
   }
 </style>

@@ -296,25 +296,6 @@ summary {
   }
 }
 
-/* Opening a region from Around the island: its name morphs into the region's title while the
-   rest crossfades (viewTransition() in src/lib/motion.ts). A tap starts it, so it moves at once
-   (--ease-push) rather than easing in. */
-::view-transition-group(region-name) {
-  animation-duration: 260ms;
-  animation-timing-function: var(--ease-push);
-}
-/* The name keeps its proportions as it grows, instead of stretching to the box. */
-::view-transition-old(region-name),
-::view-transition-new(region-name) {
-  width: auto;
-  height: 100%;
-}
-::view-transition-old(root),
-::view-transition-new(root) {
-  animation-duration: 180ms;
-  animation-timing-function: var(--ease-out);
-}
-
 /* Looping (ambient) animations stop while their element is off screen or the app is in the
    background: see ambient() in src/lib/motion.ts. */
 [data-paused],

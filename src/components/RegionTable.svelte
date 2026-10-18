@@ -9,14 +9,12 @@
   import { PERIODS, psiKey, type Period } from '../lib/period';
   import { selectionHaptic } from '../lib/telegram';
 
-  // `onselect`: a row was tapped, to open that region's own view. `morph`: the row whose name
-  // morphs into that view's title (App.svelte).
+  // `onselect`: a row was tapped, to open that region's own view (App.svelte).
   let {
     snapshot,
     period = '3h',
-    morph = null,
     onselect,
-  }: { snapshot: Snapshot; period?: Period; morph?: RegionId | null; onselect?: (id: RegionId) => void } = $props();
+  }: { snapshot: Snapshot; period?: Period; onselect?: (id: RegionId) => void } = $props();
 
   function select(id: RegionId) {
     selectionHaptic();
@@ -51,7 +49,7 @@
       >
         <button type="button" class="row" data-region={r.id} onclick={() => select(r.id as RegionId)}>
         <span class="name">
-          <span style:display="inline-block" style:view-transition-name={morph === r.id ? 'region-name' : undefined}>{r.name}</span>
+          {r.name}
           {#if r.mine}<span class="tag">Your area</span>{/if}
         </span>
         <span class="track" aria-hidden="true">
