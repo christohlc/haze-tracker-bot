@@ -185,7 +185,7 @@ export function backdrop(height, snap, { island = true } = {}) {
   c.text('I’m going hazelnuts!', 164, 84, 'head', sky.ink);
   c.text(cardDate(snap.asOf), 164, 122, 'body', sky.ink);
   // Where to get it, for a card forwarded away from the bot.
-  c.text(`@${BOT_USERNAME}`, CARD_W - 56, 122, 'body', sky.ink, 'right');
+  c.text(`@${BOT_USERNAME}`, CARD_W - 56, 122, 'label', sky.ink, 'right');
   return { c, sky };
 }
 

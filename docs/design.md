@@ -236,8 +236,8 @@ newspaper graphic:
   (“1-hr PM2.5: 123”, no unit) in its own band’s colour (`PM25_BAND`: the PSI palette’s green,
   yellow and orange for the same severity, a red for Very high), as ST’s and CNA’s graphics do.
 - **The bot’s handle** (`BOT_USERNAME`, `@hazelnutellabot`) sits top right on the time’s
-  baseline, on this and the forecast card (`backdrop`), so a forwarded picture says where it came
-  from.
+  baseline, in the footer’s small type so it stays an attribution, on this and the forecast card
+  (`backdrop`), so a forwarded picture says where it came from.
 - **Two legend rows** of band chips: “24-hr PSI band” and “1-hr PM2.5 band”, ranges from `PSI_BANDS` and `PM25_BANDS`.
 - Both numbers are NEA’s, so no “our calculation” note; the 3-hour PSI stays out of the picture.
   Missing readings show “–” on a grey card; a stale snapshot gets the amber note.
