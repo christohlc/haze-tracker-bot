@@ -62,8 +62,8 @@
     margin: -2px;
   }
   .name {
-    padding-block: 8px;
-    margin-block: -8px;
+    padding-block: 11px;
+    margin-block: -11px;
   }
   .logo img {
     display: block;
@@ -105,6 +105,10 @@
     .logo,
     .name {
       transition: none;
+    }
+    .logo:active,
+    .name:active {
+      transform: none;
     }
   }
 </style>

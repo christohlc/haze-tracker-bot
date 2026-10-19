@@ -579,9 +579,9 @@
     overflow-wrap: anywhere;
   }
   .tuck {
-    margin: 4px 0 0 -6px;
+    margin: -2px 0 -6px -6px; /* a 44px hit area, laid out as the 32px it looks */
     padding: 6px;
-    min-height: 32px;
+    min-height: 44px;
     border: 0;
     background: none;
     color: var(--link);

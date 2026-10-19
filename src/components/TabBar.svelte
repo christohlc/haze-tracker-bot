@@ -267,25 +267,45 @@
   .thumb.instant {
     transition: none;
   }
+  /* The thumb and the pressed lens are two layers that cross-fade, so only transform and
+     opacity animate. */
   .lens {
     position: absolute;
     inset: 0;
-    border-radius: 999px;
-    background: var(--control-thumb);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
-    transition:
-      transform 200ms var(--ease-out),
-      box-shadow 200ms var(--ease-out),
-      background-color 200ms var(--ease-out);
+    transition: transform 200ms var(--ease-out);
   }
-  /* Pressed, the thumb swells into a lens with a lit rim, like iOS's tab bar. */
-  .lens.pressed {
-    transform: scale(1.12);
-    background: color-mix(in srgb, var(--control-thumb) 70%, transparent);
+  .lens::before,
+  .lens::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 999px;
+    transition: opacity 200ms var(--ease-out);
+  }
+  .lens::before {
+    background: var(--control-thumb);
+    box-shadow: var(--shadow-thumb);
+  }
+  .lens::after {
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.8),
       inset 0 -1px 2px rgba(255, 255, 255, 0.3),
       0 6px 16px rgba(0, 0, 0, 0.16);
+    opacity: 0;
+  }
+  /* Pressed, the thumb swells into a lens with a lit rim, like iOS's tab bar. */
+  .lens.pressed {
+    transform: scale(1.12);
+    transition-duration: 160ms;
+  }
+  .lens.pressed::before {
+    opacity: 0.7;
+  }
+  .lens.pressed::after {
+    opacity: 1;
+  }
+  .lens.pressed::before,
+  .lens.pressed::after {
     transition-duration: 160ms;
   }
 
@@ -352,6 +372,8 @@
   @media (prefers-reduced-motion: reduce) {
     .thumb,
     .lens,
+    .lens::before,
+    .lens::after,
     .icon,
     .label {
       transition: none;

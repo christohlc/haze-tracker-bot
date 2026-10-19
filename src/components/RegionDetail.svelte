@@ -79,6 +79,14 @@
   #region-title:focus {
     outline: none;
   }
+  @media (prefers-reduced-motion: reduce) {
+    .back {
+      transition: none;
+    }
+    .back:active {
+      transform: none;
+    }
+  }
   .stats {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));

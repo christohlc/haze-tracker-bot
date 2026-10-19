@@ -117,3 +117,48 @@ In short, the bot is the same page re-skinned with Telegram colours. Nothing on 
 - `src/components/Segmented.svelte`: 44 px tap targets.
 - `src/App.svelte`: header swap and shared `period` only; section order unchanged for an easy
   merge with the forecast work.
+
+## 2026-10-19: against design.md
+
+The app checked against its own rules rather than the reference site: a pass in the preview at
+375 × 812 (light, dark, `?demo=worst`, every tab and a region page) and a read of every component.
+The basics hold: loops sit under `use:ambient`, the tweened hero number isn't announced, colour
+never stands alone, no `100vh`, hover is guarded. What didn't:
+
+### Users see it
+1. **The pet covers content.** Resting on the floor above the tab bar (z-index 4), it sits on
+   body text, the Share button and chart legends on every tab.
+2. **The hero mixes two measures.** The number is the area's 3-hr PSI; the Next hours strip
+   under it is the island's 1-hr PSI, so 221 above “186–230 in 1 hr” reads as a drop.
+3. **Big numbers and long names overflow:** the region list's `3ch` value column (“1000” hits the
+   chevron), the hero's next-hours ranges, the history chart's 34px y-axis, `1fr` columns in
+   Segmented and the cigarette tiles, the daily-update chips.
+4. **Alerts card load failure** has no Try again and falls back to the alerts-off copy.
+5. **Share:** the error says “Try again.” with no button; nothing says the picture is drawing.
+6. **History chart:** “Band II/III/IV” on the PM2.5 scale, 10–11px px-sized labels, “Rolling
+   1-hour averages” at 1h, “1h/3h/24h” where the hero says “1 hr”.
+
+### Touch, focus, motion
+7. Under 44px: every Try again (`.state .primary`, 40px), the pet's Tuck away (32px), the
+   header name, “More at haze.gov.sg”, the cigarette slider.
+8. No global `:focus-visible`: most controls fall back to the browser ring, weak on the sky.
+9. Press scales with no reduced-motion fallback (Segmented, the region page's Back, the offline
+   banner's button); the tab bar lens transitions `box-shadow` and `background-color`.
+10. Shadows are rgba literals with no dark value (header, Segmented, tab bar, switch thumb).
+
+### Consistency and copy
+11. Three Try again styles, `.sub-title` beside `.subhead`, a bare `.empty` beside `.note.empty`.
+12. Five timestamp forms (“updated 3 pm SGT”, “3 pm SGT, 16 Oct”, “Issued 14 Oct, 3 pm SGT”,
+    “Checked 3 pm SGT”, “issued 3 h ago”).
+13. Notes over two sentences: What to do, both halves of What's ahead, Data sources.
+14. Empty states say “right now” in some cards and “yet” in others; Around the island and the
+    cigarette count have none.
+15. Raw text reaches users: a feed's `lastError` in Data sources, `e.message` in a few errors.
+16. Telegram: What to do's haze.gov.sg link skips `openLink`; no selection tick on the wind
+    layer switch or the cigarette region pick; the alerts button's 🔔 repeats the card's bell.
+17. Accessibility: an `<h2>` inside the pet card's `<label>`; `aria-current` on the region row's
+    `<li>`, not its button; the hero's “–” isn't hidden; the dial's “today N” is 11px.
+18. “Satellite pictures of the smoke” doesn't look tappable.
+
+Fixed in order: touch, focus and motion (7–10, 17); overflow and states (3–5, 14, 15); copy
+and consistency (6, 11–13, 16, 18); then the pet and the hero strip (1–2), which are design calls.

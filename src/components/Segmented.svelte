@@ -68,7 +68,7 @@
     width: calc((100% - 4px) / var(--n));
     border-radius: 8px;
     background: var(--control-thumb);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+    box-shadow: var(--shadow-thumb);
     /* on-screen movement between options */
     transition: transform 200ms var(--ease-in-out);
     z-index: -1;
@@ -96,6 +96,12 @@
   @media (prefers-reduced-motion: reduce) {
     .thumb {
       transition: none;
+    }
+    button {
+      transition: color 150ms ease;
+    }
+    button:active {
+      transform: none;
     }
   }
 </style>

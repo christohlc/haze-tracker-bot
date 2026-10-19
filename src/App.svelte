@@ -380,6 +380,12 @@
     transform: scale(0.97);
   }
   @media (prefers-reduced-motion: reduce) {
+    .offline button {
+      transition: none;
+    }
+    .offline button:active:not(:disabled) {
+      transform: none;
+    }
     .sections > :global(*) {
       animation: fade 200ms ease both;
     }

@@ -8,12 +8,15 @@
 <section class="card" aria-labelledby="pet-title">
   <label class="row">
     <span>
-      <h2 id="pet-title" class="section-title">Purifier pet</h2>
-      <span class="note">A little air purifier that wanders the dashboard. Drag it anywhere, or tap it for a pat.</span>
+      <!-- A heading can't sit in a label, so this is one by role; the switch is named by it alone. -->
+      <span id="pet-title" class="section-title" role="heading" aria-level="2">Purifier pet</span>
+      <span id="pet-note" class="note">A little air purifier that wanders the dashboard. Drag it anywhere, or tap it for a pat.</span>
     </span>
     <input
       type="checkbox"
       role="switch"
+      aria-labelledby="pet-title"
+      aria-describedby="pet-note"
       checked={shown}
       onchange={(e) => {
         selectionHaptic();
