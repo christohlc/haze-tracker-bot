@@ -113,6 +113,7 @@
     pointer-events: none;
   }
   .now {
+    font-size: 0.75rem;
     font-weight: 650;
     color: var(--ink);
   }

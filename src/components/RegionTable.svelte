@@ -44,10 +44,9 @@
       <!-- When the area changes, rows slide to their new places (quartInOut is --ease-in-out). -->
       <li
         class:mine={r.mine}
-        aria-current={r.mine ? 'true' : undefined}
         animate:flip={{ duration: reducedMotion() ? 0 : 220, easing: quartInOut }}
       >
-        <button type="button" class="row" data-region={r.id} onclick={() => select(r.id as RegionId)}>
+        <button type="button" class="row" data-region={r.id} aria-current={r.mine ? 'true' : undefined} onclick={() => select(r.id as RegionId)}>
         <span class="name">
           {r.name}
           {#if r.mine}<span class="tag">Your area</span>{/if}
@@ -93,6 +92,10 @@
     text-align: left;
     cursor: pointer;
     transition: transform 120ms var(--ease-out);
+  }
+  .row:focus-visible {
+    outline-offset: 0;
+    border-radius: 8px;
   }
   .row:active {
     transform: scale(0.97);

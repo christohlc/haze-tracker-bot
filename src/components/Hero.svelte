@@ -101,7 +101,7 @@
       <p class="band"><span class="dot" style:background="var(--band-{band.id})"></span>{band.label}</p>
     {/if}
   {:else}
-    <div class="figure"><span class="value empty">–</span></div>
+    <div class="figure"><span class="value empty" aria-hidden="true">–</span></div>
     <p class="missing">
       {mine ? `No reading for ${mine.name} for this period yet. Pick another area, or the highest.` : 'No reading from NEA for this period yet.'}
     </p>

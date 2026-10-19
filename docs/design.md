@@ -47,7 +47,7 @@ which is described below.
 | Status | `--status-good`, `--status-critical` | Feed health, errors, “Stop all alerts” |
 | Haze map | `--map-sea`, `--map-land`, `--map-coast`, `--map-label`, `--haze-moderate`, `--haze-dense`, `--map-fire` | Haze hues follow NEA’s map (orange moderate, brown-red dense) so they read the same as haze.gov.sg |
 | Purifier pet | `--pet-body`, `--pet-vent`, `--pet-line`, `--pet-blush`, `--pet-sweat` | A pale appliance in both schemes, so its face reads on any card |
-| Shape | `--radius` 16px, `--gutter` 16px | |
+| Shape | `--radius` 16px, `--gutter` 16px, `--shadow-thumb` | The shadow lifts a thumb or knob off its track |
 | Motion | `--ease-out`, `--ease-in-out`, `--ease-push` | `--ease-push` only for a view a tap pushes in (a region's page) |
 
 Dark mode sets `:root[data-theme='dark']`. `src/lib/telegram.ts` takes the scheme from Telegram
@@ -95,6 +95,8 @@ or, outside Telegram, from the OS. A new colour token needs both a light and a d
 - Tap targets are at least 44px. Segmented controls and the tab bar switch on `pointerdown` for a mouse, and on
   lift for a finger, so a scroll that starts on one doesn’t change it; `:active` gives the press
   feedback straight away.
+- Keyboard focus shows one ring everywhere: 2px `--accent`, 2px out (`:focus-visible` in
+  `app.css`). A control that clips it draws it on its frame instead.
 - On/off settings are drawn switches, not checkboxes. Saving one shows the change at once and undoes
   it if the save fails; the controls lock while it saves but don’t dim. “Stop all alerts” asks first
   (Telegram’s own confirm dialog).

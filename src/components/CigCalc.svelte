@@ -88,6 +88,8 @@
   }
   input[type='range'] {
     width: 100%;
+    height: 44px; /* the track stays centred; this is the finger's room */
+    margin: 0;
     accent-color: var(--accent);
     touch-action: pan-y;
   }

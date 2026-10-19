@@ -79,6 +79,7 @@
   #region-title:focus {
     outline: none;
   }
+
   .stats {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
