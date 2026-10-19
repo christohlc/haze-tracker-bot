@@ -40,9 +40,10 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
 - **Ops alerts go to the operator, never to users.** At the end of every tick `lib/ops.js` writes
   `state('tick_heartbeat')` (`admin` `status` shows it as `lastTick`) and DMs the `ops_chat_id`
   setting about each feed in `source_status` that keeps failing (`failingSources` in
-  `lib/ops-rules.js`: NEA after 2 h without a good fetch, news after 6 h, on-demand feeds as soon as
-  their latest fetch failed), again every 6 h while it keeps failing (on-demand feeds once per
-  outage), then once when it works again (`state('ops_notified')`, written after the send). The
+  `lib/ops-rules.js`: NEA after 2 h without a good fetch, news after 6 h, on-demand feeds once they
+  fail again 30 min after first failing, `source_status.failing_since`, so only if someone asks
+  again; **run `npx tgcloud migrate` before pushing** a build that reads it), again every 6 h
+  while it keeps failing (on-demand feeds once per outage), then once when it works again (`state('ops_notified')`, written after the send). The
   tick can't report its own absence, so the Worker
   (`cron/worker.js`) DMs `OPS_CHAT_ID` when the last successful tick run is over 45 min old or the
   dispatch failed, only on the hour's first cron (it has no store), so at most hourly. Its secrets

@@ -12,7 +12,7 @@ const NEA_STALE_S = 2 * 3600;
 const NEWS_STALE_S = 6 * 3600;
 
 /**
- * @typedef {{ source: string, lastOkAt: number | null, lastErrorAt: number | null, lastError: string | null }} SourceStatus
+ * @typedef {{ source: string, lastOkAt: number | null, lastErrorAt: number | null, lastError: string | null, failingSince: number | null }} SourceStatus
  * (store.js allSourceStatus; times in unix seconds)
  */
 
@@ -23,24 +23,33 @@ function staleAfterS(source) {
 }
 
 /**
- * A feed fetched only when the Mini App asks (cachedFeed), which may not be asked for again for hours:
- * its latest fetch failing is enough to count, and ops.js tells it once per outage.
+ * A feed fetched only when the Mini App asks (cachedFeed), which may not be asked for again for hours,
+ * so how long since its last good fetch says nothing (failingSources), and ops.js tells it once per outage.
  * @param {string} source
  */
 export const isOnDemand = (source) => staleAfterS(source) === null;
+
+/**
+ * An on-demand feed counts as failing once a fetch this long after its first failure failed too: NEA's
+ * forecast API drops fetches from the platform for minutes at a time, not worth a DM. So a feed nobody
+ * asks for again isn't reported.
+ */
+export const ON_DEMAND_GRACE_S = 30 * 60;
 
 /** @param {SourceStatus} s */
 const lastFetchFailed = (s) => (s.lastErrorAt ?? 0) > (s.lastOkAt ?? 0);
 
 /**
- * The sources whose latest fetch failed, and, unless on demand, that have gone too long without a good one.
+ * The sources whose latest fetch failed, and that have gone too long without a good one or, if on
+ * demand, failed again ON_DEMAND_GRACE_S after they started failing.
  * @param {SourceStatus[]} statuses @param {number} now unix seconds @returns {SourceStatus[]}
  */
 export function failingSources(statuses, now) {
   return statuses.filter((s) => {
     if (!lastFetchFailed(s)) return false;
     const staleS = staleAfterS(s.source);
-    return staleS === null || now - (s.lastOkAt ?? 0) > staleS;
+    if (staleS !== null) return now - (s.lastOkAt ?? 0) > staleS;
+    return s.failingSince !== null && (s.lastErrorAt ?? 0) - s.failingSince >= ON_DEMAND_GRACE_S;
   });
 }
 

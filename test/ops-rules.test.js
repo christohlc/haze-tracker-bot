@@ -4,11 +4,14 @@ import { CARD_UPLOAD_BY_MS, cardUploadDue, failingSources, isOnDemand, opsMessag
 
 const NOW = 1_792_000_000;
 const H = 3600;
-const row = (source, lastOkAgoH, lastErrorAgoH, lastError = 'HTTP 500') => ({
+const ago = (h) => (h === null ? null : NOW - h * H);
+// failingSince defaults to the latest error, as recordSource writes it after one failure.
+const row = (source, lastOkAgoH, lastErrorAgoH, lastError = 'HTTP 500', failingSinceAgoH = lastErrorAgoH) => ({
   source,
-  lastOkAt: lastOkAgoH === null ? null : NOW - lastOkAgoH * H,
-  lastErrorAt: lastErrorAgoH === null ? null : NOW - lastErrorAgoH * H,
+  lastOkAt: ago(lastOkAgoH),
+  lastErrorAt: ago(lastErrorAgoH),
   lastError: lastErrorAgoH === null ? null : lastError,
+  failingSince: ago(failingSinceAgoH),
 });
 const names = (rows) => failingSources(rows, NOW).map((s) => s.source);
 
@@ -18,11 +21,17 @@ test('NEA fails only after 2 hours without a good fetch', () => {
   assert.deepEqual(names([row('nea_psi', null, 0.1)]), ['nea_psi']); // never worked
 });
 
-test('news fails after 6 hours, on-demand feeds as soon as the latest fetch failed', () => {
+test('news fails after 6 hours', () => {
   assert.deepEqual(names([row('news_st', 5, 0.1), row('news_cna', 7, 0.1)]), ['news_cna']);
-  assert.deepEqual(names([row('nea_weather', 0.2, 0.1), row('lta_cameras', 0.1, 0.2)]), ['nea_weather']);
-  assert.deepEqual(names([row('nea_hazemap', 0.1, null)]), []);
   assert.deepEqual(['nea_psi', 'news_st', 'nea_outlook', 'lta_cameras'].map(isOnDemand), [false, false, true, true]);
+});
+
+test('an on-demand feed fails once it fails again 30 min after it started failing', () => {
+  // One failed fetch, however long since the last good one: not yet.
+  assert.deepEqual(names([row('nea_outlook', 2.25, 0.1), row('lta_cameras', 0.1, 0.2), row('nea_hazemap', 0.1, null)]), []);
+  assert.deepEqual(names([row('nea_outlook', 3, 0.1, 'x', 0.4)]), []); // 18 min on
+  assert.deepEqual(names([row('nea_outlook', 3, 0.1, 'x', 0.6)]), ['nea_outlook']); // 30 min on
+  assert.deepEqual(names([row('nea_outlook', 3, 0.1, 'x', null)]), []); // failing since before the column
 });
 
 test('a source DM’d as failing recovers once its latest fetch works', () => {
