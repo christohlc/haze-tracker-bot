@@ -123,10 +123,11 @@ const floorOf = (w: World) => Math.max(w.floor, w.top + PET_H);
 const usable = (w: World) =>
   w.platforms.filter((p) => p.top - PET_H >= w.top && p.top <= w.floor && p.right - p.left >= PET_W);
 
-/** The highest platform across `cx` whose top passes `ok`. */
-function highestUnder(plats: Platform[], cx: number, ok: (p: Platform) => boolean): Platform | null {
+/** The highest platform across `cx` whose top passes `ok` (or the lowest). */
+function highestUnder(plats: Platform[], cx: number, ok: (p: Platform) => boolean, lowest = false): Platform | null {
   let best: Platform | null = null;
-  for (const p of plats) if (cx >= p.left && cx <= p.right && ok(p) && (!best || p.top < best.top)) best = p;
+  for (const p of plats)
+    if (cx >= p.left && cx <= p.right && ok(p) && (!best || (lowest ? p.top > best.top : p.top < best.top))) best = p;
   return best;
 }
 
@@ -233,6 +234,29 @@ export function release(s: PetState) {
   }
   s.action = 'fall';
   s.on = null;
+}
+
+/**
+ * On the floor it stands over whatever scrolls behind the tab bar, so it doesn't stay there: the
+ * card top it leaps up to, the lowest one above it. None while no card's top is in view.
+ */
+export function leapTarget(s: PetState, w: World): Platform | null {
+  if (s.on !== 'floor') return null;
+  const below = floorOf(w) - 8;
+  return highestUnder(usable(w), s.x + PET_W / 2, (p) => p.top < below, true);
+}
+
+/** A jump just high enough to clear `p`'s top, so it lands there on the way down; `instant`
+    (reduced motion): it's simply there. */
+export function leap(s: PetState, p: Platform, instant = false) {
+  if (instant) {
+    [s.y, s.vx, s.vy, s.on, s.action] = [p.top, 0, 0, p.id, 'wait'];
+    return;
+  }
+  s.vy = -Math.sqrt(2 * GRAVITY * (s.y - p.top + 16));
+  s.vx = 0;
+  s.on = null;
+  s.action = 'hop';
 }
 
 function settleOn(s: PetState, w: World, plats: Platform[]) {

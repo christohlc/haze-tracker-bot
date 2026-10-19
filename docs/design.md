@@ -296,7 +296,9 @@ It's written small, with no physics or canvas library.
   (Unhealthy), struggling and heroic (Very unhealthy, Hazardous, sweating). The fan spins faster
   as the band rises. Its lines are about itself, never advice: the dashboard says what to do.
 - It roams the safe box (inside `--inset-top` and the side insets) and stands on the top edges
-  of the visible tab's cards, or on the floor just above the tab bar. It sits at z-index 4,
+  of the visible tab's cards. On the floor just above the tab bar it would stand over whatever
+  scrolls behind, so it leaps up to the nearest card top in view (`leapTarget`), and fades back
+  while there's none. It sits at z-index 4,
   over the tab bar and under the game, which hides it.
 - Only the pet takes the pointer, so whatever is under it stays tappable. A drag past 10px picks it
   up (a selection tick); less is a tap, a pat (a light impact, a wiggle and a speech bubble).

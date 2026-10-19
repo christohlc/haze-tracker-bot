@@ -6,6 +6,8 @@ import {
   actionWeights,
   dragTo,
   fromSaved,
+  leap,
+  leapTarget,
   parseSaved,
   PET_LINES,
   petMood,
@@ -169,4 +171,26 @@ test('reduced motion: off its footing, it goes straight down without falling or 
   release(thrown);
   step(thrown, 16, world(), 40, true);
   assert.deepEqual([thrown.on, thrown.y, thrown.vx], [1, card.top, 0]);
+});
+
+test('from the floor it leaps onto the lowest card top in view, and lands there', () => {
+  const high = { id: 2, left: 16, right: 359, top: 200 };
+  const w = world([high, card]);
+  const s = pet(100, 720, { action: 'wait', on: 'floor' });
+  const target = leapTarget(s, w);
+  assert.equal(target?.id, card.id);
+  leap(s, target);
+  assert.equal(run(s, w).on, card.id);
+  assert.equal(s.y, card.top);
+});
+
+test('no leap while no card top is in view, or when it is not on the floor', () => {
+  assert.equal(leapTarget(pet(100, 720, { action: 'wait', on: 'floor' }), world([])), null);
+  assert.equal(leapTarget(pet(100, card.top, { action: 'wait', on: card.id }), world()), null);
+});
+
+test('reduced motion: the leap puts it straight on the card', () => {
+  const s = pet(100, 720, { action: 'wait', on: 'floor' });
+  leap(s, card, true);
+  assert.deepEqual([s.y, s.on, s.action], [card.top, card.id, 'wait']);
 });

@@ -18,6 +18,8 @@
     clamp,
     dragTo,
     fromSaved,
+    leap,
+    leapTarget,
     parseSaved,
     petMood,
     pickAction,
@@ -59,6 +61,8 @@
   let bubbleBelow = $state(false); // near the top, it opens underneath
   let reduce = $state(reducedMotion());
   let dragging = $state(false);
+  // On the floor, over content, with no card top in view to leap to: it fades back.
+  let grounded = $state(false);
 
   let s: PetState | null = null;
   let world: World = { left: 0, right: 0, top: 0, floor: 0, platforms: [] };
@@ -83,8 +87,18 @@
 
   // The wander AI: a new weighted pick when the last action runs out (hops end when they land).
   let nextPick = 0;
+  let groundedAt = 0;
   function think(now: number) {
-    if (!s || s.on == null || s.action === 'drag' || reduce || now < nextPick) return;
+    if (!s || s.on == null || s.action === 'drag') return;
+    // Off the floor and onto a card soon after it lands there, whatever it was doing, so it
+    // never rests over content. Under reduced motion it just appears there.
+    const target = grounded && now - groundedAt > 600 ? leapTarget(s, world) : null;
+    if (target) {
+      leap(s, target, reduce);
+      nextPick = now + 400;
+      return;
+    }
+    if (reduce || now < nextPick) return;
     const a = pickAction(mood.mood, Math.random());
     startAction(s, a, Math.random());
     nextPick = now + (actionMs(a, Math.random()) || 600);
@@ -153,6 +167,10 @@
         moved = false;
         saveSoon();
       }
+    }
+    if ((s.on === 'floor') !== grounded) {
+      grounded = s.on === 'floor';
+      groundedAt = now;
     }
     draw();
   }
@@ -308,6 +326,7 @@
     class="pet mood-{mood.mood} fan-{mood.fan} act-{action}"
     class:dragging
     class:ready
+    class:grounded={grounded && !bubble && !dragging}
     bind:this={el}
     use:ambient
   >
@@ -424,6 +443,10 @@
   }
   .pet.ready {
     opacity: 1;
+    transition: opacity 200ms var(--ease-out);
+  }
+  .pet.ready.grounded {
+    opacity: 0.45;
   }
 
   .body {
