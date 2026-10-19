@@ -1,6 +1,6 @@
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { PM25_BANDS } from '../../tgcloud/lib/psi.js';
+  import { PM25_BANDS, PSI_BANDS } from '../../tgcloud/lib/psi.js';
   import type { HourRow, RegionId, Snapshot } from '../lib/api';
   import { fmt, sgtHour, sgtWeekday } from '../lib/format';
   import { ambient, reveal } from '../lib/motion';
@@ -75,17 +75,11 @@
   const shownDays = $derived(Math.max(1, Math.round(n / 24)));
   const span = $derived(week && shownDays > 1 ? `${shownDays} days` : '24 hours');
 
-  // Band edges: NEA PSI bands, and the matching PM2.5 1-hour bands.
-  const BANDS = {
-    psi: [
-      { v: 50, label: 'Moderate' },
-      { v: 100, label: 'Unhealthy' },
-      { v: 200, label: 'Very unhealthy' },
-      { v: 300, label: 'Hazardous' },
-    ],
-    // NEA's 1-hour PM2.5 bands: a line at each band's top, named by the band above it.
-    pm25: PM25_BANDS.slice(0, -1).map((b, i) => ({ v: b.max, label: PM25_BANDS[i + 1].label })),
-  };
+  // Band edges, NEA's PSI bands and its 1-hour PM2.5 bands: a line at each band's top, named by
+  // the band above it.
+  const edges = (bands: { label: string; max: number }[]) =>
+    bands.slice(0, -1).map((b, i) => ({ v: b.max, label: bands[i + 1].label }));
+  const BANDS = { psi: edges(PSI_BANDS), pm25: edges(PM25_BANDS) };
   const bandLines = $derived.by(() => {
     // Keep the line, but drop a label that would sit on top of the one below it.
     let lastY = Infinity;
