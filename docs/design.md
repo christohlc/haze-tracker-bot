@@ -174,7 +174,7 @@ messages is the same short form, for the general public.
 - Use sentence case, curly quotes and apostrophes, and en dashes for ranges (“60–80”).
 - Times are in SGT, e.g. “updated 3 pm SGT”: minutes only when they aren’t :00 (`sgtHour`).
   What NEA issues or publishes (readings, forecasts, the haze map) gets that clock time, with the
-  date when it isn't today (`sgtTime`); only live feeds (a camera picture, a station reading, a
+  date when it isn’t today (`sgtTime`); only live feeds (a camera picture, a station reading, a
   news story) say “25 min ago” (`timeAgo`).
 - Say the answer, then stop. Each fact once per message or card; a number’s label says whose it is
   (“Our 3-hr PSI”, “Official 24-hr PSI”), and how it’s worked out goes in the Mini App’s notes, not

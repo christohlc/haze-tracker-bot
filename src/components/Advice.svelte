@@ -4,14 +4,14 @@
   import type { Snapshot } from '../lib/api';
   import { area } from '../lib/area.svelte';
   import { reducedMotion } from '../lib/motion';
-  import { openLink } from '../lib/telegram';
+  import { HAZE_HOME } from '../../tgcloud/lib/hazemap-parse.js';
+  import { openExternal } from '../lib/telegram';
   import Segmented from './Segmented.svelte';
 
   const GROUPS: { value: Group; label: string }[] = [
     { value: 'general', label: 'General public' },
     { value: 'vulnerable', label: 'Vulnerable people' },
   ];
-  const HAZE_SITE = 'https://www.haze.gov.sg';
   const TREND = { rising: { arrow: '↑', word: 'Rising' }, easing: { arrow: '↓', word: 'Easing' }, steady: { arrow: '→', word: 'Steady' } };
 
   // The verdict and group live in App, which shares them with the hero and remembers the group.
@@ -74,7 +74,7 @@
       <li>Keep windows closed; run air-con on recirculate or a HEPA air purifier.</li>
       <li>See a doctor if you get breathing difficulty or chest pain.</li>
     {/if}
-    <li>Check <a href={HAZE_SITE} target="_blank" rel="noopener noreferrer" onclick={(e) => openLink(HAZE_SITE) && e.preventDefault()}>haze.gov.sg</a> for official advisories.</li>
+    <li>Check <a href={HAZE_HOME} target="_blank" rel="noopener noreferrer" onclick={(e) => openExternal(e, HAZE_HOME)}>haze.gov.sg</a> for official advisories.</li>
   </ul>
 </section>
 

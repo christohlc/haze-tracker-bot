@@ -52,6 +52,11 @@ export function openLink(url: string): boolean {
   return true;
 }
 
+/** A link's onclick: opens `url` in Telegram's in-app browser, or lets the link open as usual. */
+export function openExternal(e: MouseEvent, url: string) {
+  if (openLink(url)) e.preventDefault();
+}
+
 /** Success / error buzz after an action completes. No-op outside Telegram. */
 export function notifyHaptic(type: 'success' | 'error' | 'warning') {
   tg?.HapticFeedback?.notificationOccurred?.(type);

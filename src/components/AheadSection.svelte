@@ -3,15 +3,14 @@
   import { RANGE_RECORD } from '../../tgcloud/lib/range.js';
   import type { Ahead } from '../lib/api';
   import { bandsIn, bandStops as stops } from '../lib/bands';
-  import { sgtDayMonth, sgtDayName, sgtHour } from '../lib/format';
-  import { openLink } from '../lib/telegram';
+  import { HAZE_HOME } from '../../tgcloud/lib/hazemap-parse.js';
+  import { sgtDayName, sgtHour, sgtTime } from '../lib/format';
+  import { openExternal } from '../lib/telegram';
   import BandPill from './BandPill.svelte';
   import PsiMeter from './PsiMeter.svelte';
 
   // `psi24h`: today's official 24-hr PSI (the highest region's), marked on NEA's forecast dial.
   let { ahead, psi24h = null }: { ahead: Ahead; psi24h?: number | null } = $props();
-
-  const HAZE_SITE = 'https://www.haze.gov.sg/';
 
   const outlook = $derived(ahead.outlook);
   const range = $derived(ahead.range);
@@ -24,9 +23,6 @@
   const pct = (v: number) => (Math.min(Math.max(v, 0), max) / max) * 100;
   const track = $derived(stops(0, max, true));
 
-  function open(e: MouseEvent) {
-    if (openLink(HAZE_SITE)) e.preventDefault();
-  }
 </script>
 
 <section class="card" aria-labelledby="ahead-title">
@@ -42,8 +38,8 @@
       </PsiMeter>
     {/if}
     <p class="note">
-      NEA’s words, issued {sgtDayMonth(outlook.issuedAt)}, {sgtHour(outlook.issuedAt)} SGT: “{outlook.text}”.{#if span && psi24h != null}{' '}The tick is today’s official 24-hr PSI.{/if}
-      <a href={HAZE_SITE} target="_blank" rel="noopener noreferrer" onclick={open}>More at haze.gov.sg</a>
+      NEA’s words, issued {sgtTime(outlook.issuedAt)}: “{outlook.text}”.{#if span && psi24h != null}{' '}The tick is today’s official 24-hr PSI.{/if}
+      <a href={HAZE_HOME} target="_blank" rel="noopener noreferrer" onclick={(e) => openExternal(e, HAZE_HOME)}>More at haze.gov.sg</a>
     </p>
   {/if}
 

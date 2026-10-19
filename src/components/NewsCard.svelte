@@ -2,7 +2,7 @@
   import { PUBLISHERS } from '../../tgcloud/lib/news-parse.js';
   import type { NewsItem } from '../lib/api';
   import { timeAgo } from '../lib/format';
-  import { openLink } from '../lib/telegram';
+  import { openExternal } from '../lib/telegram';
 
   let { news, serverTime }: { news: NewsItem[]; serverTime: number } = $props();
 
@@ -10,9 +10,6 @@
   const names = Object.values(PUBLISHERS).map((p) => p.name);
   const credit = `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
 
-  function open(e: MouseEvent, link: string) {
-    if (openLink(link)) e.preventDefault();
-  }
 </script>
 
 <section class="card" aria-labelledby="news-title">
@@ -24,7 +21,7 @@
     <ul>
       {#each news.slice(0, SHOWN) as item (item.link)}
         <li>
-          <a href={item.link} target="_blank" rel="noopener noreferrer" onclick={(e) => open(e, item.link)}>
+          <a href={item.link} target="_blank" rel="noopener noreferrer" onclick={(e) => openExternal(e, item.link)}>
             <span class="headline">{item.title}</span>
             <span class="note meta">{PUBLISHERS[item.source].name} · {timeAgo(item.publishedAt, serverTime)}</span>
           </a>

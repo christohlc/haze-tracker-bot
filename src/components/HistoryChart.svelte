@@ -1,8 +1,10 @@
 <script lang="ts">
   import { untrack } from 'svelte';
+  import { PM25_BANDS } from '../../tgcloud/lib/psi.js';
   import type { HourRow, RegionId, Snapshot } from '../lib/api';
   import { fmt, sgtHour, sgtWeekday } from '../lib/format';
   import { ambient, reveal } from '../lib/motion';
+  import { PERIODS } from '../lib/period';
   import { niceTicks, rollingSeries, type Scale, type Window } from '../lib/series';
   import Segmented from './Segmented.svelte';
 
@@ -37,7 +39,8 @@
     niceTicks(Math.max(scale === 'psi' ? 100 : 55, ...series.flatMap((s) => s.points.map((p) => p.v ?? 0)))),
   );
   const maxV = $derived(yTicks[yTicks.length - 1]);
-  // The left gutter fits the widest tick label (4 digits in a bad haze).
+  // The left gutter fits the widest tick label (4 digits in a bad haze), at about 7px a digit
+  // in the 0.75rem tick font.
   const pad = $derived({ t: 12, r: 12, b: 24, l: Math.max(34, 10 + 7 * String(maxV).length) });
 
   const x = (i: number) => pad.l + (n <= 1 ? 0 : (i / (n - 1)) * (width - pad.l - pad.r));
@@ -80,12 +83,8 @@
       { v: 200, label: 'Very unhealthy' },
       { v: 300, label: 'Hazardous' },
     ],
-    pm25: [
-      // NEA's 1-hour PM2.5 bands (PM25_BANDS), named by the band above each line.
-      { v: 55, label: 'Elevated' },
-      { v: 150, label: 'High' },
-      { v: 250, label: 'Very high' },
-    ],
+    // NEA's 1-hour PM2.5 bands: a line at each band's top, named by the band above it.
+    pm25: PM25_BANDS.slice(0, -1).map((b, i) => ({ v: b.max, label: PM25_BANDS[i + 1].label })),
   };
   const bandLines = $derived.by(() => {
     // Keep the line, but drop a label that would sit on top of the one below it.
@@ -151,9 +150,9 @@
       label="Average"
       bind:value={win}
       options={[
-        { value: 1, label: '1 hr' },
-        { value: 3, label: '3 hr' },
-        { value: 24, label: '24 hr' },
+        { value: 1, label: PERIODS['1h'].short },
+        { value: 3, label: PERIODS['3h'].short },
+        { value: 24, label: PERIODS['24h'].short },
       ]}
     />
   </div>

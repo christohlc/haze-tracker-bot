@@ -41,7 +41,7 @@
   </div>
 
   {#if c.past24h == null && c.lastHour == null}
-      <p class="note empty">No PM2.5 readings for {placeName === 'Island-wide average' ? 'the island' : placeName} yet.</p>
+    <p class="note empty">No PM2.5 readings for {place === 'island' ? 'the island' : placeName} yet.</p>
   {:else}
     <div class="result">
       <p class="big"><span class="num-big num">{fmt(c.past24h, 1)}</span> cigarettes over the past 24 hours</p>
