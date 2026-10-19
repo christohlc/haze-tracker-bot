@@ -39,21 +39,25 @@
     </label>
   </div>
 
-  <div class="result">
-    <p class="big"><span class="num-big num">{fmt(c.past24h, 1)}</span> cigarettes over the past 24 hours</p>
-    <p class="note">{placeName}, {outdoorPct}% of the time outdoors</p>
-  </div>
+  {#if c.past24h == null && c.lastHour == null}
+      <p class="note empty">No PM2.5 readings for {placeName === 'Island-wide average' ? 'the island' : placeName} yet.</p>
+  {:else}
+    <div class="result">
+      <p class="big"><span class="num-big num">{fmt(c.past24h, 1)}</span> cigarettes over the past 24 hours</p>
+      <p class="note">{placeName}, {outdoorPct}% of the time outdoors</p>
+    </div>
 
-  <div class="tiles">
-    <div class="tile">
-      <span class="tile-value num">{fmt(c.lastHour, 2)}</span>
-      <span class="tile-label">in the last hour</span>
+    <div class="tiles">
+      <div class="tile">
+        <span class="tile-value num">{fmt(c.lastHour, 2)}</span>
+        <span class="tile-label">in the last hour</span>
+      </div>
+      <div class="tile">
+        <span class="tile-value num">{fmt(c.perDayAtCurrent, 1)}</span>
+        <span class="tile-label">per day if this hour’s level continued</span>
+      </div>
     </div>
-    <div class="tile">
-      <span class="tile-value num">{fmt(c.perDayAtCurrent, 1)}</span>
-      <span class="tile-label">per day if this hour’s level continued</span>
-    </div>
-  </div>
+  {/if}
 
   <p class="note foot">
     Assumes indoor air has 40% of outdoor PM2.5, so 0% outdoors still counts some.
@@ -115,7 +119,7 @@
   }
   .tiles {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
     margin-top: 14px;
   }

@@ -27,7 +27,6 @@
   let hover = $state<number | null>(null);
 
   const H = 220;
-  const pad = { t: 12, r: 12, b: 24, l: 34 };
 
   const regions = $derived(
     snapshot.regions.filter((r) => !region || r.id === region).map((r) => ({ id: r.id as RegionId, name: r.name })),
@@ -38,6 +37,8 @@
     niceTicks(Math.max(scale === 'psi' ? 100 : 55, ...series.flatMap((s) => s.points.map((p) => p.v ?? 0)))),
   );
   const maxV = $derived(yTicks[yTicks.length - 1]);
+  // The left gutter fits the widest tick label (4 digits in a bad haze).
+  const pad = $derived({ t: 12, r: 12, b: 24, l: Math.max(34, 10 + 7 * String(maxV).length) });
 
   const x = (i: number) => pad.l + (n <= 1 ? 0 : (i / (n - 1)) * (width - pad.l - pad.r));
   const y = (v: number) => pad.t + (1 - v / maxV) * (H - pad.t - pad.b);

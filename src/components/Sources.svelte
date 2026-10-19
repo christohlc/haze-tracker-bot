@@ -51,7 +51,7 @@
             <p class="note">{meta.role}</p>
             <p class="note">
               {#if ok && s.lastOkAt}Checked {sgtClock(s.lastOkAt)} SGT{/if}
-              {#if !ok}{s.lastError}{s.lastOkAt ? ` · last worked ${sgtClock(s.lastOkAt)} SGT` : ''}{/if}
+              {#if !ok}Couldn’t reach it{s.lastErrorAt ? ` at ${sgtClock(s.lastErrorAt)} SGT` : ''}{s.lastOkAt ? ` · last worked ${sgtClock(s.lastOkAt)} SGT` : ''}{/if}
             </p>
           </li>
         {/each}

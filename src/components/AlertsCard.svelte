@@ -13,7 +13,7 @@
   import type { RegionId } from '../lib/api';
   import { saveAlerts, type AlertSettings } from '../lib/alerts';
   import { area, areaFromAlerts, onAreaPicked, pickedHere, revertArea } from '../lib/area.svelte';
-  import { confirmAction, notifyHaptic } from '../lib/telegram';
+  import { confirmAction, inTelegram, notifyHaptic } from '../lib/telegram';
 
   // The advice group picked in the Advice card: vulnerable people get a nudge towards every band.
   let { group = 'general' }: { group?: Group } = $props();
@@ -26,7 +26,14 @@
   onMount(() => {
     // Band alerts follow the area picked at the top.
     const stop = onAreaPicked(saveRegion);
-    initial.then(
+    load(initial);
+    return stop;
+  });
+
+  function load(p: Promise<AlertSettings | null>) {
+    status = 'loading';
+    error = null;
+    p.then(
       (loaded) => {
         settings = loaded;
         status = 'ready';
@@ -36,12 +43,12 @@
         else if (loaded) areaFromAlerts(loaded.region);
       },
       (e) => {
-        error = e instanceof Error ? e.message : 'Couldn’t load your alerts.';
+        // In Telegram, the card says what failed and offers a retry; outside it, why it can't work.
+        error = inTelegram || !(e instanceof Error) ? 'Couldn’t check your alerts.' : e.message;
         status = 'failed';
       },
     );
-    return stop;
-  });
+  }
 
   // A change shows straight away (all off switches the card to its off state) and is undone if
   // the save fails. While it saves the controls are locked but not dimmed.
@@ -131,10 +138,11 @@
     </span>
     <div>
       <h2 id="alerts-title" class="section-title">
-        {#if status === 'loading'}Haze alerts{:else if settings}Alerts are on{:else}Know before you go out{/if}
+        {#if status !== 'ready'}Haze alerts{:else if settings}Alerts are on{:else}Know before you go out{/if}
       </h2>
       <p class="note">
         {#if status === 'loading'}Checking your alerts…
+        {:else if status === 'failed'}Messages in this chat when the haze changes.
         {:else if settings}Messages arrive in this chat. You can also change them with /alerts.
         {:else}A message here when the band changes or haze news breaks. Daily update optional.{/if}
       </p>
@@ -203,6 +211,9 @@
   {/if}
 
   {#if error}<p class="error" role="alert">{error}</p>{/if}
+  {#if status === 'failed' && inTelegram}
+    <button type="button" class="primary" onclick={() => load(getAlerts())}>Try again</button>
+  {/if}
 </section>
 
 <style>
@@ -306,7 +317,7 @@
   .chips button {
     min-height: 44px;
     padding: 0 4px;
-    white-space: nowrap;
+    line-height: 1.15;
     border: 1px solid var(--hairline);
     border-radius: 999px;
     background: none;

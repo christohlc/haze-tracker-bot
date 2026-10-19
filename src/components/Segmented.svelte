@@ -56,7 +56,7 @@
   .seg {
     position: relative;
     display: grid;
-    grid-template-columns: repeat(var(--n), 1fr);
+    grid-template-columns: repeat(var(--n), minmax(0, 1fr));
     padding: 2px;
     border-radius: 10px;
     background: var(--control);
