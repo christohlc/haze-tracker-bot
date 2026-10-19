@@ -20,13 +20,15 @@ export const settings = table('settings', {
   value: text('value').notNull(),
 });
 
-// Per data feed: last success and last error, since runtime logs aren't reachable.
+// Per data feed: last success and last error, since runtime logs aren't reachable. `failingSince` is
+// the first failure since the last success (null while it works): ops-rules.js failingSources.
 export const sourceStatus = table('source_status', {
   source: text('source').primaryKey(),
   lastOkAt: integer('last_ok_at'),
   lastErrorAt: integer('last_error_at'),
   lastError: text('last_error'),
   detail: text('detail'),
+  failingSince: integer('failing_since'),
 });
 
 // Chats that asked for alerts. `lastBand` is the band this chat was last told about,

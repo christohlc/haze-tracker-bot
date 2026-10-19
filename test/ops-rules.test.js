@@ -1,24 +1,19 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import {
-  CARD_UPLOAD_BY_MS,
-  cardUploadDue,
-  failingSources,
-  isOnDemand,
-  onDemandFailingSince,
-  opsMessage,
-  recoveredSources,
-} from '../tgcloud/lib/ops-rules.js';
+import { CARD_UPLOAD_BY_MS, cardUploadDue, failingSources, isOnDemand, opsMessage, recoveredSources } from '../tgcloud/lib/ops-rules.js';
 
 const NOW = 1_792_000_000;
 const H = 3600;
-const row = (source, lastOkAgoH, lastErrorAgoH, lastError = 'HTTP 500') => ({
+const ago = (h) => (h === null ? null : NOW - h * H);
+// failingSince defaults to the latest error, as recordSource writes it after one failure.
+const row = (source, lastOkAgoH, lastErrorAgoH, lastError = 'HTTP 500', failingSinceAgoH = lastErrorAgoH) => ({
   source,
-  lastOkAt: lastOkAgoH === null ? null : NOW - lastOkAgoH * H,
-  lastErrorAt: lastErrorAgoH === null ? null : NOW - lastErrorAgoH * H,
+  lastOkAt: ago(lastOkAgoH),
+  lastErrorAt: ago(lastErrorAgoH),
   lastError: lastErrorAgoH === null ? null : lastError,
+  failingSince: ago(failingSinceAgoH),
 });
-const names = (rows, since = {}) => failingSources(rows, NOW, since).map((s) => s.source);
+const names = (rows) => failingSources(rows, NOW).map((s) => s.source);
 
 test('NEA fails only after 2 hours without a good fetch', () => {
   assert.deepEqual(names([row('nea_psi', 1.5, 0.1), row('nea_pm25', 2.5, 0.1)]), ['nea_pm25']);
@@ -31,26 +26,12 @@ test('news fails after 6 hours', () => {
   assert.deepEqual(['nea_psi', 'news_st', 'nea_outlook', 'lta_cameras'].map(isOnDemand), [false, false, true, true]);
 });
 
-test('an on-demand feed fails once a fetch 30 min after its first failure failed too', () => {
+test('an on-demand feed fails once it fails again 30 min after it started failing', () => {
   // One failed fetch, however long since the last good one: not yet.
-  const once = [row('nea_outlook', 2.25, 0.1), row('lta_cameras', 0.1, 0.2), row('nea_hazemap', 0.1, null)];
-  const since = onDemandFailingSince(once, {});
-  assert.deepEqual(since, { nea_outlook: NOW - 0.1 * H });
-  assert.deepEqual(names(once, since), []);
-  // Still failing 20 min later: not yet; 30 min later: yes.
-  assert.deepEqual(names([row('nea_outlook', 2.25, -0.2)], since), []);
-  const later = [row('nea_outlook', 2.25, -0.4)];
-  assert.deepEqual(onDemandFailingSince(later, since), since); // keeps the first failure
-  assert.deepEqual(names(later, onDemandFailingSince(later, since)), ['nea_outlook']);
-});
-
-test('a good fetch between two ticks starts a new outage', () => {
-  const since = { nea_outlook: NOW - 2 * H };
-  const rows = [row('nea_outlook', 0.5, 0.1)];
-  assert.deepEqual(onDemandFailingSince(rows, since), { nea_outlook: NOW - 0.1 * H });
-  assert.deepEqual(names(rows, onDemandFailingSince(rows, since)), []);
-  // Working again: dropped.
-  assert.deepEqual(onDemandFailingSince([row('nea_outlook', 0.1, 0.5)], since), {});
+  assert.deepEqual(names([row('nea_outlook', 2.25, 0.1), row('lta_cameras', 0.1, 0.2), row('nea_hazemap', 0.1, null)]), []);
+  assert.deepEqual(names([row('nea_outlook', 3, 0.1, 'x', 0.4)]), []); // 18 min on
+  assert.deepEqual(names([row('nea_outlook', 3, 0.1, 'x', 0.6)]), ['nea_outlook']); // 30 min on
+  assert.deepEqual(names([row('nea_outlook', 3, 0.1, 'x', null)]), []); // failing since before the column
 });
 
 test('a source DM’d as failing recovers once its latest fetch works', () => {

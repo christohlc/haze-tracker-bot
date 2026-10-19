@@ -12,7 +12,7 @@ const NEA_STALE_S = 2 * 3600;
 const NEWS_STALE_S = 6 * 3600;
 
 /**
- * @typedef {{ source: string, lastOkAt: number | null, lastErrorAt: number | null, lastError: string | null }} SourceStatus
+ * @typedef {{ source: string, lastOkAt: number | null, lastErrorAt: number | null, lastError: string | null, failingSince: number | null }} SourceStatus
  * (store.js allSourceStatus; times in unix seconds)
  */
 
@@ -24,15 +24,15 @@ function staleAfterS(source) {
 
 /**
  * A feed fetched only when the Mini App asks (cachedFeed), which may not be asked for again for hours,
- * so how long since its last good fetch says nothing: it counts as failing once a fetch
- * ON_DEMAND_GRACE_S after its first failure failed too, and ops.js tells it once per outage.
+ * so how long since its last good fetch says nothing (failingSources), and ops.js tells it once per outage.
  * @param {string} source
  */
 export const isOnDemand = (source) => staleAfterS(source) === null;
 
 /**
- * NEA's forecast API drops the odd fetch from the platform (19 Oct 2026: down at 10:28, back at
- * 10:38), and a one-off isn't worth a DM.
+ * An on-demand feed counts as failing once a fetch this long after its first failure failed too: NEA's
+ * forecast API drops fetches from the platform for minutes at a time, not worth a DM. So a feed nobody
+ * asks for again isn't reported.
  */
 export const ON_DEMAND_GRACE_S = 30 * 60;
 
@@ -40,35 +40,16 @@ export const ON_DEMAND_GRACE_S = 30 * 60;
 const lastFetchFailed = (s) => (s.lastErrorAt ?? 0) > (s.lastOkAt ?? 0);
 
 /**
- * Each on-demand feed whose latest fetch failed → its first failure since its last good fetch (unix s),
- * as far as the ticks saw: kept in state('ops_failing_since') from one tick to the next.
- * @param {SourceStatus[]} statuses @param {Record<string, number>} prev the last tick's
- * @returns {Record<string, number>}
- */
-export function onDemandFailingSince(statuses, prev) {
-  return Object.fromEntries(
-    statuses
-      .filter((s) => isOnDemand(s.source) && lastFetchFailed(s))
-      .map((s) => {
-        const since = prev[s.source];
-        // A good fetch since then (between two ticks) starts a new outage.
-        return [s.source, since && since > (s.lastOkAt ?? 0) ? since : /** @type {number} */ (s.lastErrorAt)];
-      }),
-  );
-}
-
-/**
  * The sources whose latest fetch failed, and that have gone too long without a good one or, if on
  * demand, failed again ON_DEMAND_GRACE_S after they started failing.
- * @param {SourceStatus[]} statuses @param {number} now unix seconds
- * @param {Record<string, number>} since onDemandFailingSince() @returns {SourceStatus[]}
+ * @param {SourceStatus[]} statuses @param {number} now unix seconds @returns {SourceStatus[]}
  */
-export function failingSources(statuses, now, since) {
+export function failingSources(statuses, now) {
   return statuses.filter((s) => {
     if (!lastFetchFailed(s)) return false;
     const staleS = staleAfterS(s.source);
     if (staleS !== null) return now - (s.lastOkAt ?? 0) > staleS;
-    return s.source in since && (s.lastErrorAt ?? 0) - since[s.source] >= ON_DEMAND_GRACE_S;
+    return s.failingSince !== null && (s.lastErrorAt ?? 0) - s.failingSince >= ON_DEMAND_GRACE_S;
   });
 }
 

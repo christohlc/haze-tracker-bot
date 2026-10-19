@@ -121,9 +121,10 @@ export { toSgtIso } from './time.js';
 export async function recordSource(source, result) {
   const at = nowSec();
   const set = result.ok
-    ? { lastOkAt: at, detail: result.detail ?? null }
-    : { lastErrorAt: at, lastError: String(result.error).slice(0, 500) };
-  await db.insert(sourceStatus).values({ source, ...set }).onConflictDoUpdate({ target: sourceStatus.source, set }).run();
+    ? { lastOkAt: at, detail: result.detail ?? null, failingSince: null }
+    : { lastErrorAt: at, lastError: String(result.error).slice(0, 500), failingSince: sql`coalesce(${sourceStatus.failingSince}, ${at})` };
+  const first = { source, ...set, failingSince: result.ok ? null : at };
+  await db.insert(sourceStatus).values(first).onConflictDoUpdate({ target: sourceStatus.source, set }).run();
 }
 
 export async function allSourceStatus() {

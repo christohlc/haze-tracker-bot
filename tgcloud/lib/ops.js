@@ -8,39 +8,26 @@ import { describeError } from './bot-errors.js';
 import { cachedCardId, sendCard } from './card/send.js';
 import { formatShareCaption } from './format.js';
 import { errorText } from './http.js';
-import {
-  cardUploadDue,
-  failingSources,
-  isOnDemand,
-  onDemandFailingSince,
-  opsMessage,
-  OPS_REPEAT_S,
-  recoveredSources,
-} from './ops-rules.js';
+import { cardUploadDue, failingSources, isOnDemand, opsMessage, OPS_REPEAT_S, recoveredSources } from './ops-rules.js';
 import { allSourceStatus, getSetting, getState, setState } from './store.js';
 
 /**
  * Called at the end of every tick. Never throws. The result goes into the tick's output, which the
  * public Actions log shows, so it names sources but never the chat. Ticks run one at a time
- * (tick.yml's concurrency group), so state('ops_notified') and state('ops_failing_since') need no
- * claim, and the first is written only once
+ * (tick.yml's concurrency group), so state('ops_notified') needs no claim, and is written only once
  * the DM went: a send that fails (wrong chat, bot blocked) is retried by the next tick.
  * @param {number} started ms
  */
 export async function reportOps(started) {
   try {
-    const [, chatId, statuses, toldRow, sinceRow] = await Promise.all([
+    const [, chatId, statuses, toldRow] = await Promise.all([
       setState('tick_heartbeat', { at: started }),
       getSetting('ops_chat_id'),
       allSourceStatus(),
       getState('ops_notified'),
-      getState('ops_failing_since'),
     ]);
     const now = Math.floor(started / 1000);
-    const prevSince = sinceRow?.value ?? {};
-    const since = onDemandFailingSince(statuses, prevSince);
-    if (JSON.stringify(since) !== JSON.stringify(prevSince)) await setState('ops_failing_since', since);
-    const failing = failingSources(statuses, now, since);
+    const failing = failingSources(statuses, now);
     const names = failing.map((s) => s.source);
     if (!chatId) return { failing: names, dm: 'no ops_chat_id' };
     /** @type {Record<string, number>} source → when it was last DM'd as failing (unix s), until it works again or stops reporting */
