@@ -87,15 +87,18 @@
 
   // The wander AI: a new weighted pick when the last action runs out (hops end when they land).
   let nextPick = 0;
+  let groundedAt = 0;
   function think(now: number) {
-    if (!s || s.on == null || s.action === 'drag' || reduce || now < nextPick) return;
-    // Off the floor and onto a card as soon as one is in view, so it never rests over content.
-    const target = leapTarget(s, world);
+    if (!s || s.on == null || s.action === 'drag') return;
+    // Off the floor and onto a card soon after it lands there, whatever it was doing, so it
+    // never rests over content. Under reduced motion it just appears there.
+    const target = grounded && now - groundedAt > 600 ? leapTarget(s, world) : null;
     if (target) {
-      leap(s, target);
+      leap(s, target, reduce);
       nextPick = now + 400;
       return;
     }
+    if (reduce || now < nextPick) return;
     const a = pickAction(mood.mood, Math.random());
     startAction(s, a, Math.random());
     nextPick = now + (actionMs(a, Math.random()) || 600);
@@ -165,7 +168,10 @@
         saveSoon();
       }
     }
-    if ((s.on === 'floor') !== grounded) grounded = s.on === 'floor';
+    if ((s.on === 'floor') !== grounded) {
+      grounded = s.on === 'floor';
+      groundedAt = now;
+    }
     draw();
   }
 

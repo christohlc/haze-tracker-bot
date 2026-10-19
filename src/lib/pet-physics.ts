@@ -247,8 +247,13 @@ export function leapTarget(s: PetState, w: World): Platform | null {
   return best;
 }
 
-/** A jump just high enough to clear `p`'s top, so it lands there on the way down. */
-export function leap(s: PetState, p: Platform) {
+/** A jump just high enough to clear `p`'s top, so it lands there on the way down; `instant`
+    (reduced motion): it's simply there. */
+export function leap(s: PetState, p: Platform, instant = false) {
+  if (instant) {
+    [s.y, s.vx, s.vy, s.on, s.action] = [p.top, 0, 0, p.id, 'wait'];
+    return;
+  }
   s.vy = -Math.sqrt(2 * GRAVITY * (s.y - p.top + 16));
   s.vx = 0;
   s.on = null;

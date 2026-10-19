@@ -188,3 +188,9 @@ test('no leap while no card top is in view, or when it is not on the floor', () 
   assert.equal(leapTarget(pet(100, 720, { action: 'wait', on: 'floor' }), world([])), null);
   assert.equal(leapTarget(pet(100, card.top, { action: 'wait', on: card.id }), world()), null);
 });
+
+test('reduced motion: the leap puts it straight on the card', () => {
+  const s = pet(100, 720, { action: 'wait', on: 'floor' });
+  leap(s, card, true);
+  assert.deepEqual([s.y, s.on, s.action], [card.top, card.id, 'wait']);
+});
