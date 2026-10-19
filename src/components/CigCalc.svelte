@@ -2,6 +2,7 @@
   import { cigarettes } from '../../tgcloud/lib/cigs.js';
   import type { Snapshot } from '../lib/api';
   import { fmt } from '../lib/format';
+  import { selectionHaptic } from '../lib/telegram';
 
   let { snapshot }: { snapshot: Snapshot } = $props();
 
@@ -26,7 +27,7 @@
   <div class="controls">
     <label class="field">
       <span>Region</span>
-      <select bind:value={place}>
+      <select bind:value={place} onchange={selectionHaptic}>
         <option value="island">Island-wide average</option>
         {#each snapshot.regions as r (r.id)}
           <option value={r.id}>{r.name}</option>
@@ -40,7 +41,7 @@
   </div>
 
   {#if c.past24h == null && c.lastHour == null}
-      <p class="note empty">No PM2.5 readings for {placeName === 'Island-wide average' ? 'the island' : placeName} yet.</p>
+    <p class="note empty">No PM2.5 readings for {place === 'island' ? 'the island' : placeName} yet.</p>
   {:else}
     <div class="result">
       <p class="big"><span class="num-big num">{fmt(c.past24h, 1)}</span> cigarettes over the past 24 hours</p>

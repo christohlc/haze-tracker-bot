@@ -13,7 +13,7 @@
   import { sgtWeekday } from '../../tgcloud/lib/time.js';
   import { clearDirection, smokeLine, windHeadline } from '../../tgcloud/lib/weather-parse.js';
   import { loadWeather, type Snapshot, type WeatherResult } from '../lib/api';
-  import { STALE_MS, timeAgo } from '../lib/format';
+  import { STALE_MS, sgtTime, timeAgo } from '../lib/format';
   import { ambient } from '../lib/motion';
 
   // Arrows and streaks point downwind: the opposite of where the wind comes from.
@@ -129,7 +129,7 @@
 
     {#if forecast}
       <div class="forecast">
-        <h3 class="sub-title">Coming days</h3>
+        <h3 class="subhead">Coming days</h3>
         {#if forecastSummary}<p class="text">{forecastSummary}</p>{/if}
         <ol class="days" style="--n: {forecastDays.length}">
           {#each forecastDays as d (d.date ?? 'next24h')}
@@ -149,7 +149,7 @@
         </ol>
         {#if forecastSmoke}<p class="text">{forecastSmoke}</p>{/if}
         <p class="note">
-          NEA forecast · issued {timeAgo(forecast.issuedAt, result!.serverTime)}{#if forecastStale}{' · '}<span class="stale-note"><span class="status-dot stale" aria-hidden="true"></span>May be out of date</span>{/if}
+          NEA forecast · issued {sgtTime(forecast.issuedAt)}{#if forecastStale}{' · '}<span class="stale-note"><span class="status-dot stale" aria-hidden="true"></span>May be out of date</span>{/if}
         </p>
       </div>
     {/if}
@@ -296,11 +296,8 @@
     padding-top: 14px;
     border-top: 1px solid var(--hairline);
   }
-  .sub-title {
+  .subhead {
     margin: 0;
-    font-size: 0.9375rem;
-    font-weight: 600;
-    color: var(--ink);
   }
   .days {
     display: grid;

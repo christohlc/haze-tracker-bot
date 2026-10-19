@@ -3,7 +3,7 @@
   import { REGION_NAMES } from '../../tgcloud/lib/config.js';
   import { loadCameras, type CamerasResult } from '../lib/api';
   import { STALE_MS, timeAgo } from '../lib/format';
-  import { openLink } from '../lib/telegram';
+  import { openExternal } from '../lib/telegram';
 
   const SATELLITE = [
     { title: 'Satellite pictures of the smoke', meta: 'Himawari images of Sumatra and Malaysia, from ASMC', link: 'https://asmc.asean.org/satellite-geo-sat/' },
@@ -34,9 +34,6 @@
     reach = Math.max(reach, Math.ceil((row.scrollLeft + row.clientWidth) / tile) + 1);
   }
 
-  function open(e: MouseEvent, link: string) {
-    if (openLink(link)) e.preventDefault();
-  }
 </script>
 
 <section class="card" aria-labelledby="views-title">
@@ -61,7 +58,7 @@
       {#each result.cameras as cam, i (cam.id)}
         {@const stale = result.serverTime - Date.parse(cam.takenAt) > STALE_MS}
         <li class="tile">
-          <a href={cam.image} target="_blank" rel="noopener noreferrer" onclick={(e) => open(e, cam.image)}>
+          <a href={cam.image} target="_blank" rel="noopener noreferrer" onclick={(e) => openExternal(e, cam.image)}>
             <div class="frame">
               {#if broken[cam.id]}
                 <span class="note missing">Picture didn’t load</span>
@@ -90,8 +87,8 @@
   <ul class="links">
     {#each SATELLITE as s (s.link)}
       <li>
-        <a href={s.link} target="_blank" rel="noopener noreferrer" onclick={(e) => open(e, s.link)}>
-          <span class="headline">{s.title}</span>
+        <a href={s.link} target="_blank" rel="noopener noreferrer" onclick={(e) => openExternal(e, s.link)}>
+          <span class="headline">{s.title}<span class="ext" aria-hidden="true">&nbsp;↗</span></span>
           <span class="note meta">{s.meta}</span>
         </a>
       </li>
@@ -213,6 +210,9 @@
   .headline {
     font-weight: 600;
     color: var(--ink);
+  }
+  .ext {
+    color: var(--link);
   }
   .empty {
     margin-top: 12px;

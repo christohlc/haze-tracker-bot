@@ -153,7 +153,7 @@
        settings, and turning on would reset an existing daily update. -->
   {#if status === 'ready' && !settings}
     <button type="button" class="primary" onclick={turnOn} disabled={busy}>
-      {busy ? 'Turning on…' : '🔔 Get haze alerts'}
+      {busy ? 'Turning on…' : 'Get haze alerts'}
     </button>
   {/if}
 

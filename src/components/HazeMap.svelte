@@ -4,7 +4,8 @@
   import { loadHazeMap, type HazeMapResult } from '../lib/api';
   import { LAND } from '../lib/coast';
   import { ambient } from '../lib/motion';
-  import { sgtDayName, timeAgo } from '../lib/format';
+  import { sgtDayName, sgtTime } from '../lib/format';
+  import { selectionHaptic } from '../lib/telegram';
 
   // NEA redraws the map once or twice a day; past two days its texts are likely left over from an episode.
   const OLD_MS = 48 * 3_600_000;
@@ -165,7 +166,7 @@
             {:else}The height smoke travels at. Arrows point where it blows; deeper blue is stronger.{/if}
           </span>
         </span>
-        <input type="checkbox" role="switch" bind:checked={showWind} disabled={windBroken} />
+        <input type="checkbox" role="switch" bind:checked={showWind} disabled={windBroken} onchange={selectionHaptic} />
       </label>
     {/if}
 
@@ -183,7 +184,7 @@
     {/if}
 
     <p class="note meta">
-      NEA via haze.gov.sg{#if map.updatedAt}{' · '}updated {timeAgo(map.updatedAt, result.serverTime)}{/if}{#if old}{' · '}<span class="stale-note"><span class="status-dot stale" aria-hidden="true"></span>May be out of date</span>{/if}
+      NEA via haze.gov.sg{#if map.updatedAt}{' · '}updated {sgtTime(map.updatedAt)}{/if}{#if old}{' · '}<span class="stale-note"><span class="status-dot stale" aria-hidden="true"></span>May be out of date</span>{/if}
     </p>
   {/if}
 </section>
