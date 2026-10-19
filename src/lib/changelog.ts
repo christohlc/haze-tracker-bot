@@ -9,6 +9,12 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-19-easier-to-read',
+    date: '2026-10-19',
+    title: 'Easier to read',
+    body: 'The history chart names NEA’s PM2.5 bands (Elevated, High, Very high) instead of numbers, and NEA’s forecasts and haze map say when they were issued in SGT.',
+  },
+  {
     id: '2026-10-18-purifier-pet',
     date: '2026-10-18',
     title: 'Meet your purifier',

@@ -4,13 +4,14 @@
   import type { Snapshot } from '../lib/api';
   import { area } from '../lib/area.svelte';
   import { reducedMotion } from '../lib/motion';
-  import BandPill from './BandPill.svelte';
+  import { openLink } from '../lib/telegram';
   import Segmented from './Segmented.svelte';
 
   const GROUPS: { value: Group; label: string }[] = [
     { value: 'general', label: 'General public' },
     { value: 'vulnerable', label: 'Vulnerable people' },
   ];
+  const HAZE_SITE = 'https://www.haze.gov.sg';
   const TREND = { rising: { arrow: '↑', word: 'Rising' }, easing: { arrow: '↓', word: 'Easing' }, steady: { arrow: '→', word: 'Steady' } };
 
   // The verdict and group live in App, which shares them with the hero and remembers the group.
@@ -56,8 +57,8 @@
       {/if}
       <p class="note">
         The stricter of NEA’s advice for the last hour’s PM2.5{#if pm}&nbsp;({pm.value} µg/m³ in {pm.name}{mine ? '' : ', the highest'}){/if}
-        and the official 24-hour PSI{#if psi24}&nbsp;<BandPill value={psi24.value} />{/if}. Simplified; haze.gov.sg is
-        official.{#if trend}&nbsp;Trend: last hour vs 3 hours before (ours).{/if}
+        and the official 24-hour PSI{#if psi24}&nbsp;(<span class="num">{psi24.value}</span>){/if}, simplified; haze.gov.sg is
+        official.{#if trend}&nbsp;The trend is ours: the last hour against 3 hours before.{/if}
       </p>
     </div>
   {:else}
@@ -73,7 +74,7 @@
       <li>Keep windows closed; run air-con on recirculate or a HEPA air purifier.</li>
       <li>See a doctor if you get breathing difficulty or chest pain.</li>
     {/if}
-    <li>Check <a href="https://www.haze.gov.sg" target="_blank" rel="noopener">haze.gov.sg</a> for official advisories.</li>
+    <li>Check <a href={HAZE_SITE} target="_blank" rel="noopener noreferrer" onclick={(e) => openLink(HAZE_SITE) && e.preventDefault()}>haze.gov.sg</a> for official advisories.</li>
   </ul>
 </section>
 

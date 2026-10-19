@@ -91,7 +91,7 @@
     {#each SATELLITE as s (s.link)}
       <li>
         <a href={s.link} target="_blank" rel="noopener noreferrer" onclick={(e) => open(e, s.link)}>
-          <span class="headline">{s.title}</span>
+          <span class="headline">{s.title}<span class="ext" aria-hidden="true">&nbsp;↗</span></span>
           <span class="note meta">{s.meta}</span>
         </a>
       </li>
@@ -213,6 +213,9 @@
   .headline {
     font-weight: 600;
     color: var(--ink);
+  }
+  .ext {
+    color: var(--link);
   }
   .empty {
     margin-top: 12px;

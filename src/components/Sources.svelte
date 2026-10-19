@@ -59,7 +59,7 @@
     </details>
   {/if}
   <p class="note credit">
-    Data: NEA via data.gov.sg. 1-hour and 3-hour PSI are calculated here and aren’t official. Not medical advice.
+    Data from NEA via data.gov.sg; the 1-hour and 3-hour PSI are our calculation, not official. Not medical advice.
   </p>
 </section>
 

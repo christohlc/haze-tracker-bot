@@ -81,9 +81,10 @@
       { v: 300, label: 'Hazardous' },
     ],
     pm25: [
-      { v: 55, label: 'Band II' },
-      { v: 150, label: 'Band III' },
-      { v: 250, label: 'Band IV' },
+      // NEA's 1-hour PM2.5 bands (PM25_BANDS), named by the band above each line.
+      { v: 55, label: 'Elevated' },
+      { v: 150, label: 'High' },
+      { v: 250, label: 'Very high' },
     ],
   };
   const bandLines = $derived.by(() => {
@@ -92,7 +93,7 @@
     return BANDS[scale]
       .filter((b) => b.v < maxV)
       .map((b) => {
-        const showLabel = lastY - y(b.v) >= 14;
+        const showLabel = lastY - y(b.v) >= 16;
         if (showLabel) lastY = y(b.v);
         return { ...b, showLabel };
       });
@@ -124,7 +125,7 @@
 <section class="card" aria-labelledby="{uid}-title">
   <h2 id="{uid}-title" class="section-title">Past {span}</h2>
   <p class="note">
-    Rolling {winLabel} averages. PSI here is converted from PM2.5, so it can differ slightly from NEA’s.
+    {win === 1 ? 'Hourly readings.' : `Rolling ${winLabel} averages.`} PSI here is converted from PM2.5, so it can differ slightly from NEA’s.
   </p>
 
   <div class="controls">
@@ -150,9 +151,9 @@
       label="Average"
       bind:value={win}
       options={[
-        { value: 1, label: '1h' },
-        { value: 3, label: '3h' },
-        { value: 24, label: '24h' },
+        { value: 1, label: '1 hr' },
+        { value: 3, label: '3 hr' },
+        { value: 24, label: '24 hr' },
       ]}
     />
   </div>
@@ -327,7 +328,7 @@
   }
   .band-label {
     fill: var(--muted);
-    font-size: 10px;
+    font-size: 0.75rem;
     /* halo so the label stays legible where lines cross it */
     paint-order: stroke;
     stroke: var(--card);
@@ -336,7 +337,7 @@
   }
   .tick {
     fill: var(--muted);
-    font-size: 11px;
+    font-size: 0.75rem;
     font-variant-numeric: tabular-nums;
   }
   .line {
