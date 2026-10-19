@@ -66,7 +66,7 @@
       status = result === 'cancelled' ? copy : [DONE[result], copy].filter(Boolean).join(' ');
       if (result !== 'cancelled') notifyHaptic('success');
     } catch (e) {
-      shareError = e instanceof Error ? e.message : 'Couldn’t share the picture. Try again.';
+      shareError = e instanceof Error ? e.message : 'Couldn’t share the picture.';
       notifyHaptic('error');
     } finally {
       busy = false;
@@ -79,6 +79,7 @@
     <button
       type="button"
       class="thumb"
+      class:sk={!url && !drawError && !empty}
       style:aspect-ratio="{CARD_W} / {CARD_H}"
       onclick={() => (expanded = !expanded)}
       disabled={!url}

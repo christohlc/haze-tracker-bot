@@ -410,7 +410,6 @@
   }
   .step-range {
     font-weight: 700;
-    white-space: nowrap;
   }
   .step-bar {
     height: 4px;

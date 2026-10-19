@@ -79,7 +79,7 @@
   /* The whole row is the button: it opens the region. */
   .row {
     display: grid;
-    grid-template-columns: 4.75rem minmax(0, 1fr) 3ch 12px;
+    grid-template-columns: 4.75rem minmax(0, 1fr) 4ch 12px;
     align-items: center;
     column-gap: 10px;
     width: 100%;
@@ -129,7 +129,9 @@
     color: var(--ink-2);
   }
   .name {
+    min-width: 0;
     font-weight: 600;
+    overflow-wrap: anywhere;
   }
   .track {
     height: 10px;
