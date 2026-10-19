@@ -106,9 +106,5 @@
     .name {
       transition: none;
     }
-    .logo:active,
-    .name:active {
-      transform: none;
-    }
   }
 </style>

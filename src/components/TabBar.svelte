@@ -296,7 +296,6 @@
   /* Pressed, the thumb swells into a lens with a lit rim, like iOS's tab bar. */
   .lens.pressed {
     transform: scale(1.12);
-    transition-duration: 160ms;
   }
   .lens.pressed::before {
     opacity: 0.7;
@@ -304,6 +303,7 @@
   .lens.pressed::after {
     opacity: 1;
   }
+  .lens.pressed,
   .lens.pressed::before,
   .lens.pressed::after {
     transition-duration: 160ms;

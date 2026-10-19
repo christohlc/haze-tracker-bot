@@ -97,11 +97,5 @@
     .thumb {
       transition: none;
     }
-    button {
-      transition: color 150ms ease;
-    }
-    button:active {
-      transform: none;
-    }
   }
 </style>

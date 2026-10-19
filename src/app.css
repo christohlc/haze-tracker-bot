@@ -227,8 +227,9 @@ summary {
   .primary {
     transition: none;
   }
-  .primary:active:not(:disabled) {
-    transform: none;
+  /* No control scales when pressed (they're 0.97 elsewhere): one rule, not one per component. */
+  :where(button, a, summary, [role='button'], [role='radio'], [role='tab']):active {
+    transform: none !important;
   }
 }
 
