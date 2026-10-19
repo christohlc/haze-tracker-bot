@@ -123,10 +123,11 @@ const floorOf = (w: World) => Math.max(w.floor, w.top + PET_H);
 const usable = (w: World) =>
   w.platforms.filter((p) => p.top - PET_H >= w.top && p.top <= w.floor && p.right - p.left >= PET_W);
 
-/** The highest platform across `cx` whose top passes `ok`. */
-function highestUnder(plats: Platform[], cx: number, ok: (p: Platform) => boolean): Platform | null {
+/** The highest platform across `cx` whose top passes `ok` (or the lowest). */
+function highestUnder(plats: Platform[], cx: number, ok: (p: Platform) => boolean, lowest = false): Platform | null {
   let best: Platform | null = null;
-  for (const p of plats) if (cx >= p.left && cx <= p.right && ok(p) && (!best || p.top < best.top)) best = p;
+  for (const p of plats)
+    if (cx >= p.left && cx <= p.right && ok(p) && (!best || (lowest ? p.top > best.top : p.top < best.top))) best = p;
   return best;
 }
 
@@ -241,10 +242,8 @@ export function release(s: PetState) {
  */
 export function leapTarget(s: PetState, w: World): Platform | null {
   if (s.on !== 'floor') return null;
-  const cx = s.x + PET_W / 2;
-  let best: Platform | null = null;
-  for (const p of usable(w)) if (cx >= p.left && cx <= p.right && p.top < floorOf(w) - 8 && (!best || p.top > best.top)) best = p;
-  return best;
+  const below = floorOf(w) - 8;
+  return highestUnder(usable(w), s.x + PET_W / 2, (p) => p.top < below, true);
 }
 
 /** A jump just high enough to clear `p`'s top, so it lands there on the way down; `instant`
