@@ -110,7 +110,12 @@
   {#if range}
     <!-- Tapping it opens What’s ahead, where the ranges are explained. -->
     <button type="button" class="ahead" onclick={() => { impactHaptic(); onahead?.(); }}>
-      <span class="ahead-title">Next hours · island-wide 1-hour PSI, our estimate<span class="visually-hidden">. Opens What’s ahead.</span></span>
+      <!-- It leads with its own measure and where it starts, since the number above may be another
+           area's or another period's: 221 above “186–230 in 1 hr” mustn't read as a drop. -->
+      <span class="ahead-title">
+        <span>Island-wide 1-hr PSI, <span class="num">{range.now}</span> now · our estimate<span class="visually-hidden">. Opens What’s ahead.</span></span>
+        <svg class="chev" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M4.5 2.5 8 6l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg>
+      </span>
       <span class="ahead-steps" style:--steps={range.steps.length}>
         {#each range.steps as s (s.h)}
           <span class="step">
@@ -391,8 +396,15 @@
     transform: scale(0.97);
   }
   .ahead-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
     font-size: 0.75rem;
     color: var(--ink-2);
+  }
+  .chev {
+    flex: none;
   }
   .ahead-steps {
     display: grid;

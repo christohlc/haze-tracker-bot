@@ -18,6 +18,8 @@
     clamp,
     dragTo,
     fromSaved,
+    leap,
+    leapTarget,
     parseSaved,
     petMood,
     pickAction,
@@ -59,6 +61,8 @@
   let bubbleBelow = $state(false); // near the top, it opens underneath
   let reduce = $state(reducedMotion());
   let dragging = $state(false);
+  // On the floor, over content, with no card top in view to leap to: it fades back.
+  let grounded = $state(false);
 
   let s: PetState | null = null;
   let world: World = { left: 0, right: 0, top: 0, floor: 0, platforms: [] };
@@ -85,6 +89,13 @@
   let nextPick = 0;
   function think(now: number) {
     if (!s || s.on == null || s.action === 'drag' || reduce || now < nextPick) return;
+    // Off the floor and onto a card as soon as one is in view, so it never rests over content.
+    const target = leapTarget(s, world);
+    if (target) {
+      leap(s, target);
+      nextPick = now + 400;
+      return;
+    }
     const a = pickAction(mood.mood, Math.random());
     startAction(s, a, Math.random());
     nextPick = now + (actionMs(a, Math.random()) || 600);
@@ -154,6 +165,7 @@
         saveSoon();
       }
     }
+    if ((s.on === 'floor') !== grounded) grounded = s.on === 'floor';
     draw();
   }
 
@@ -308,6 +320,7 @@
     class="pet mood-{mood.mood} fan-{mood.fan} act-{action}"
     class:dragging
     class:ready
+    class:grounded={grounded && !bubble && !dragging}
     bind:this={el}
     use:ambient
   >
@@ -424,6 +437,10 @@
   }
   .pet.ready {
     opacity: 1;
+    transition: opacity 200ms var(--ease-out);
+  }
+  .pet.ready.grounded {
+    opacity: 0.45;
   }
 
   .body {

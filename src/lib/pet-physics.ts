@@ -235,6 +235,26 @@ export function release(s: PetState) {
   s.on = null;
 }
 
+/**
+ * On the floor it stands over whatever scrolls behind the tab bar, so it doesn't stay there: the
+ * card top it leaps up to, the lowest one above it. None while no card's top is in view.
+ */
+export function leapTarget(s: PetState, w: World): Platform | null {
+  if (s.on !== 'floor') return null;
+  const cx = s.x + PET_W / 2;
+  let best: Platform | null = null;
+  for (const p of usable(w)) if (cx >= p.left && cx <= p.right && p.top < floorOf(w) - 8 && (!best || p.top > best.top)) best = p;
+  return best;
+}
+
+/** A jump just high enough to clear `p`'s top, so it lands there on the way down. */
+export function leap(s: PetState, p: Platform) {
+  s.vy = -Math.sqrt(2 * GRAVITY * (s.y - p.top + 16));
+  s.vx = 0;
+  s.on = null;
+  s.action = 'hop';
+}
+
 function settleOn(s: PetState, w: World, plats: Platform[]) {
   s.x = clamp(s.x, w.left, w.right - PET_W);
   const best = highestUnder(plats, s.x + PET_W / 2, (p) => p.top >= s.y - 0.5);
