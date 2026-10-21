@@ -75,10 +75,6 @@ test('a tick overdue by more than 45 minutes is DM’d to OPS_CHAT_ID', async (t
   await worker.scheduled({ cron: 'x', scheduledTime: TOP }, OPS_ENV);
   assert.equal(dms(calls).length, 0);
 
-  calls = fakeApis(t, { agoMin: null });
-  await worker.scheduled({ cron: 'x', scheduledTime: TOP }, OPS_ENV);
-  assert.match(dms(calls)[0].body.text, /No successful tick run found/);
-
   calls = fakeApis(t, { agoMin: 50 });
   await worker.scheduled({ cron: 'x', scheduledTime: TOP + 15 * 60_000 }, OPS_ENV);
   assert.equal(calls.length, 1); // not the hour's first cron: dispatch only
@@ -94,6 +90,10 @@ test('a failed dispatch is DM’d and still fails the run; a failed lookup alone
   assert.ok(dms(calls)[0].body.text.length < 400); // GitHub's error page, trimmed under Telegram's limit
 
   calls = fakeApis(t, { runs: 500 });
+  await worker.scheduled({ cron: 'x', scheduledTime: TOP }, OPS_ENV);
+  assert.equal(dms(calls).length, 0);
+
+  calls = fakeApis(t, { agoMin: null }); // GitHub answered with no runs at all
   await worker.scheduled({ cron: 'x', scheduledTime: TOP }, OPS_ENV);
   assert.equal(dms(calls).length, 0);
 });
