@@ -59,7 +59,7 @@ async function tickProblem(env, now, dispatchError) {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const run = (await res.json()).workflow_runs?.[0];
     // The tick has hundreds of successful runs, so an empty list is GitHub's listing glitching
-    // (it answered 200 with none on 20 Oct while every run succeeded), not news.
+    // (it answered 200 with none on 20 Oct 2026 while every run succeeded), not news.
     if (!run) throw new Error('empty run list');
     const agoMs = now - Date.parse(run.updated_at);
     if (agoMs > OVERDUE_MS) problems.push(`No successful tick for ${Math.round(agoMs / 60_000)} min (last: ${run.html_url})`);
