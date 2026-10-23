@@ -116,6 +116,8 @@ export function buildSnapshot(pm25History, psi) {
       pm25: pick(worst('pm25'), 'pm25'),
     },
     cigs: cigarettes(island),
+    /** "Highest 24-hr PSI since…" (psi-record.js), set by refreshNea, which keeps the past days. */
+    record: /** @type {{ since: string | null } | null} */ (null),
     history: rows,
   };
 }

@@ -35,6 +35,7 @@ export function worstCase(): Dashboard {
         psi24h: { region: 'central', name: 'Central', value: 1000 },
         pm25: { region: 'south', name: 'South', value: 1000 },
       },
+      record: { since: null },
     },
     history,
     sources: [

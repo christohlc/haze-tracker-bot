@@ -28,6 +28,8 @@ test('buildSnapshot + formatHaze on the site example', () => {
   const html = formatHaze(snap);
   assert.match(html, /<pre>Region/);
   assert.match(html, /11 pm SGT/);
+  assert.doesNotMatch(html, /📊/, 'no record line until refreshNea sets one');
+  assert.match(formatHaze({ ...snap, record: { since: '2015-09-25' } }), /· 153–184\n📊 Singapore’s highest 24-hr PSI since Sep 2015\n💨/);
 });
 
 test('the 24-hour PM2.5 average is NEA’s when its PSI item is for the latest hour, ours otherwise', () => {

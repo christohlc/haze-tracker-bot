@@ -101,7 +101,7 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   may lack `setTimeout`: then it waits with `Atomics.wait`, or, if that's missing too, fetches at most
   5 days per run back to back (`paced: false` in the result), so rerun a minute later.
 - **Some `tgcloud/lib/` modules are shared with the front-end and tests**
-  (`psi`, `cigs`, `advice`, `alert-settings`, `alert-rules`, `breaking-rules`, `format`, `snapshot`,
+  (`psi`, `psi-record`, `psi-history`, `cigs`, `advice`, `alert-settings`, `alert-rules`, `breaking-rules`, `format`, `snapshot`,
   `outlook-parse`, `range`, `inline-rules`, `html`, `time`, `config`, `fetch-retry`, `news-parse`, `cameras-parse`, `weather-parse`, `hazemap-parse`, `forecast-parse`, `chat-rules`, `ops-rules`,
   `card/geometry|png|raster|summary|forecast|glyphs|art`). Keep these pure: no `sdk` import, no DB, so
   Vite and `node --test` can load them. Modules that touch `sdk`, directly or via `store`, are
@@ -160,6 +160,13 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   start the tick, so their limits can pause alerts but never block /haze or the Mini App. The
   limit that reaches users is data.gov.sg's (no key: a 429 came at 7 requests in 4 s): keep NEA
   requests claimed once across isolates (`claimEvery`), and a failed one falls back to the stored copy.
+- **“Singapore’s highest 24-hr PSI since Sep 2019”** (`lib/psi-record.js`) compares today's highest
+  official 24-hour PSI from haze (each region's capped at its particle sub-index, `hazePsi`, so ozone
+  spikes and glitches don't count), once above 100, with past days, and is said only when the last day as high is over a
+  year back. The past is `lib/psi-history.js`, **generated** by `scripts/psi-history.mjs` (NEA's data, Feb 2016
+  on, days above 100 only; rerun it now and then: it only adds the days since, `--full` rebuilds), plus 2015's peak by hand (a lower bound, sourced in the
+  module: NEA's data online starts in 2016), plus the days since, kept by `refreshNea` in `state('psi_peaks')`.
+  It lands in the snapshot as `record`; /haze, the daily update and the hero show it.
 - **1-hour and 3-hour PSI and the next-hours range are our own calculations**, not NEA's.
   Copy must keep saying so; only the 24-hour PSI and NEA's forecast are official.
 - **Where users came from.** A private `/start <source>` (links like `t.me/<bot>?start=reddit`)

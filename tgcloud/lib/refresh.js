@@ -5,6 +5,7 @@
 
 import { getLatestPsi, getPm25History } from './nea.js';
 import { buildSnapshot, isStale, neaRefetchEveryS, REVISED_EVERY_S, USER_REVISED_EVERY_S } from './snapshot.js';
+import { hazePsi, highestSince, notePeak } from './psi-record.js';
 import { HISTORY_HOURS, latestRange } from './range.js';
 import { claimEvery, getState, getStates, lastHours, recentReadings, recordSource, setState, upsertReadings } from './store.js';
 import { sgtDateOf, sgtDayStart, unixHour } from './time.js';
@@ -47,12 +48,23 @@ export async function refreshNea({ deadline, claimed = false } = {}) {
   }
 
   // One read for the snapshot (the last 25 hours) and the range (two weeks).
-  const [rows, psiState] = await Promise.all([recentReadings(HISTORY_HOURS), getState('psi').then((s) => s?.value)]);
+  const [rows, states] = await Promise.all([recentReadings(HISTORY_HOURS), getStates(['psi', 'psi_peaks'])]);
+  const psiState = states.get('psi')?.value;
   const history = lastHours(rows, 25);
   if (!history.length || !psiState) throw new Error('No NEA data yet (fetch failed and nothing cached)');
   const snap = buildSnapshot(history, psiState);
-  // The range is extra: if it can't be stored, the old one ages out (currentRange) and the snapshot still goes.
-  await Promise.all([setState('snapshot', snap), saveRange(rows).catch(() => null)]);
+  // Today's highest 24-hour PSI joins the days "highest since…" compares with (psi-record.js).
+  const today = sgtDateOf(Date.parse(snap.psiAsOf));
+  const kept = states.get('psi_peaks')?.value ?? [];
+  const haze = hazePsi(snap.regions);
+  const peaks = notePeak(kept, today, haze);
+  snap.record = highestSince(haze, today, peaks);
+  // The range and the peaks are extra: if they can't be stored, the snapshot still goes.
+  await Promise.all([
+    setState('snapshot', snap),
+    saveRange(rows).catch(() => null),
+    peaks === kept ? null : setState('psi_peaks', peaks).catch(() => null),
+  ]);
   return snap;
 }
 
