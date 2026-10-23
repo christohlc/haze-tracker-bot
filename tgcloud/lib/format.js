@@ -7,6 +7,7 @@ import { PUBLISHERS } from './news-parse.js';
 import { outlookLabel, psiRangeText } from './outlook-parse.js';
 import { REGIONS } from './config.js';
 import { bandById, bandGroups, PM25_BANDS, PSI_BANDS, psiBand } from './psi.js';
+import { recordText } from './psi-record.js';
 import { RANGE_RECORD } from './range.js';
 import { readingsFor, STALE_NOTE } from './snapshot.js';
 import { sgtDayMonth, sgtDayName, sgtHour } from './time.js';
@@ -57,6 +58,7 @@ export function formatHaze(snap, ahead, { table = true, region = null } = {}) {
   const f = focus(snap, region);
   const lines = [
     ...psiLines(snap, f.area),
+    ...(snap.record ? [`📊 ${recordText(snap.record)}`] : []),
     `💨 Last hour’s PM2.5: ${bandWords(snap, 'pm25')} · ${sgtHour(snap.asOf)} SGT`,
     ...(snap.stale ? [`⚠️ <i>${STALE_NOTE}</i>`] : []),
     '',

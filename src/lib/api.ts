@@ -28,6 +28,8 @@ export interface Snapshot {
   regions: Region[];
   island: { now: number | null; mean24h: number | null };
   worst: { psi1h: Worst | null; psi3h: Worst | null; psi24h: Worst | null; pm25: Worst | null };
+  /** "Singapore’s worst haze since…" (psi-record.js); missing in older snapshots. */
+  record?: { since: string | null } | null;
 }
 
 export type HourRow = { t: string } & Partial<Record<RegionId, number>>;

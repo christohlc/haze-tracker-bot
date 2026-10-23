@@ -101,7 +101,7 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   may lack `setTimeout`: then it waits with `Atomics.wait`, or, if that's missing too, fetches at most
   5 days per run back to back (`paced: false` in the result), so rerun a minute later.
 - **Some `tgcloud/lib/` modules are shared with the front-end and tests**
-  (`psi`, `aqi`, `cigs`, `advice`, `alert-settings`, `alert-rules`, `breaking-rules`, `format`, `snapshot`,
+  (`psi`, `psi-record`, `psi-history`, `aqi`, `cigs`, `advice`, `alert-settings`, `alert-rules`, `breaking-rules`, `format`, `snapshot`,
   `outlook-parse`, `range`, `inline-rules`, `html`, `time`, `config`, `fetch-retry`, `news-parse`, `cameras-parse`, `weather-parse`, `hazemap-parse`, `forecast-parse`, `chat-rules`, `ops-rules`,
   `card/geometry|png|raster|summary|forecast|glyphs|art`). Keep these pure: no `sdk` import, no DB, so
   Vite and `node --test` can load them. Modules that touch `sdk`, directly or via `store`, are
@@ -160,6 +160,10 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   start the tick, so their limits can pause alerts but never block /haze or the Mini App. The
   limit that reaches users is data.gov.sg's (no key: a 429 came at 7 requests in 4 s): keep NEA
   requests claimed once across isolates (`claimEvery`), and a failed one falls back to the stored copy.
+- **“Singapore’s worst haze since Sep 2019”** (`lib/psi-record.js`, said once the 24-hr PSI is past 100
+  and the last day as high is over a year back) compares with `lib/psi-history.js`, **generated** by
+  `npm run psi:history` (NEA's data from Feb 2016; **rerun it before a deploy**, since the bot only keeps
+  days after its `THROUGH`, in `state('psi_peaks')`), plus 2015's peak by hand (sourced in the module).
 - **1-hour and 3-hour PSI and the next-hours range are our own calculations**, not NEA's.
   Copy must keep saying so; only the 24-hour PSI and NEA's forecast are official.
 - **Where users came from.** A private `/start <source>` (links like `t.me/<bot>?start=reddit`)

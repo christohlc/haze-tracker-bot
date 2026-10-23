@@ -2,6 +2,7 @@
   import { Tween } from 'svelte/motion';
   import { cubicOut } from 'svelte/easing';
   import { bandFloor, psiBand } from '../../tgcloud/lib/psi.js';
+  import { recordText } from '../../tgcloud/lib/psi-record.js';
   import { readingsFor } from '../../tgcloud/lib/snapshot.js';
   import { psiRangeText } from '../../tgcloud/lib/outlook-parse.js';
   import type { Range, RegionId, Snapshot } from '../lib/api';
@@ -131,6 +132,8 @@
   {#if mask}
     <p class="verdict"><strong>{mask.title}.</strong> {mask.text}</p>
   {/if}
+  <!-- About the whole island and NEA’s 24-hour PSI, whatever the period or area shown; its words say so. -->
+  {#if snapshot.record}<p class="aside record">{recordText(snapshot.record)}</p>{/if}
 
   <div class="period">
     <Segmented
@@ -334,6 +337,9 @@
     margin: 0;
     font-size: 0.8125rem;
     color: var(--ink-2);
+  }
+  .record {
+    margin-bottom: 12px;
   }
   .figure {
     display: flex;
