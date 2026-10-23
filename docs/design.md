@@ -86,7 +86,8 @@ or, outside Telegram, from the OS. A new colour token needs both a light and a d
     pill) picks the region the hero, advice and alerts follow, and Around the island lists it first on a
     tinted row tagged “Your area”; until someone picks, it's the highest.
   - **Outlook:** what’s ahead, wind and rain, where it’s coming from (NEA’s regional haze map), history.
-  - **More:** live views, news, cigarettes, what’s new, sources (collapsed).
+  - **More:** live views, news, cigarettes, why other apps show a higher number (US AQI vs PSI),
+    the purifier pet, what’s new, sources (collapsed).
 - A tab mounts the first time it’s opened and then stays mounted, hidden (laid out at zero
   height rather than `display: none`), so its controls keep their state, its cards rise in only
   once, charts keep their width, and Live views loads its pictures only once More is opened.

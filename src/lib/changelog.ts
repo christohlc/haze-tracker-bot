@@ -9,6 +9,12 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-23-other-apps',
+    date: '2026-10-23',
+    title: 'See why IQAir reads higher',
+    body: 'IQAir and AQICN often show a bigger, scarier number than NEA. A new card in More shows the last hour’s haze on their US scale next to NEA’s PSI, and explains why they differ.',
+  },
+  {
     id: '2026-10-19-pet-out-of-the-way',
     date: '2026-10-19',
     title: 'A purifier that minds its manners',
