@@ -1,17 +1,21 @@
 <script lang="ts">
   import { bandById, psiBand } from '../../tgcloud/lib/psi.js';
 
-  // For NEA's outlook, which names bands: pass `bandId` with `showLabel`.
+  // For NEA's outlook, which names bands: pass `bandId` with `showLabel`. `text` draws a neutral pill
+  // (no band colour, which only ever means a PSI band), for another scale's number.
   let {
     value = null,
     bandId = null,
     showLabel = false,
     size = 'sm',
-  }: { value?: number | null; bandId?: string | null; showLabel?: boolean; size?: 'sm' | 'lg' } = $props();
+    text = null,
+  }: { value?: number | null; bandId?: string | null; showLabel?: boolean; size?: 'sm' | 'lg'; text?: string | null } = $props();
   const band = $derived(bandId ? bandById(bandId) : psiBand(value));
 </script>
 
-{#if band}
+{#if text != null}
+  <span class="pill neutral {size}">{text}</span>
+{:else if band}
   <span
     class="pill {size}"
     style:background="var(--band-{band.id})"
@@ -49,8 +53,12 @@
       font-size: 0.75rem;
     }
   }
-  .empty {
+  .empty,
+  .neutral {
     color: var(--muted);
     background: var(--control);
+  }
+  .neutral {
+    color: var(--ink);
   }
 </style>

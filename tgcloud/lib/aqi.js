@@ -23,8 +23,7 @@ export function pm25ToUsAqi(pm25) {
   if (pm25 == null || Number.isNaN(pm25)) return null;
   // EPA truncates to one decimal before looking up the breakpoint.
   const c = Math.floor(Math.max(0, pm25) * 10) / 10;
-  const top = BREAKPOINTS[BREAKPOINTS.length - 1];
-  if (c > top[1]) return { aqi: 500, label: top[4], beyond: true };
-  const [cLo, cHi, iLo, iHi, label] = BREAKPOINTS.find((b) => c <= b[1]) ?? top;
-  return { aqi: Math.round(iLo + ((c - cLo) * (iHi - iLo)) / (cHi - cLo)), label, beyond: false };
+  for (const [cLo, cHi, iLo, iHi, label] of BREAKPOINTS)
+    if (c <= cHi) return { aqi: Math.round(iLo + ((c - cLo) * (iHi - iLo)) / (cHi - cLo)), label, beyond: false };
+  return { aqi: 500, label: 'Hazardous', beyond: true };
 }

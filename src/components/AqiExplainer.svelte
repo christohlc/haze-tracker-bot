@@ -1,6 +1,7 @@
 <script lang="ts">
   import { pm25ToUsAqi } from '../../tgcloud/lib/aqi.js';
   import { psiBand } from '../../tgcloud/lib/psi.js';
+  import { readingsFor } from '../../tgcloud/lib/snapshot.js';
   import type { Snapshot } from '../lib/api';
   import { area } from '../lib/area.svelte';
   import BandPill from './BandPill.svelte';
@@ -9,9 +10,21 @@
 
   // One region for every row, so the numbers describe the same air: the user's area, else the
   // region with the highest PM2.5 last hour.
-  const region = $derived(snapshot.regions.find((r) => r.id === (area.id ?? snapshot.worst.pm25?.region)) ?? null);
+  const readings = $derived(readingsFor(snapshot, area.id));
+  const region = $derived(readings.area ?? snapshot.regions.find((r) => r.id === readings.pm25?.region));
   const us = $derived(pm25ToUsAqi(region?.pm25));
 </script>
+
+<!-- The pill already tells a screen reader its band, so the visible label is hidden from it. -->
+{#snippet psiRow(title: string, sub: string, value: number | null)}
+  <div class="row">
+    <dt>{title} <span class="sub">{sub}</span></dt>
+    <dd>
+      <BandPill {value} />
+      <span class="label" aria-hidden={value != null}>{psiBand(value)?.label ?? 'No reading'}</span>
+    </dd>
+  </div>
+{/snippet}
 
 <section class="card" aria-labelledby="aqi-title">
   <h2 id="aqi-title" class="section-title">Why other apps show a higher number</h2>
@@ -21,28 +34,14 @@
   </p>
 
   {#if region && us}
-    <p class="lead">Last hour in {region.name}: PM2.5 <b class="num">{Math.round(region.pm25 ?? 0)}</b> µg/m³</p>
+    <p class="lead">Last hour in {region.name}: PM2.5 <b class="num">{Math.round(region.pm25!)}</b> µg/m³</p>
     <dl>
       <div class="row">
         <dt>US AQI <span class="sub">IQAir and AQICN’s scale, our conversion</span></dt>
-        <!-- A neutral pill: the same shape as the PSI rows, but no band colour, which only ever means a PSI band. -->
-        <dd><span class="pill num">{us.aqi}{us.beyond ? '+' : ''}</span> <span class="label">{us.label}</span></dd>
+        <dd><BandPill text={`${us.aqi}${us.beyond ? '+' : ''}`} /> <span class="label">{us.label}</span></dd>
       </div>
-      <!-- The pill already tells a screen reader its band, so the visible label is hidden from it. -->
-      <div class="row">
-        <dt>Our 1-hr PSI <span class="sub">same hour, our calculation</span></dt>
-        <dd>
-          <BandPill value={region.psi1h} />
-          <span class="label" aria-hidden={region.psi1h != null}>{psiBand(region.psi1h)?.label ?? 'No reading'}</span>
-        </dd>
-      </div>
-      <div class="row">
-        <dt>Official 24-hr PSI <span class="sub">NEA</span></dt>
-        <dd>
-          <BandPill value={region.psi24h} />
-          <span class="label" aria-hidden={region.psi24h != null}>{psiBand(region.psi24h)?.label ?? 'No reading'}</span>
-        </dd>
-      </div>
+      {@render psiRow('Our 1-hr PSI', 'same hour, our calculation', region.psi1h)}
+      {@render psiRow('Official 24-hr PSI', 'NEA', region.psi24h)}
     </dl>
   {:else}
     <p class="note empty">No PM2.5 reading{region ? ` for ${region.name}` : ''} from NEA right now, so nothing to compare.</p>
@@ -94,19 +93,6 @@
     gap: 2px 8px;
     margin: 0;
     text-align: right;
-  }
-  /* Matches BandPill's small size. */
-  .pill {
-    min-width: 3.25ch;
-    padding: 2px 7px;
-    border-radius: 999px;
-    background: var(--control);
-    color: var(--ink);
-    font-weight: 650;
-    font-size: 0.8125rem;
-    line-height: 1.4;
-    text-align: center;
-    white-space: nowrap;
   }
   .label {
     font-size: 0.875rem;
