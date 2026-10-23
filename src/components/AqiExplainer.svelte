@@ -25,7 +25,8 @@
     <dl>
       <div class="row">
         <dt>US AQI <span class="sub">IQAir and AQICN’s scale, our conversion</span></dt>
-        <dd><b class="num">{us.aqi}{us.beyond ? '+' : ''}</b> <span class="label">{us.label}</span></dd>
+        <!-- A neutral pill: the same shape as the PSI rows, but no band colour, which only ever means a PSI band. -->
+        <dd><span class="pill num">{us.aqi}{us.beyond ? '+' : ''}</span> <span class="label">{us.label}</span></dd>
       </div>
       <!-- The pill already tells a screen reader its band, so the visible label is hidden from it. -->
       <div class="row">
@@ -94,10 +95,18 @@
     margin: 0;
     text-align: right;
   }
-  dd b {
-    font-family: var(--font-display);
-    font-size: 1.125rem;
-    font-weight: 700;
+  /* Matches BandPill's small size. */
+  .pill {
+    min-width: 3.25ch;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: var(--control);
+    color: var(--ink);
+    font-weight: 650;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    text-align: center;
+    white-space: nowrap;
   }
   .label {
     font-size: 0.875rem;
