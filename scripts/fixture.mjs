@@ -1,9 +1,7 @@
 // Build src/dev/fixture.json from live NEA data, shaped like endpoints/getDashboard,
 // so the Mini App can be developed outside Telegram. Run: node scripts/fixture.mjs
 import { writeFileSync } from 'node:fs';
-import { hazePsi, highestSince } from '../tgcloud/lib/psi-record.js';
 import { buildSnapshot } from '../tgcloud/lib/snapshot.js';
-import { sgtDateOf } from '../tgcloud/lib/time.js';
 
 const BASE = 'https://api-open.data.gov.sg/v2/real-time/api';
 const sgtDate = (daysAgo) => new Date(Date.now() + 8 * 3600_000 - daysAgo * 86_400_000).toISOString().slice(0, 10);
@@ -18,7 +16,7 @@ const psi = (await items('psi'))[0];
 const { history: _h, ...snapshot } = buildSnapshot(history, psi);
 const now = Math.floor(Date.now() / 1000);
 const fixture = {
-  snapshot: { ...snapshot, stale: false, record: highestSince(hazePsi(snapshot.regions), sgtDateOf(Date.parse(snapshot.psiAsOf))) },
+  snapshot: { ...snapshot, stale: false },
   history: history.map((h) => ({ t: h.timestamp, ...h.readings })),
   sources: [
     { source: 'nea_pm25', lastOkAt: now, lastErrorAt: null, lastError: null, detail: `latest ${snapshot.asOf}` },

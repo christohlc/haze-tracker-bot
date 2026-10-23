@@ -7,7 +7,9 @@
 // Run: npm run psi:history                  adds the days since the file's THROUGH (before a deploy)
 //      npm run psi:history -- --full        rebuilds from 2016
 import { existsSync, writeFileSync } from 'node:fs';
+import { REGIONS as REGION_LIST } from '../tgcloud/lib/config.js';
 import { particlePsi } from '../tgcloud/lib/psi-record.js';
+import { sgtDateOf } from '../tgcloud/lib/time.js';
 
 // data.gov.sg's "Historical Pollutant Standards Index (PSI)" collection (2215), one dataset a year.
 const YEARS = {
@@ -21,7 +23,7 @@ const YEARS = {
   2023: 'd_10501b71361f97dbbbab82095406c9c5',
   2024: 'd_9213cd2e4631f7148ab5932a10df9958',
 };
-const REGIONS = ['north', 'south', 'east', 'west', 'central'];
+const REGIONS = REGION_LIST.map((r) => r.id);
 const FROM_API = '2025-01-01';
 const OUT = new URL('../tgcloud/lib/psi-history.js', import.meta.url);
 
@@ -53,13 +55,12 @@ if (full) {
     const poll = await getJson(`https://api-open.data.gov.sg/v1/public/api/datasets/${id}/poll-download`);
     if (!poll.data?.url) throw new Error(`${year}: no download (${JSON.stringify(poll).slice(0, 200)})`);
     const [head, ...lines] = (await (await fetch(poll.data.url)).text()).trim().split('\n');
-    const col = head.split(',');
-    const at = (f, c) => Number.parseFloat(f[col.indexOf(c)]);
+    const [t, region, psi, sub] = ['timestamp', 'region', 'psi_twenty_four_hourly', 'pm25_sub_index'].map((c) => head.split(',').indexOf(c));
     for (const line of lines) {
       const f = line.split(',');
-      if (!REGIONS.includes(f[col.indexOf('region')])) continue;
-      const pm25Sub = at(f, 'pm25_sub_index');
-      note(f[col.indexOf('timestamp')].slice(0, 10), particlePsi(at(f, 'psi_twenty_four_hourly'), Number.isFinite(pm25Sub) ? pm25Sub : null));
+      if (!REGIONS.includes(f[region])) continue;
+      const pm25Sub = Number.parseFloat(f[sub]);
+      note(f[t].slice(0, 10), particlePsi(Number.parseFloat(f[psi]), Number.isFinite(pm25Sub) ? pm25Sub : null));
     }
     console.log(year, lines.length, 'rows');
   }
@@ -69,7 +70,7 @@ if (full) {
   from = nextDay(old.THROUGH);
 }
 
-const yesterday = new Date(Date.now() + 8 * 3_600_000 - 86_400_000).toISOString().slice(0, 10);
+const yesterday = sgtDateOf(Date.now() - 86_400_000);
 for (let d = from; d <= yesterday; d = nextDay(d)) {
   const body = await getJson(`https://api.data.gov.sg/v1/environment/psi?date=${d}`);
   // A day that fails stops the run, so THROUGH never moves past a day that wasn't read.

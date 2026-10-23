@@ -12,10 +12,12 @@ const FROM_PSI = 100;
 /** Say it only when the last day as high was at least this long ago, so not for the day before. */
 const GAP_DAYS = 365;
 
-/** 2015's haze, before NEA's data online. Not NEA's exact peak, which isn't published: a lower bound,
-    from "As of 7am, the 24-hour PSI was 263-321" (The Star, 25 Sep 2015). Earlier hazes (2013's
-    highest 24-hour PSI was 246) used a PSI without PM2.5, so they aren't on the same scale. */
-const PEAK_2015 = /** @type {[string, number]} */ (['2015-09-25', 321]);
+/** 2015's haze, before NEA's data online, by year alone: it ran into October and only one of its
+    days is known. Not NEA's exact peak, which isn't published: a lower bound, from "As of 7am, the
+    24-hour PSI was 263-321" (The Star, 25 Sep 2015). Earlier hazes (2013's highest 24-hour PSI
+    was 246) used a PSI without PM2.5, so they aren't on the same scale.
+    @type {[string, number]} */
+const PEAK_2015 = ['2015', 321];
 
 /**
  * A region's 24-hour PSI from haze: no higher than its PM2.5 sub-index, so an ozone spike or a
@@ -31,20 +33,24 @@ export const particlePsi = (psi, pm25Sub) => (pm25Sub == null ? psi : Math.min(p
  * @returns {number | null}
  */
 export function hazePsi(regions) {
-  const vals = regions.filter((r) => r.psi24h != null).map((r) => particlePsi(/** @type {number} */ (r.psi24h), pm25ToPsi(r.pm25Mean24h)));
-  return vals.length ? Math.max(...vals) : null;
+  let max = null;
+  for (const r of regions) if (r.psi24h != null) max = Math.max(max ?? 0, particlePsi(r.psi24h, pm25ToPsi(r.pm25Mean24h)));
+  return max;
 }
 
 /**
  * The days to keep in state('psi_peaks'), with `psi` noted as `date`'s highest if it is: only
- * days after psi-history.js ends and above 100. Returns `kept` itself when nothing changed.
+ * days after psi-history.js ends (older ones are dropped once it's regenerated) and above 100.
+ * Returns `kept` itself when nothing changed.
  * @param {Array<[string, number]>} kept @param {string} date SGT @param {number | null | undefined} psi
  */
 export function notePeak(kept, date, psi) {
   if (psi == null || psi <= FROM_PSI || date <= THROUGH) return kept;
   const old = kept.find(([d]) => d === date);
   if (old && old[1] >= psi) return kept;
-  return [...kept.filter(([d]) => d !== date), /** @type {[string, number]} */ ([date, psi])].sort(([a], [b]) => a.localeCompare(b));
+  /** @type {[string, number]} */
+  const day = [date, psi];
+  return [...kept.filter(([d]) => d !== date && d > THROUGH), day].sort(([a], [b]) => a.localeCompare(b));
 }
 
 /**
@@ -63,14 +69,13 @@ export function highestSince(psi, today, kept = []) {
 }
 
 /**
- * "Singapore’s worst haze since Sep 2019", or null. 2015 gets no month: its haze ran into October
- * and only one day of it is known; past its lower bound we can't tell, so "since at least 2015".
+ * "Singapore’s worst haze since Sep 2019" ("since 2015" for a day known by year alone), or null.
+ * Past 2015's lower bound we can't tell, so "since at least 2015".
  * @param {{ since: string | null } | null | undefined} record
  */
 export function recordText(record) {
   if (!record) return null;
   if (!record.since) return 'Singapore’s worst haze since at least 2015';
-  if (record.since === PEAK_2015[0]) return 'Singapore’s worst haze since 2015';
   const [y, m] = record.since.split('-');
-  return `Singapore’s worst haze since ${MONTHS[Number(m) - 1]} ${y}`;
+  return `Singapore’s worst haze since ${m ? `${MONTHS[Number(m) - 1]} ` : ''}${y}`;
 }

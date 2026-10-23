@@ -160,14 +160,10 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
   start the tick, so their limits can pause alerts but never block /haze or the Mini App. The
   limit that reaches users is data.gov.sg's (no key: a 429 came at 7 requests in 4 s): keep NEA
   requests claimed once across isolates (`claimEvery`), and a failed one falls back to the stored copy.
-- **“Singapore’s worst haze since Sep 2019”** (`lib/psi-record.js`) compares today's highest
-  official 24-hour PSI from haze (each region's capped at its PM2.5 sub-index, `particlePsi`, so ozone
-  spikes and glitches don't count), once above 100, with past days, and is said only when the last day as high is over a
-  year back. The past is `lib/psi-history.js`, **generated** by `scripts/psi-history.mjs` (NEA's data, Feb 2016
-  on, days above 100 only; `npm run psi:history` before a deploy: it adds the days since
-  `THROUGH`, which the bot never saw; `-- --full` rebuilds), plus 2015's peak by hand (a lower bound, sourced in the
-  module: NEA's data online starts in 2016), plus the days since, kept by `refreshNea` in `state('psi_peaks')`.
-  It lands in the snapshot as `record`; /haze, the daily update and the hero show it.
+- **“Singapore’s worst haze since Sep 2019”** (`lib/psi-record.js`, said once the 24-hr PSI is past 100
+  and the last day as high is over a year back) compares with `lib/psi-history.js`, **generated** by
+  `npm run psi:history` (NEA's data from Feb 2016; **rerun it before a deploy**, since the bot only keeps
+  days after its `THROUGH`, in `state('psi_peaks')`), plus 2015's peak by hand (sourced in the module).
 - **1-hour and 3-hour PSI and the next-hours range are our own calculations**, not NEA's.
   Copy must keep saying so; only the 24-hour PSI and NEA's forecast are official.
 - **Where users came from.** A private `/start <source>` (links like `t.me/<bot>?start=reddit`)

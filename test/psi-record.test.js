@@ -19,8 +19,8 @@ test('nothing to say at 100 or under', () => {
 
 test('above every day since 2016 but under 2015’s peak: since 2015', () => {
   if (top >= 321) return; // the history already holds a day as high
-  assert.deepEqual(highestSince(top + 1, after(1)), { since: '2015-09-25' });
-  assert.equal(recordText({ since: '2015-09-25' }), 'Singapore’s worst haze since 2015');
+  assert.deepEqual(highestSince(top + 1, after(1)), { since: '2015' });
+  assert.equal(recordText({ since: '2015' }), 'Singapore’s worst haze since 2015');
   assert.equal(recordText({ since: '2019-09-19' }), 'Singapore’s worst haze since Sep 2019');
 });
 

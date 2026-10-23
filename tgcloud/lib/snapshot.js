@@ -5,7 +5,8 @@
 import { REGIONS } from './config.js';
 import { meanOfLast, pm25ToPsi } from './psi.js';
 import { cigarettes } from './cigs.js';
-import { unixHour } from './time.js';
+import { hazePsi, highestSince } from './psi-record.js';
+import { sgtDateOf, unixHour } from './time.js';
 
 /**
  * Mean PM2.5 over the regions that reported; null if none did. The island-wide figure, and
@@ -69,8 +70,9 @@ export const STALE_NOTE = 'No new NEA reading lately. May be out of date.';
 /**
  * @param {Array<{ timestamp: string, readings: Record<string, number> }>} pm25History oldest first
  * @param {{ timestamp: string, readings: Record<string, Record<string, number>> }} psi
+ * @param {Array<[string, number]>} [peaks] days since psi-history.js, kept by refreshNea (psi-record.js)
  */
-export function buildSnapshot(pm25History, psi) {
+export function buildSnapshot(pm25History, psi, peaks = []) {
   if (!pm25History.length) throw new Error('No PM2.5 readings');
   const history = pm25History.slice(-25);
   const rows = history.map((h) => ({ t: h.timestamp, ...h.readings }));
@@ -116,8 +118,8 @@ export function buildSnapshot(pm25History, psi) {
       pm25: pick(worst('pm25'), 'pm25'),
     },
     cigs: cigarettes(island),
-    /** "Singapore’s worst haze since…" (psi-record.js), set by refreshNea, which keeps the past days. */
-    record: /** @type {{ since: string | null } | null} */ (null),
+    /** "Singapore’s worst haze since…" (psi-record.js) */
+    record: highestSince(hazePsi(regions), sgtDateOf(Date.parse(psi.timestamp)), peaks),
     history: rows,
   };
 }

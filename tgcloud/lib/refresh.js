@@ -5,7 +5,7 @@
 
 import { getLatestPsi, getPm25History } from './nea.js';
 import { buildSnapshot, isStale, neaRefetchEveryS, REVISED_EVERY_S, USER_REVISED_EVERY_S } from './snapshot.js';
-import { hazePsi, highestSince, notePeak } from './psi-record.js';
+import { hazePsi, notePeak } from './psi-record.js';
 import { HISTORY_HOURS, latestRange } from './range.js';
 import { claimEvery, getState, getStates, lastHours, recentReadings, recordSource, setState, upsertReadings } from './store.js';
 import { sgtDateOf, sgtDayStart, unixHour } from './time.js';
@@ -52,14 +52,11 @@ export async function refreshNea({ deadline, claimed = false } = {}) {
   const psiState = states.get('psi')?.value;
   const history = lastHours(rows, 25);
   if (!history.length || !psiState) throw new Error('No NEA data yet (fetch failed and nothing cached)');
-  const snap = buildSnapshot(history, psiState);
+  const kept = states.get('psi_peaks')?.value ?? [];
+  const snap = buildSnapshot(history, psiState, kept);
   // Today's haze joins the days "worst haze since…" compares with (psi-record.js). Two isolates
   // writing at once can lose one's peak; the next refetch notes the day's reading again.
-  const today = sgtDateOf(Date.parse(snap.psiAsOf ?? snap.asOf));
-  const kept = states.get('psi_peaks')?.value ?? [];
-  const haze = hazePsi(snap.regions);
-  const peaks = notePeak(kept, today, haze);
-  snap.record = highestSince(haze, today, peaks);
+  const peaks = notePeak(kept, sgtDateOf(Date.parse(snap.psiAsOf)), hazePsi(snap.regions));
   // The range and the peaks are extra: if they can't be stored, the snapshot still goes.
   await Promise.all([
     setState('snapshot', snap),
