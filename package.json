@@ -10,7 +10,8 @@
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json",
     "deploy": "node scripts/deploy-guard.mjs && npm run build && tgcloud push",
     "test": "node --test test/",
-    "card:assets": "node scripts/card/build-assets.mjs"
+    "card:assets": "node scripts/card/build-assets.mjs",
+    "psi:history": "node scripts/psi-history.mjs"
   },
   "devDependencies": {
     "@resvg/resvg-js": "^2.6.2",

@@ -199,8 +199,8 @@ messages is the same short form, for the general public.
   chat’s area shares, and “;” between PM2.5 bands. The share caption is the same PSI lines, and
   inline mode’s result says “Singapore haze update” with the same words (`bandWords`).
   One closing note; the table (with our 1h/3h) only in the text version.
-  During haze, a 📊 line under the PSI lines puts it in history (“Singapore’s highest 24-hr PSI since Sep
-  2019”, `recordText`), only when the last day as high is over a year back. The hero shows the same words
+  During haze, a 📊 line under the PSI lines puts it in history (“Singapore’s worst haze since Sep
+  2019”, `recordText`; 2015 gets no month, since only one of its days is known), only when the last day as high is over a year back. The hero shows the same words
   under the verdict.
 - Advice lines (`adviceLines`) go in one order in every message, each with its own emoji:
   👉 Outside now, 🧓 Vulnerable people (only when their advice is stricter), 😷 the short form.

@@ -12,7 +12,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     id: '2026-10-23-highest-since',
     date: '2026-10-23',
     title: 'See how this haze compares',
-    body: 'When the haze is the worst in over a year, the top of the dashboard and /haze say so, like “Singapore’s highest 24-hr PSI since Sep 2019”, going back to the 2015 haze.',
+    body: 'When the haze is the worst in over a year, the top of the dashboard and /haze say so, like “Singapore’s worst haze since Sep 2019”, going back to the 2015 haze.',
   },
   {
     id: '2026-10-19-pet-out-of-the-way',

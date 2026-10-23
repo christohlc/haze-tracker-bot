@@ -1,5 +1,5 @@
 // @ts-check
-// "Singapore’s highest 24-hr PSI since Sep 2019": how today's official 24-hour PSI compares with past hazes.
+// "Singapore’s worst haze since Sep 2019": how today's official 24-hour PSI compares with past hazes.
 // Past days come from psi-history.js (generated, Feb 2016 on), 2015's peak (below) and the days
 // the bot has seen since (state('psi_peaks'), kept by refreshNea). Pure module, no SDK.
 
@@ -18,13 +18,20 @@ const GAP_DAYS = 365;
 const PEAK_2015 = /** @type {[string, number]} */ (['2015-09-25', 321]);
 
 /**
- * The highest regional 24-hour PSI from haze: each region's no higher than its 24-hour PM2.5
- * sub-index, as psi-history.js counts it, so an ozone spike or a glitch isn't taken for haze.
+ * A region's 24-hour PSI from haze: no higher than its PM2.5 sub-index, so an ozone spike or a
+ * glitch isn't taken for haze. During haze it's the PSI itself. Used here and by the script that
+ * generates psi-history.js, so both count the same way.
+ * @param {number} psi @param {number | null | undefined} pm25Sub
+ */
+export const particlePsi = (psi, pm25Sub) => (pm25Sub == null ? psi : Math.min(psi, pm25Sub));
+
+/**
+ * The highest regional 24-hour PSI from haze (particlePsi), today's value to compare.
  * @param {Array<{ psi24h: number | null, pm25Mean24h: number | null }>} regions from buildSnapshot
  * @returns {number | null}
  */
 export function hazePsi(regions) {
-  const vals = regions.filter((r) => r.psi24h != null).map((r) => Math.min(/** @type {number} */ (r.psi24h), pm25ToPsi(r.pm25Mean24h) ?? Infinity));
+  const vals = regions.filter((r) => r.psi24h != null).map((r) => particlePsi(/** @type {number} */ (r.psi24h), pm25ToPsi(r.pm25Mean24h)));
   return vals.length ? Math.max(...vals) : null;
 }
 
@@ -55,10 +62,15 @@ export function highestSince(psi, today, kept = []) {
   return (Date.parse(today) - Date.parse(last)) / 86_400_000 >= GAP_DAYS ? { since: last } : null;
 }
 
-/** "Singapore’s highest 24-hr PSI since Sep 2019", or null. @param {{ since: string | null } | null | undefined} record */
+/**
+ * "Singapore’s worst haze since Sep 2019", or null. 2015 gets no month: its haze ran into October
+ * and only one day of it is known; past its lower bound we can't tell, so "since at least 2015".
+ * @param {{ since: string | null } | null | undefined} record
+ */
 export function recordText(record) {
   if (!record) return null;
-  if (!record.since) return 'Singapore’s highest 24-hr PSI since the 2015 haze, or higher';
+  if (!record.since) return 'Singapore’s worst haze since at least 2015';
+  if (record.since === PEAK_2015[0]) return 'Singapore’s worst haze since 2015';
   const [y, m] = record.since.split('-');
-  return `Singapore’s highest 24-hr PSI since ${MONTHS[Number(m) - 1]} ${y}`;
+  return `Singapore’s worst haze since ${MONTHS[Number(m) - 1]} ${y}`;
 }

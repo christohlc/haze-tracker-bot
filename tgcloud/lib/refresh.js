@@ -53,8 +53,9 @@ export async function refreshNea({ deadline, claimed = false } = {}) {
   const history = lastHours(rows, 25);
   if (!history.length || !psiState) throw new Error('No NEA data yet (fetch failed and nothing cached)');
   const snap = buildSnapshot(history, psiState);
-  // Today's highest 24-hour PSI joins the days "highest since…" compares with (psi-record.js).
-  const today = sgtDateOf(Date.parse(snap.psiAsOf));
+  // Today's haze joins the days "worst haze since…" compares with (psi-record.js). Two isolates
+  // writing at once can lose one's peak; the next refetch notes the day's reading again.
+  const today = sgtDateOf(Date.parse(snap.psiAsOf ?? snap.asOf));
   const kept = states.get('psi_peaks')?.value ?? [];
   const haze = hazePsi(snap.regions);
   const peaks = notePeak(kept, today, haze);
