@@ -16,21 +16,24 @@
 <section class="card" aria-labelledby="aqi-title">
   <h2 id="aqi-title" class="section-title">Why other apps show a higher number</h2>
   <p class="note">
-    IQAir, AQICN and many weather apps use the US AQI, not Singapore’s PSI. Both run from 0 to 500, but the US scale
-    rates the same air as worse, and those apps go by the last hour or so rather than a 24-hour average.
+    IQAir, AQICN and some other apps use the US AQI, not Singapore’s PSI. It rates the same air as worse, and they show
+    the last hour or so, not a 24-hour average.
   </p>
 
   {#if region && us}
     <p class="lead">Last hour in {region.name}: PM2.5 <b class="num">{Math.round(region.pm25 ?? 0)}</b> µg/m³</p>
     <dl>
       <div class="row">
-        <dt>US AQI <span class="sub">IQAir, AQICN</span></dt>
+        <dt>US AQI <span class="sub">IQAir and AQICN’s scale, our conversion</span></dt>
         <dd><b class="num">{us.aqi}{us.beyond ? '+' : ''}</b> <span class="label">{us.label}</span></dd>
       </div>
       <!-- The pill already tells a screen reader its band, so the visible label is hidden from it. -->
       <div class="row">
-        <dt>Our 1-hr PSI <span class="sub">same hour, NEA’s scale</span></dt>
-        <dd><BandPill value={region.psi1h} /> <span class="label" aria-hidden="true">{psiBand(region.psi1h)?.label ?? ''}</span></dd>
+        <dt>Our 1-hr PSI <span class="sub">same hour, our calculation</span></dt>
+        <dd>
+          <BandPill value={region.psi1h} />
+          <span class="label" aria-hidden={region.psi1h != null}>{psiBand(region.psi1h)?.label ?? 'No reading'}</span>
+        </dd>
       </div>
       <div class="row">
         <dt>Official 24-hr PSI <span class="sub">NEA</span></dt>
@@ -45,8 +48,8 @@
   {/if}
 
   <p class="note foot">
-    Those apps also use their own sensors and averaging, so their number won’t match exactly. The advice here follows
-    NEA’s bands, Singapore’s official ones.
+    Compare their number with the 1-hour reading; NEA’s 24-hour PSI moves more slowly. Their sensors and averaging
+    differ, so it won’t match exactly. The advice here follows NEA’s official bands.
   </p>
 </section>
 
