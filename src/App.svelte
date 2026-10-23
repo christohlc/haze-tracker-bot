@@ -3,6 +3,7 @@
   import Advice from './components/Advice.svelte';
   import AheadSection from './components/AheadSection.svelte';
   import AlertsCard from './components/AlertsCard.svelte';
+  import AqiExplainer from './components/AqiExplainer.svelte';
   import BrandHeader from './components/BrandHeader.svelte';
   import CigCalc from './components/CigCalc.svelte';
   import Hero from './components/Hero.svelte';
@@ -244,6 +245,7 @@
         <LiveViews />
         {#if data.news}<NewsCard news={data.news} serverTime={data.serverTime} />{/if}
         <CigCalc snapshot={data.snapshot} />
+        <AqiExplainer snapshot={data.snapshot} />
         <PetCard shown={petHidden === false} onchange={showPet} />
         <WhatsNew {seen} />
         <Sources sources={data.sources} />
