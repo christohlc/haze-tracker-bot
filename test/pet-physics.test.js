@@ -10,6 +10,8 @@ import {
   leapTarget,
   parseSaved,
   PET_LINES,
+  SHIFT_LINES,
+  bandShift,
   petMood,
   pickAction,
   release,
@@ -135,6 +137,22 @@ test('every band has a mood and lines that give no advice', () => {
       assert.ok(line.length <= 40, line);
       assert.doesNotMatch(line, /mask|indoors|stay in|go out|exercise|safe/i, line);
     }
+  }
+});
+
+test('only a new NEA reading for the same area and period moves the band', () => {
+  const r = (band, extra = {}) => ({ asOf: '10:00', area: null, period: '24h', band, ...extra });
+  assert.equal(bandShift(null, r('good')), null, 'nothing to compare with yet');
+  assert.equal(bandShift(r('unhealthy'), r('moderate', { asOf: '11:00' })), 'down');
+  assert.equal(bandShift(r('moderate'), r('hazardous', { asOf: '11:00' })), 'up');
+  assert.equal(bandShift(r('moderate'), r('moderate', { asOf: '11:00' })), null, 'same band');
+  assert.equal(bandShift(r('unhealthy'), r('moderate')), null, 'same reading');
+  assert.equal(bandShift(r('unhealthy'), r('moderate', { asOf: '11:00', area: 'west' })), null, 'another area');
+  assert.equal(bandShift(r('unhealthy'), r('moderate', { asOf: '11:00', period: '1h' })), null, 'another period');
+  assert.equal(bandShift(r(null), r('good', { asOf: '11:00' })), null, 'no reading before');
+  for (const line of [...SHIFT_LINES.up, ...SHIFT_LINES.down]) {
+    assert.ok(line.length <= 40, line);
+    assert.doesNotMatch(line, /mask|indoors|stay in|go out|exercise|safe/i, line);
   }
 });
 

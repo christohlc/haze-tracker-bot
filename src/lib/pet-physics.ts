@@ -3,6 +3,9 @@
 // Matter.js + PixiJS. Pure (no DOM), so `node --test` covers it; PurifierPet.svelte measures the
 // page and draws. Units: px and px/s, y down; the pet's (x, y) is its left edge and its feet.
 
+import { bandRank } from '../../tgcloud/lib/psi.js';
+import type { Period } from './period';
+
 export const PET_W = 48;
 export const PET_H = 56;
 
@@ -73,6 +76,34 @@ export const PET_LINES: Record<Mood, string[]> = {
   busy: ['Filtering as fast as I can.', 'Fan’s on high today.', 'Bit of haze. On it.'],
   struggling: ['Working overtime here.', 'Phew. So much haze.', 'Remind me to change my filter.'],
   heroic: ['Every blade, full speed.', 'I was built for this.', 'Not stopping till it clears.'],
+};
+
+/** What the pet last saw: one NEA reading for one area and period. */
+export interface Reading {
+  asOf: string;
+  area: string | null;
+  period: Period;
+  band: string | null;
+}
+
+/** Which way a new reading moved the band: 'up' is worse. */
+export type BandShift = 'up' | 'down';
+
+/**
+ * A new NEA reading moved the band: 'up' (worse) or 'down'. Only a new `asOf` for the same area and
+ * period counts, so switching area or period never reads as the air changing.
+ */
+export function bandShift(prev: Reading | null, next: Reading): BandShift | null {
+  if (!prev || prev.asOf === next.asOf || prev.area !== next.area || prev.period !== next.period) return null;
+  const a = bandRank(prev.band);
+  const b = bandRank(next.band);
+  if (a < 0 || b < 0 || a === b) return null;
+  return b > a ? 'up' : 'down';
+}
+
+export const SHIFT_LINES: Record<BandShift, string[]> = {
+  down: ['Clearing up! Fan’s easing off.', 'Air’s better. I felt that.'],
+  up: ['Haze is up. So’s my fan.', 'More haze in. Bracing.'],
 };
 
 // Wander weights, like hedgehog-mode's AI (walk 10, wait 3, jump 1, wave 1), shifted by mood.

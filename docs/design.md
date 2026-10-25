@@ -299,6 +299,11 @@ It's written small, with no physics or canvas library.
 - Its mood follows the hero's band: dozing (Good), happy (Moderate, or no reading), busy
   (Unhealthy), struggling and heroic (Very unhealthy, Hazardous, sweating). The fan spins faster
   as the band rises. Its lines are about itself, never advice: the dashboard says what to do.
+- When a new NEA reading moves the band, it says so: a sparkle and a line as the air clears, a brace
+  and a line as it worsens (`bandShift`). Only a new `asOf` for the same area and period counts, so
+  switching area or 1h/24h never reads as the air changing (24-hour PSI goes by `psiAsOf`). It reacts
+  to NEA's readings alone, not to loading or being offline; a fresh reading replacing the one saved on
+  the phone counts, since that's the air having changed since you last looked.
 - It roams the safe box (inside `--inset-top` and the side insets) and stands on the top edges
   of the visible tab's cards. On the floor just above the tab bar it would stand over whatever
   scrolls behind, so it leaps up to the nearest card top in view (`leapTarget`), and fades back

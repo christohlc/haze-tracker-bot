@@ -14,7 +14,9 @@
     PET_H,
     PET_LINES,
     PET_W,
+    SHIFT_LINES,
     actionMs,
+    bandShift,
     clamp,
     dragTo,
     fromSaved,
@@ -28,8 +30,10 @@
     step,
     toSaved,
     type PetAction,
+    type BandShift,
     type PetState,
     type Platform,
+    type Reading,
     type World,
   } from '../lib/pet-physics';
 
@@ -52,6 +56,7 @@
   let el = $state<HTMLElement>();
   let bounds = $state<HTMLElement>();
   let squashEl = $state<HTMLElement>();
+  let sparkleEl = $state<SVGElement>();
   let bodyEl = $state<HTMLElement>();
   let action = $state<PetAction>('fall');
   let facing = $state<1 | -1>(1);
@@ -197,7 +202,7 @@
 
   let ease = 'ease-out';
   /** A one-off move (Web Animations, so it needs no remount to replay). */
-  function play(node: HTMLElement | undefined, keyframes: Keyframe[], duration: number) {
+  function play(node: Element | undefined, keyframes: Keyframe[], duration: number) {
     if (!reduce) node?.animate?.(keyframes, { duration, easing: ease });
   }
 
@@ -240,21 +245,56 @@
     nextPick = droppedAt + 1500;
   }
 
+  /** Opens the bubble with a line, toward the middle of the screen, for 4 s. */
+  let bubbleTimer: ReturnType<typeof setTimeout> | undefined;
+  function say(text: string) {
+    if (!s) return;
+    bubbleLeft = s.x + PET_W / 2 < (world.left + world.right) / 2;
+    bubbleBelow = s.y - PET_H - world.top < 90;
+    bubble = text;
+    clearTimeout(bubbleTimer);
+    bubbleTimer = setTimeout(() => (bubble = null), 4000);
+  }
+
   // A tap (or Enter/Space) is a pat: a wiggle and a line about how it's getting on.
   let line = 0;
-  let bubbleTimer: ReturnType<typeof setTimeout> | undefined;
   function pat() {
     if (!s || performance.now() - droppedAt < 400) return;
     selectionHaptic();
     play(squashEl, [{}, { transform: 'rotate(-8deg)', offset: 0.25 }, { transform: 'rotate(6deg)', offset: 0.6 }, {}], 420);
     const lines = PET_LINES[mood.mood];
-    bubbleLeft = s.x + PET_W / 2 < (world.left + world.right) / 2;
-    bubbleBelow = s.y - PET_H - world.top < 90;
-    bubble = lines[line++ % lines.length];
-    clearTimeout(bubbleTimer);
-    bubbleTimer = setTimeout(() => (bubble = null), 4000);
+    say(lines[line++ % lines.length]);
     wave();
   }
+
+  // A new NEA reading that moves the band: a sparkle as it clears, a brace as it worsens, and a
+  // line either way. Switching area or period isn't the air changing (bandShift).
+  let lastReading: Reading | null = null;
+  let shiftLine = 0;
+  // A refresh can land while it's still reading where it was left (STORAGE_WAIT_MS): it reacts once it's out.
+  let pendingShift: BandShift | null = null;
+  function react(shift: BandShift) {
+    if (!s) return void (pendingShift = shift);
+    pendingShift = null;
+    if (hidden || dragging) return; // tucked away or in hand: the user's choice, so it lets this one go
+    const lines = SHIFT_LINES[shift];
+    say(lines[shiftLine++ % lines.length]);
+    if (shift === 'down') {
+      play(sparkleEl, [{ opacity: 0, transform: 'translateY(2px) scale(0.8)' }, { opacity: 1, offset: 0.3 }, { opacity: 0, transform: 'translateY(-8px) scale(1)' }], 900);
+    } else {
+      play(squashEl, [{}, { transform: 'scale(1.06, 0.9)', offset: 0.35 }, {}], 360);
+    }
+  }
+  $effect(() => {
+    // The 24-hour PSI is NEA's own feed, with its own time; the 1h and 3h follow PM2.5's.
+    const asOf = period === '24h' ? snapshot.psiAsOf : snapshot.asOf;
+    const next: Reading = { asOf, area: area.id, period, band: band?.id ?? null };
+    untrack(() => {
+      const shift = bandShift(lastReading, next);
+      lastReading = next;
+      if (shift) react(shift);
+    });
+  });
   // A mouse pointing at it gets a wave (touch has no hover; it gets the pat's wave instead).
   function onpointerenter(e: PointerEvent) {
     if (e.pointerType === 'mouse' && s?.action !== 'wave' && !dragging && !reduce) wave();
@@ -288,6 +328,7 @@
       nextPick = performance.now() + 1200;
       draw();
       ready = true;
+      if (pendingShift) react(pendingShift);
     });
     return () => {
       stop();
@@ -410,6 +451,12 @@
                 <!-- grille -->
                 <path class="grille" d="M15 44 h18" />
                 {#if mood.sweat}<path class="sweat" d="M41 22 q2.6 3.4 0 5 q-2.6 -1.6 0 -5Z" />{/if}
+            </g>
+            <!-- a sparkle as the air clears; shown only while it plays -->
+            <g class="sparkle" bind:this={sparkleEl}>
+              <path d="M8 4 l1 2.4 l2.4 1 l-2.4 1 l-1 2.4 l-1 -2.4 l-2.4 -1 l2.4 -1Z" />
+              <path d="M40 0 l0.8 1.8 l1.8 0.8 l-1.8 0.8 l-0.8 1.8 l-0.8 -1.8 l-1.8 -0.8 l1.8 -0.8Z" />
+              <path d="M44 10 l0.6 1.4 l1.4 0.6 l-1.4 0.6 l-0.6 1.4 l-0.6 -1.4 l-1.4 -0.6 l1.4 -0.6Z" />
             </g>
             {#if mood.mood === 'dozing' && action === 'wait'}<text class="zz" x={facing < 0 ? 6 : 37} y="8">z</text>{/if}
           </svg>
@@ -554,6 +601,12 @@
   }
   .sweat {
     fill: var(--pet-sweat);
+  }
+  .sparkle {
+    fill: var(--band-good);
+    opacity: 0;
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
   }
   .zz {
     fill: var(--muted);
