@@ -80,6 +80,25 @@ export const PET_LINES: Record<Mood, string[]> = {
   heroic: ['Every blade, full speed.', 'I was built for this.', 'Not stopping till it clears.'],
 };
 
+export const NIGHT_LINES = ['Shh. Night shift.', 'Running quiet tonight.', 'Still on. Just quieter.'];
+export const LOVED_LINES = ['Aw. Fan’s all aflutter.', 'Okay, okay, I’m blushing.', 'Best pats in Singapore.'];
+
+/** 11 pm to 7 am in Singapore. */
+export function isNight(ms: number): boolean {
+  const h = new Date(ms + 8 * 3_600_000).getUTCHours();
+  return h >= 23 || h < 7;
+}
+
+/** Night, and the air's fine (dozing or happy): it puts on its nightcap and runs quiet. A purifier
+ *  with haze to filter stays up. */
+export const isSleepy = (mood: Mood, ms: number) => (mood === 'dozing' || mood === 'happy') && isNight(ms);
+
+export const COMBO_PATS = 3;
+export const COMBO_MS = 1500;
+
+/** The pats still inside the combo window, with this one added; COMBO_PATS of them is a combo. */
+export const recentPats = (times: number[], now: number) => [...times.filter((t) => now - t < COMBO_MS), now];
+
 /** What the pet last saw: one NEA reading for one area and period. */
 export interface Reading {
   asOf: string;
@@ -117,11 +136,14 @@ const WEIGHTS: Record<Mood, [PetAction, number][]> = {
   heroic: [['walk', 10], ['wait', 1], ['hop', 3], ['wave', 1]],
 };
 
-export const actionWeights = (mood: Mood) => WEIGHTS[mood];
+// At night, with little haze to filter, it mostly dozes.
+const NIGHT_WEIGHTS: [PetAction, number][] = [['wait', 12], ['walk', 3], ['wave', 1]];
 
-/** A weighted pick; `rand` in [0, 1). */
-export function pickAction(mood: Mood, rand: number): PetAction {
-  const w = WEIGHTS[mood];
+export const actionWeights = (mood: Mood, sleepy = false) => (sleepy ? NIGHT_WEIGHTS : WEIGHTS[mood]);
+
+/** A weighted pick; `rand` in [0, 1). `sleepy`: night, with little haze (`isSleepy`). */
+export function pickAction(mood: Mood, rand: number, sleepy = false): PetAction {
+  const w = actionWeights(mood, sleepy);
   let r = rand * w.reduce((n, [, k]) => n + k, 0);
   for (const [a, k] of w) if ((r -= k) < 0) return a;
   return w[0][0];

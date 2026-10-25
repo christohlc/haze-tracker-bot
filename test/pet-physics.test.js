@@ -9,8 +9,14 @@ import {
   leap,
   leapTarget,
   parseSaved,
+  COMBO_MS,
+  LOVED_LINES,
+  NIGHT_LINES,
   PET_LINES,
   SHIFT_LINES,
+  isNight,
+  isSleepy,
+  recentPats,
   bandShift,
   petMood,
   pickAction,
@@ -151,6 +157,35 @@ test('only a new NEA reading for the same area and period moves the band', () =>
   assert.equal(bandShift(r('unhealthy'), r('moderate', { asOf: '11:00', period: '1h' })), null, 'another period');
   assert.equal(bandShift(r(null), r('good', { asOf: '11:00' })), null, 'no reading before');
   for (const line of [...SHIFT_LINES.up, ...SHIFT_LINES.down]) {
+    assert.ok(line.length <= 40, line);
+    assert.doesNotMatch(line, /mask|indoors|stay in|go out|exercise|safe/i, line);
+  }
+});
+
+test('night is 11 pm to 7 am in Singapore, and only a purifier with little to filter dozes', () => {
+  const sgt = (hhmm) => Date.parse(`2026-10-25T${hhmm}:00+08:00`);
+  assert.equal(isNight(sgt('22:59')), false);
+  assert.equal(isNight(sgt('23:00')), true);
+  assert.equal(isNight(sgt('03:30')), true);
+  assert.equal(isNight(sgt('06:59')), true);
+  assert.equal(isNight(sgt('07:00')), false);
+  assert.equal(isSleepy('happy', sgt('01:00')), true);
+  assert.equal(isSleepy('heroic', sgt('01:00')), false, 'haze to filter: it stays up');
+  assert.equal(isSleepy('dozing', sgt('12:00')), false);
+  assert.ok(!actionWeights('happy', true).some(([a]) => a === 'hop'), 'no hopping at night');
+  assert.equal(pickAction('happy', 0, true), 'wait');
+});
+
+test('three pats inside the window are a combo; old ones drop out', () => {
+  let pats = recentPats([], 0);
+  pats = recentPats(pats, 400);
+  assert.equal(recentPats(pats, 900).length, 3);
+  assert.equal(recentPats(pats, COMBO_MS + 300).length, 2, 'the first pat is too old');
+  assert.deepEqual(recentPats([0, 100], 5000), [5000]);
+});
+
+test('extra lines give no advice either', () => {
+  for (const line of [...NIGHT_LINES, ...LOVED_LINES]) {
     assert.ok(line.length <= 40, line);
     assert.doesNotMatch(line, /mask|indoors|stay in|go out|exercise|safe/i, line);
   }

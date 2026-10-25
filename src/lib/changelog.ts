@@ -9,6 +9,12 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-25-pet-play',
+    date: '2026-10-25',
+    title: 'More ways to play with your purifier',
+    body: 'Pat it three times quickly for hearts, or hold it down to send its fan into turbo. Late at night, when the air is fine, it puts on a nightcap and dozes.',
+  },
+  {
     id: '2026-10-25-pet-air',
     date: '2026-10-25',
     title: 'Watch your purifier at work',

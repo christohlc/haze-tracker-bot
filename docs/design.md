@@ -46,7 +46,7 @@ which is described below.
 | Regions | `--region-north` … `--region-south` | Fixed order matching `REGIONS`. Never cycled or reassigned |
 | Status | `--status-good`, `--status-critical` | Feed health, errors, “Stop all alerts” |
 | Haze map | `--map-sea`, `--map-land`, `--map-coast`, `--map-label`, `--haze-moderate`, `--haze-dense`, `--map-fire` | Haze hues follow NEA’s map (orange moderate, brown-red dense) so they read the same as haze.gov.sg |
-| Purifier pet | `--pet-body`, `--pet-vent`, `--pet-line`, `--pet-blush`, `--pet-sweat`, `--pet-puff`, `--pet-speck` | A pale appliance in both schemes, so its face reads on any card. Puffs (clean air) are cool blue, specks (haze) warm grey |
+| Purifier pet | `--pet-body`, `--pet-vent`, `--pet-line`, `--pet-blush`, `--pet-sweat`, `--pet-puff`, `--pet-speck`, `--pet-heart`, `--pet-cap` | A pale appliance in both schemes, so its face reads on any card. Puffs (clean air) are cool blue, specks (haze) warm grey |
 | Shape | `--radius` 16px, `--gutter` 16px, `--shadow-thumb` | The shadow lifts a thumb or knob off its track |
 | Motion | `--ease-out`, `--ease-in-out`, `--ease-push` | `--ease-push` only for a view a tap pushes in (a region's page) |
 
@@ -302,6 +302,14 @@ It's written small, with no physics or canvas library.
 - Its work shows: puffs of clean air rise from the top (one at low fan, two on high, three flat out,
   faster as the fan speeds up), and from Unhealthy up, specks of haze drift into the grille. CSS loops only,
   so they stop with the fan under reduced motion and off screen.
+- Play: three pats inside 1.5 s (`recentPats`) and hearts rise, with a success haptic, a quick
+  wiggle and a line of its own. Holding it revs the fan a step at 150 ms, and at 500 ms it's turbo
+  for 2 s: fan flat out, a shake, a light impact, no bubble. Let go early and it drops back (a
+  spin's speed can't ease); the click that ends a turbo press isn't a pat. A fast scroll (over
+  2.5 px/ms, measured per frame) while it rides a card gets a cling wobble. There's no double-tap:
+  telling one from a pat would hold every pat back 300 ms.
+- Night (11 pm–7 am SGT, `isSleepy`) with little haze (dozing or happy): a nightcap, mostly
+  dozing, and night lines. With haze to filter it stays up.
 - When a new NEA reading moves the band, it says so: a sparkle and a line as the air clears, a brace
   and a line as it worsens (`bandShift`). Only a new `asOf` for the same area and period counts, so
   switching area or 1h/24h never reads as the air changing (24-hour PSI goes by `psiAsOf`). It reacts
@@ -313,7 +321,7 @@ It's written small, with no physics or canvas library.
   while there's none. It sits at z-index 4,
   over the tab bar and under the game, which hides it.
 - Only the pet takes the pointer, so whatever is under it stays tappable. A drag past 10px picks it
-  up (a selection tick); less is a tap, a pat (a light impact, a wiggle and a speech bubble).
+  up (a selection tick); less is a tap, a pat (a selection tick, a wiggle and a speech bubble).
   The bubble's “Tuck away” hides it; the Purifier pet card in More brings it back. The spot it
   was dropped in is remembered (as fractions of the screen), not every place it wanders to.
 - Motion: its position is a transform set each frame; fan, feet and breathing are CSS loops under

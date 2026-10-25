@@ -9,8 +9,19 @@
   import { ambient, appVisible, onAppVisible, onReducedMotion, reducedMotion } from '../lib/motion';
   import { psiKey, type Period } from '../lib/period';
   import { STORE_KEYS } from '../lib/store-keys';
-  import { STORAGE_WAIT_MS, getStored, lockVerticalSwipes, selectionHaptic, setStored } from '../lib/telegram';
   import {
+    STORAGE_WAIT_MS,
+    getStored,
+    impactHaptic,
+    lockVerticalSwipes,
+    notifyHaptic,
+    selectionHaptic,
+    setStored,
+  } from '../lib/telegram';
+  import {
+    COMBO_PATS,
+    LOVED_LINES,
+    NIGHT_LINES,
     PET_H,
     PET_LINES,
     PET_W,
@@ -20,11 +31,13 @@
     clamp,
     dragTo,
     fromSaved,
+    isSleepy,
     leap,
     leapTarget,
     parseSaved,
     petMood,
     pickAction,
+    recentPats,
     release,
     startAction,
     step,
@@ -55,13 +68,24 @@
   // The same band as the hero, so the pet and the big number agree.
   const band = $derived(psiBand(readingsFor(snapshot, area.id)[psiKey(period)]?.value ?? null));
   const mood = $derived(petMood(band?.id));
+  // Night with little haze: nightcap on, mostly dozing. The clock ticks once a minute.
+  let clock = $state(Date.now());
+  const sleepy = $derived(isSleepy(mood.mood, clock));
+  // Held, the fan revs a step; past HOLD_MS it's turbo, flat out, for TURBO_MS.
+  let revving = $state(false);
+  let turbo = $state(false);
+  const fan = $derived(turbo ? 3 : revving ? Math.min(mood.fan + 1, 3) : mood.fan);
 
   let el = $state<HTMLElement>();
   let bounds = $state<HTMLElement>();
   let squashEl = $state<HTMLElement>();
+  let wiggleEl = $state<HTMLElement>();
+  let heartsEl = $state<SVGElement>();
   let sparkleEl = $state<SVGElement>();
   let bodyEl = $state<HTMLElement>();
   let action = $state<PetAction>('fall');
+  // Eyes shut and a z: dozing, or a sleepy night, while it waits (turbo wakes it).
+  const napping = $derived((mood.mood === 'dozing' || sleepy) && action === 'wait' && !turbo);
   let facing = $state<1 | -1>(1);
   let ready = $state(false);
   let bubble = $state<string | null>(null);
@@ -107,7 +131,7 @@
       return;
     }
     if (reduce || now < nextPick) return;
-    const a = pickAction(mood.mood, Math.random());
+    const a = pickAction(mood.mood, Math.random(), sleepy);
     startAction(s, a, Math.random());
     nextPick = now + (actionMs(a, Math.random()) || 600);
   }
@@ -166,6 +190,7 @@
     const dt = last ? now - last : 16;
     last = now;
     think(now);
+    cling(dt);
     if (pointer && dragging) dragTo(s, pointer.x - grab.x, pointer.y - grab.y, dt, world);
     else {
       const wasAir = s.on == null;
@@ -188,6 +213,7 @@
     if (frame || hidden || !appVisible()) return;
     clearTimeout(slow);
     last = 0;
+    lastScrollY = window.scrollY;
     dirty = true;
     frame = requestAnimationFrame(tick);
   }
@@ -205,8 +231,40 @@
 
   let ease = 'ease-out';
   /** A one-off move (Web Animations, so it needs no remount to replay). */
-  function play(node: Element | undefined, keyframes: Keyframe[], duration: number) {
-    if (!reduce) node?.animate?.(keyframes, { duration, easing: ease });
+  function play(node: Element | undefined, keyframes: Keyframe[], duration: number, delay = 0) {
+    if (!reduce) node?.animate?.(keyframes, { duration, delay, easing: ease, fill: 'backwards' });
+  }
+  /** Fades in, rises and fades out: the sparkle and the hearts. */
+  const floatUp = (rise: number): Keyframe[] => [
+    { opacity: 0, transform: 'translateY(0) scale(0.8)' },
+    { opacity: 1, offset: 0.3 },
+    { opacity: 0, transform: `translateY(${-rise}px) scale(1)` },
+  ];
+
+  // Hold for turbo: the fan revs while it's held, so you can see it coming; let go early and it
+  // drops back (a spin's speed can't ease). A move past TAP_SLOP is a drag instead, and the click
+  // that ends a turbo press isn't a pat.
+  const HOLD_RAMP_MS = 150;
+  const HOLD_MS = 500;
+  const TURBO_MS = 2000;
+  let holdTimers: ReturnType<typeof setTimeout>[] = [];
+  let turboTimer: ReturnType<typeof setTimeout> | undefined;
+  let turboPress = false; // this press set off a turbo
+  function startHold() {
+    turboPress = false;
+    holdTimers = [setTimeout(() => (revving = true), HOLD_RAMP_MS), setTimeout(goTurbo, HOLD_MS)];
+  }
+  function stopHold() {
+    holdTimers.forEach(clearTimeout);
+    holdTimers = [];
+    revving = false;
+  }
+  function goTurbo() {
+    stopHold();
+    turboPress = turbo = true;
+    impactHaptic();
+    clearTimeout(turboTimer);
+    turboTimer = setTimeout(() => (turbo = false), TURBO_MS);
   }
 
   function onpointerdown(e: PointerEvent) {
@@ -218,6 +276,7 @@
     }
     pointer = { id: e.pointerId, x: e.clientX, y: e.clientY, startX: e.clientX, startY: e.clientY };
     grab = { x: e.clientX - s.x, y: e.clientY - s.y };
+    startHold();
     start();
   }
   function onpointermove(e: PointerEvent) {
@@ -226,6 +285,7 @@
     pointer.y = e.clientY;
     if (!dragging && Math.hypot(e.clientX - pointer.startX, e.clientY - pointer.startY) > TAP_SLOP) {
       dragging = true;
+      stopHold();
       bubble = null;
       unlockSwipes = lockVerticalSwipes(); // a downward drag mustn't minimise the app
       selectionHaptic();
@@ -234,6 +294,7 @@
   }
   function endDrag() {
     pointer = null;
+    stopHold();
     if (!dragging) return false;
     dragging = false;
     unlockSwipes?.();
@@ -241,7 +302,9 @@
     return true;
   }
   function letGo(e: PointerEvent) {
-    if (!pointer || e.pointerId !== pointer.id || !s || !endDrag()) return;
+    if (!pointer || e.pointerId !== pointer.id || !s) return;
+    if (turboPress) droppedAt = performance.now(); // the click that follows isn't a pat
+    if (!endDrag()) return;
     droppedAt = performance.now();
     moved = true;
     release(s); // the next step throws it, or under reduced motion puts it straight down
@@ -259,14 +322,29 @@
     bubbleTimer = setTimeout(() => (bubble = null), 4000);
   }
 
-  // A tap (or Enter/Space) is a pat: a wiggle and a line about how it's getting on.
+  // A tap (or Enter/Space) is a pat: a wiggle and a line about how it's getting on. Three in quick
+  // succession and it's smitten: hearts and a line of its own.
   let line = 0;
+  let pats: number[] = [];
   function pat() {
-    if (!s || performance.now() - droppedAt < 400) return;
-    selectionHaptic();
-    play(squashEl, [{}, { transform: 'rotate(-8deg)', offset: 0.25 }, { transform: 'rotate(6deg)', offset: 0.6 }, {}], 420);
-    const lines = PET_LINES[mood.mood];
-    say(lines[line++ % lines.length]);
+    const now = performance.now();
+    if (!s || now - droppedAt < 400) return;
+    pats = recentPats(pats, now);
+    const wiggle = (deg: number, ms: number) =>
+      play(squashEl, [{}, { transform: `rotate(${-deg}deg)`, offset: 0.25 }, { transform: `rotate(${deg * 0.75}deg)`, offset: 0.6 }, {}], ms);
+    if (pats.length >= COMBO_PATS) {
+      pats = [];
+      notifyHaptic('success');
+      wiggle(10, 300);
+      const rise = floatUp(12);
+      [...(heartsEl?.children ?? [])].forEach((heart, i) => play(heart, rise, 450, i * 60));
+      say(LOVED_LINES[line++ % LOVED_LINES.length]);
+    } else {
+      selectionHaptic();
+      wiggle(8, 420);
+      const lines = sleepy ? NIGHT_LINES : PET_LINES[mood.mood];
+      say(lines[line++ % lines.length]);
+    }
     wave();
   }
 
@@ -283,7 +361,7 @@
     const lines = SHIFT_LINES[shift];
     say(lines[shiftLine++ % lines.length]);
     if (shift === 'down') {
-      play(sparkleEl, [{ opacity: 0, transform: 'translateY(2px) scale(0.8)' }, { opacity: 1, offset: 0.3 }, { opacity: 0, transform: 'translateY(-8px) scale(1)' }], 900);
+      play(sparkleEl, floatUp(8), 900);
     } else {
       play(squashEl, [{}, { transform: 'scale(1.06, 0.9)', offset: 0.35 }, {}], 360);
     }
@@ -314,9 +392,24 @@
     start(); // wakes the slow loop
   }
 
+  // A fast scroll while it's riding a card: it clings on with a wobble. Measured per frame, so the
+  // speed doesn't depend on how often the device sends scroll events.
+  const CLING_SPEED = 2.5; // px/ms, about 40px a frame
+  const CLING_GAP_MS = 600;
+  let lastScrollY = 0;
+  let clungAt = 0;
+  function cling(dt: number) {
+    const dy = window.scrollY - lastScrollY;
+    lastScrollY = window.scrollY;
+    if (Math.abs(dy) / dt < CLING_SPEED || typeof s?.on !== 'number' || dragging || last - clungAt < CLING_GAP_MS) return;
+    clungAt = last;
+    play(wiggleEl, [{}, { transform: `translateY(${dy > 0 ? -2 : 2}px) rotate(-6deg)`, offset: 0.3 }, { transform: 'rotate(4deg)', offset: 0.65 }, {}], 450);
+  }
+
   onMount(() => {
     ease = getComputedStyle(document.documentElement).getPropertyValue('--ease-out').trim() || ease;
     const offVisible = onAppVisible((v) => (v ? start() : stop()));
+    const minute = setInterval(() => (clock = Date.now()), 60_000);
     const offMotion = onReducedMotion((r) => {
       reduce = r;
       start(); // the next step puts it straight down if it was mid-air
@@ -338,6 +431,9 @@
       unlockSwipes?.();
       clearTimeout(saveTimer);
       clearTimeout(bubbleTimer);
+      clearTimeout(turboTimer);
+      clearInterval(minute);
+      stopHold();
       offVisible();
       offMotion();
     };
@@ -367,8 +463,9 @@
 
 {#if !hidden}
   <div
-    class="pet mood-{mood.mood} fan-{mood.fan} act-{action}"
+    class="pet mood-{mood.mood} fan-{fan} act-{action}"
     class:dragging
+    class:turbo
     class:ready
     class:grounded={grounded && !bubble && !dragging}
     bind:this={el}
@@ -389,17 +486,18 @@
       type="button"
       class="body"
       bind:this={bodyEl}
-      aria-label="Air purifier pet. Tap to pat, drag to move."
+      aria-label="Air purifier pet. Tap to pat, hold for turbo, drag to move."
       onclick={pat}
       {onpointerdown}
       {onpointermove}
       onpointerup={letGo}
       onpointercancel={letGo}
       onlostpointercapture={letGo}
+      oncontextmenu={(e) => e.preventDefault()}
       {onpointerenter}
     >
       <span class="squash" bind:this={squashEl}>
-        <span class="wiggle">
+        <span class="wiggle" bind:this={wiggleEl}>
           <svg viewBox="0 0 48 56" width={PET_W} height={PET_H} aria-hidden="true">
             <!-- a drawn shadow, not a filter: a filter would be redrawn with every turn of the fan -->
             <ellipse class="shadow" cx="24" cy="54.5" rx="15" ry="2" />
@@ -438,7 +536,7 @@
                     <circle class="eye" cx="18" cy="32" r="2.4" />
                     <circle class="eye" cx="30" cy="32" r="2.4" />
                     <ellipse class="eye" cx="24" cy="38.5" rx="2" ry="2.4" />
-                  {:else if mood.mood === 'dozing' && action === 'wait'}
+                  {:else if napping}
                     <path class="line" d="M15.5 32 q2.5 2 5 0 M27.5 32 q2.5 2 5 0" />
                     <path class="line" d="M22 38 q2 1.4 4 0" />
                   {:else if mood.mood === 'struggling'}
@@ -463,6 +561,11 @@
                 </g>
                 <!-- grille -->
                 <path class="grille" d="M15 44 h18" />
+                <!-- a nightcap, after 11 pm while there's little to filter -->
+                {#if sleepy}
+                  <path class="cap" d="M9 9.5 Q12 -1 26 1 Q35 2.5 41 8 L37 10 Q30 6 9 9.5Z" />
+                  <circle class="cap-pom" cx="41.5" cy="8.5" r="2.4" />
+                {/if}
                 {#if mood.sweat}<path class="sweat" d="M41 22 q2.6 3.4 0 5 q-2.6 -1.6 0 -5Z" />{/if}
             </g>
             <!-- a sparkle as the air clears; shown only while it plays -->
@@ -471,7 +574,13 @@
               <path d="M40 0 l0.8 1.8 l1.8 0.8 l-1.8 0.8 l-0.8 1.8 l-0.8 -1.8 l-1.8 -0.8 l1.8 -0.8Z" />
               <path d="M44 10 l0.6 1.4 l1.4 0.6 l-1.4 0.6 l-0.6 1.4 l-0.6 -1.4 l-1.4 -0.6 l1.4 -0.6Z" />
             </g>
-            {#if mood.mood === 'dozing' && action === 'wait'}<text class="zz" x={facing < 0 ? 6 : 37} y="8">z</text>{/if}
+            <!-- hearts for a run of pats; shown only while they play -->
+            <g class="hearts" bind:this={heartsEl}>
+              <path d="M10 6 c-1.6 -2.6 -5 -1 -3.4 1.6 L10 11 L13.4 7.6 C15 5 11.6 3.4 10 6Z" />
+              <path d="M24 2 c-1.2 -2 -3.8 -0.8 -2.6 1.2 L24 5.8 L26.6 3.2 C27.8 1.2 25.2 0 24 2Z" />
+              <path d="M38 6 c-1.6 -2.6 -5 -1 -3.4 1.6 L38 11 L41.4 7.6 C43 5 39.6 3.4 38 6Z" />
+            </g>
+            {#if napping}<text class="zz" x={facing < 0 ? 6 : 37} y="8">z</text>{/if}
           </svg>
         </span>
       </span>
@@ -630,6 +739,23 @@
     transform-box: view-box;
     transform-origin: 24px 44px;
   }
+  .hearts path {
+    fill: var(--pet-heart);
+    opacity: 0;
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+  }
+  .cap {
+    fill: var(--pet-cap);
+    stroke: var(--pet-line);
+    stroke-width: 1.5;
+    stroke-linejoin: round;
+  }
+  .cap-pom {
+    fill: var(--pet-body);
+    stroke: var(--pet-line);
+    stroke-width: 1.5;
+  }
   .sparkle {
     fill: var(--band-good);
     opacity: 0;
@@ -746,6 +872,9 @@
     .sweat {
       animation: drip 1.6s ease-in infinite;
     }
+    .turbo .wiggle {
+      animation: shake 120ms ease-in-out infinite;
+    }
     /* One puff at low fan, two on high, three flat out, evenly spaced, rising faster as the fan speeds up. */
     .puffs circle {
       animation: rise var(--puff-s, 2.4s) ease-in-out calc(var(--i) * var(--puff-s, 2.4s) / var(--puffs, 1) * -1) infinite;
@@ -774,6 +903,14 @@
     }
   }
 
+  @keyframes shake {
+    25% {
+      transform: translateX(-0.8px) rotate(-1deg);
+    }
+    75% {
+      transform: translateX(0.8px) rotate(1deg);
+    }
+  }
   @keyframes rise {
     from {
       opacity: 0;
