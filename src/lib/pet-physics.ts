@@ -3,7 +3,9 @@
 // Matter.js + PixiJS. Pure (no DOM), so `node --test` covers it; PurifierPet.svelte measures the
 // page and draws. Units: px and px/s, y down; the pet's (x, y) is its left edge and its feet.
 
-import { bandRank } from '../../tgcloud/lib/psi.js';
+import { REGIONS } from '../../tgcloud/lib/config.js';
+import { bandRank, pm25Band } from '../../tgcloud/lib/psi.js';
+import type { HourRow, RegionId } from './api';
 import type { Period } from './period';
 
 export const PET_W = 48;
@@ -82,6 +84,10 @@ export const PET_LINES: Record<Mood, string[]> = {
 
 export const NIGHT_LINES = ['Shh. Night shift.', 'Running quiet tonight.', 'Still on. Just quieter.'];
 export const LOVED_LINES = ['Aw. Fan’s all aflutter.', 'Okay, okay, I’m blushing.', 'Best pats in Singapore.'];
+/** The loved lines, with one that says its name once it has one. */
+export const lovedLines = (name: string) => (name ? [...LOVED_LINES, `${name} loves a pat.`] : LOVED_LINES);
+export const GREY_LINE = 'Filter’s looking grey.';
+export const FRESH_LINE = 'Fresh filter. Ahh.';
 
 /** 11 pm to 7 am in Singapore. */
 export function isNight(ms: number): boolean {
@@ -98,6 +104,71 @@ export const COMBO_MS = 1500;
 
 /** The pats still inside the combo window, with this one added; COMBO_PATS of them is a combo. */
 export const recentPats = (times: number[], now: number) => [...times.filter((t) => now - t < COMBO_MS), now];
+
+export type Outfit = 'halloween' | 'deepavali' | 'christmas' | 'cny';
+
+// SGT dates, inclusive. Deepavali and Chinese New Year move: add next year's when this one passes.
+const OUTFITS: [Outfit, string, string][] = [
+  ['halloween', '10-24', '10-31'],
+  ['christmas', '12-18', '12-26'],
+  ['deepavali', '2026-11-06', '2026-11-09'],
+  ['cny', '2027-02-04', '2027-02-11'],
+];
+
+/** What it's wearing on an SGT date (YYYY-MM-DD), if anything. Yearly dates are given as MM-DD. */
+export function petOutfit(ymd: string): Outfit | null {
+  for (const [outfit, from, to] of OUTFITS) {
+    const day = from.length === 5 ? ymd.slice(5) : ymd;
+    if (day >= from && day <= to) return outfit;
+  }
+  return null;
+}
+
+/** Its filter: how grimy (0 clean to 1) and the last NEA hour counted. */
+export interface Filter {
+  dirt: number;
+  through: string;
+}
+
+// Grime an hour of PM2.5 adds, by NEA's band: about 2 days of Elevated, a day of High or 12 hours
+// of Very high to grey it (GRIMY).
+const GRIME: Record<string, number> = { II: 1 / 80, III: 1 / 40, IV: 1 / 20 };
+export const GRIMY = 0.6;
+
+/**
+ * Adds the hours of NEA's PM2.5 history after `f.through`, for the area (null: the highest region).
+ * Only ever adds, so hours scrolling out of the history never clean it. No filter yet: a fresh one,
+ * counting from the latest hour.
+ */
+export function addGrime(f: Filter | null, history: HourRow[], area: string | null): Filter {
+  const latest = history.at(-1)?.t ?? f?.through ?? '';
+  if (!f) return { dirt: 0, through: latest };
+  if (latest <= f.through) return f; // nothing new: the same filter, so callers can compare by identity
+  const ids = (area ? [area] : REGIONS.map((r) => r.id)) as RegionId[];
+  let dirt = f.dirt;
+  for (const row of history) {
+    if (row.t <= f.through) continue;
+    const pm25 = Math.max(...ids.map((id) => row[id] ?? -Infinity));
+    dirt += GRIME[pm25Band(Number.isFinite(pm25) ? pm25 : null)?.id ?? ''] ?? 0;
+  }
+  return { dirt: Math.min(1, dirt), through: latest };
+}
+
+/** How grey it looks: 0 clean, 1 greying (half of GRIMY), 2 grey (it asks for a new filter). */
+export const grimeLevel = (f: Filter | null): 0 | 1 | 2 => (!f ? 0 : f.dirt >= GRIMY ? 2 : f.dirt >= GRIMY / 2 ? 1 : 0);
+
+export function parseFilter(raw: string | null): Filter | null {
+  try {
+    const f = JSON.parse(raw ?? 'null');
+    return typeof f?.dirt === 'number' && typeof f?.through === 'string' ? { dirt: clamp(f.dirt, 0, 1), through: f.through } : null;
+  } catch {
+    return null;
+  }
+}
+
+export const NAME_MAX = 16;
+/** A name as typed: trimmed, inner runs of spaces made one, cut to NAME_MAX characters. */
+export const cleanName = (raw: string) => [...raw.trim().replace(/\s+/g, ' ')].slice(0, NAME_MAX).join('').trim();
 
 /** What the pet last saw: one NEA reading for one area and period. */
 export interface Reading {

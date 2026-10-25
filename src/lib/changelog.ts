@@ -9,6 +9,12 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-25-pet-personality',
+    date: '2026-10-25',
+    title: 'Name your purifier',
+    body: 'Give your purifier a name in More. It dresses up for Halloween, Deepavali, Christmas and Chinese New Year, its filter greys as haze rolls through (tap it to change the filter), and once tucked away it peeks out now and then.',
+  },
+  {
     id: '2026-10-25-pet-play',
     date: '2026-10-25',
     title: 'More ways to play with your purifier',

@@ -51,6 +51,12 @@
     petHidden = !shown;
     setStored(STORE_KEYS.petHidden, shown ? '0' : '1');
   }
+  let petName = $state('');
+  getStored(STORE_KEYS.petName, STORAGE_WAIT_MS).then((v) => (petName = v ?? ''));
+  function namePet(name: string) {
+    petName = name;
+    setStored(STORE_KEYS.petName, name);
+  }
   // The haze map and its land outline are only fetched once Outlook is opened.
   const loadHazeMapCard = () => import('./components/HazeMap.svelte');
 
@@ -246,7 +252,7 @@
         {#if data.news}<NewsCard news={data.news} serverTime={data.serverTime} />{/if}
         <CigCalc snapshot={data.snapshot} />
         <AqiExplainer snapshot={data.snapshot} />
-        <PetCard shown={petHidden === false} onchange={showPet} />
+        <PetCard shown={petHidden === false} onchange={showPet} name={petName} onname={namePet} />
         <WhatsNew {seen} />
         <Sources sources={data.sources} />
       </div>
@@ -264,7 +270,16 @@
 
 {#if data && petHidden != null}
   {#await loadPet() then m}
-    <m.default snapshot={data.snapshot} {period} hidden={petHidden || ninja} onhide={() => showPet(false)} />
+    <m.default
+      snapshot={data.snapshot}
+      history={data.history}
+      {period}
+      {tab}
+      name={petName}
+      hidden={petHidden || ninja}
+      peekable={petHidden && !ninja}
+      onhide={() => showPet(false)}
+    />
   {/await}
 {/if}
 

@@ -1,10 +1,11 @@
 <script lang="ts">
   import { onMount, untrack } from 'svelte';
-  import { fade, scale } from 'svelte/transition';
+  import { fade, fly, scale } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
   import { psiBand } from '../../tgcloud/lib/psi.js';
   import { readingsFor } from '../../tgcloud/lib/snapshot.js';
-  import type { Snapshot } from '../lib/api';
+  import { sgtDateOf } from '../../tgcloud/lib/time.js';
+  import type { HourRow, Snapshot } from '../lib/api';
   import { area } from '../lib/area.svelte';
   import { ambient, appVisible, onAppVisible, onReducedMotion, reducedMotion } from '../lib/motion';
   import { psiKey, type Period } from '../lib/period';
@@ -20,13 +21,16 @@
   } from '../lib/telegram';
   import {
     COMBO_PATS,
-    LOVED_LINES,
+    FRESH_LINE,
+    GREY_LINE,
     NIGHT_LINES,
     PET_H,
     PET_LINES,
     PET_W,
     SHIFT_LINES,
     actionMs,
+    addGrime,
+    grimeLevel,
     bandShift,
     clamp,
     dragTo,
@@ -34,7 +38,10 @@
     isSleepy,
     leap,
     leapTarget,
+    lovedLines,
+    parseFilter,
     parseSaved,
+    petOutfit,
     petMood,
     pickAction,
     recentPats,
@@ -44,6 +51,7 @@
     toSaved,
     type PetAction,
     type BandShift,
+    type Filter,
     type PetState,
     type Platform,
     type Reading,
@@ -54,12 +62,27 @@
   // and thrown, and works harder as the haze gets worse. Physics in lib/pet-physics.ts.
   let {
     snapshot,
+    history,
     period,
+    tab,
+    name,
     hidden,
+    peekable,
     onhide,
-  }: { snapshot: Snapshot; period: Period; hidden: boolean; onhide: () => void } = $props();
+  }: {
+    snapshot: Snapshot;
+    history: HourRow[];
+    period: Period;
+    tab: string;
+    name: string;
+    hidden: boolean;
+    /** Tucked away (not hidden by the game): it may peek over the tab bar. */
+    peekable: boolean;
+    onhide: () => void;
+  } = $props();
 
   const POS_KEY = STORE_KEYS.petPos;
+  const FILTER_KEY = STORE_KEYS.petFilter;
   // [cx, cy, r]. The middle puff first: at low fan only it runs. Specks start off the sides.
   const PUFFS = [[23, 2, 2.2], [18, 3, 1.8], [28, 3.5, 1.6]];
   const SPECKS = [[2, 40, 1.1], [46, 42, 1], [0, 47, 0.9], [48, 48, 1.2]];
@@ -311,10 +334,12 @@
     nextPick = droppedAt + 1500;
   }
 
-  /** Opens the bubble with a line, toward the middle of the screen, for 4 s. */
+  /** Opens the bubble with a line, toward the middle of the screen, for 4 s. `offer`: with Change filter. */
   let bubbleTimer: ReturnType<typeof setTimeout> | undefined;
-  function say(text: string) {
+  let offerFilter = $state(false);
+  function say(text: string, offer = false) {
     if (!s) return;
+    offerFilter = offer;
     bubbleLeft = s.x + PET_W / 2 < (world.left + world.right) / 2;
     bubbleBelow = s.y - PET_H - world.top < 90;
     bubble = text;
@@ -326,6 +351,7 @@
   // succession and it's smitten: hearts and a line of its own.
   let line = 0;
   let pats: number[] = [];
+  let askFilter = false;
   function pat() {
     const now = performance.now();
     if (!s || now - droppedAt < 400) return;
@@ -338,15 +364,69 @@
       wiggle(10, 300);
       const rise = floatUp(12);
       [...(heartsEl?.children ?? [])].forEach((heart, i) => play(heart, rise, 450, i * 60));
-      say(LOVED_LINES[line++ % LOVED_LINES.length]);
+      const loved = lovedLines(name);
+      say(loved[line++ % loved.length]);
     } else {
       selectionHaptic();
       wiggle(8, 420);
       const lines = sleepy ? NIGHT_LINES : PET_LINES[mood.mood];
-      say(lines[line++ % lines.length]);
+      if (grime === 2 && (askFilter = !askFilter)) say(GREY_LINE, true); // every other pat, so it doesn't nag
+      else say(lines[line++ % lines.length]);
     }
     wave();
   }
+
+  // Its filter greys with the haze hours in NEA's history since it last looked, for your area
+  // (addGrime), and only ever greys: a pat while it's grimy offers a fresh one. Purely for fun.
+  let filter = $state<Filter | null>(null);
+  let filterRead = $state(false);
+  const grime = $derived(grimeLevel(filter));
+  function saveFilter(f: Filter) {
+    filter = f;
+    setStored(FILTER_KEY, JSON.stringify(f));
+  }
+  $effect(() => {
+    if (!filterRead) return;
+    const was = untrack(() => filter);
+    const next = addGrime(was, history, area.id);
+    if (next !== was) untrack(() => saveFilter(next));
+  });
+  function changeFilter() {
+    if (!filter) return;
+    saveFilter({ dirt: 0, through: filter.through });
+    notifyHaptic('success');
+    play(squashEl, [{}, { transform: 'translateY(-4px) rotate(-6deg)', offset: 0.4 }, {}], 360);
+    say(FRESH_LINE);
+  }
+
+  // Something to wear on the day (SGT), unless it's in its nightcap.
+  const outfit = $derived(sleepy ? null : petOutfit(sgtDateOf(clock)));
+
+  // Tucked away, it peeks over the tab bar's right end now and then: after a tab switch, at most
+  // once a minute, for 3 s. Only decoration (no pointer), so it never covers a tap.
+  const PEEK_MS = 3000;
+  const PEEK_SHOWS = 36; // px over the bar: down to its eyes (y 32, r 2)
+  const PEEK_GAP_MS = 60_000;
+  let peek = $state<{ left: number; top: number } | null>(null);
+  let peekedAt = -PEEK_GAP_MS;
+  let lastTab: string | null = null;
+  let peekTimer: ReturnType<typeof setTimeout> | undefined;
+  $effect(() => {
+    const t = tab;
+    untrack(() => {
+      const switched = lastTab != null && t !== lastTab;
+      lastTab = t;
+      const now = performance.now();
+      if (!switched || !peekable || now - peekedAt < PEEK_GAP_MS) return;
+      peekedAt = now;
+      measure();
+      const barTop = world.floor + 6; // measure() keeps the floor 6px above the tab bar
+      peek = { left: world.right - PET_W - 8, top: barTop - PEEK_SHOWS };
+      clearTimeout(peekTimer);
+      peekTimer = setTimeout(() => (peek = null), PEEK_MS);
+    });
+  });
+
 
   // A new NEA reading that moves the band: a sparkle as it clears, a brace as it worsens, and a
   // line either way. Switching area or period isn't the air changing (bandShift).
@@ -414,6 +494,10 @@
       reduce = r;
       start(); // the next step puts it straight down if it was mid-air
     });
+    getStored(FILTER_KEY, STORAGE_WAIT_MS).then((raw) => {
+      filter = parseFilter(raw);
+      filterRead = true;
+    });
     getStored(POS_KEY, STORAGE_WAIT_MS).then((raw) => {
       measure();
       const saved = parseSaved(raw);
@@ -432,6 +516,7 @@
       clearTimeout(saveTimer);
       clearTimeout(bubbleTimer);
       clearTimeout(turboTimer);
+      clearTimeout(peekTimer);
       clearInterval(minute);
       stopHold();
       offVisible();
@@ -478,7 +563,10 @@
     {#if bubble}
       <div class="bubble" class:left={bubbleLeft} class:below={bubbleBelow} in:scale={{ duration: reduce ? 0 : 180, start: 0.9, easing: cubicOut }} out:fade={{ duration: reduce ? 0 : 120 }}>
         <p>{bubble}</p>
-        <button type="button" class="tuck" onclick={tuckAway}>Tuck away</button>
+        <div class="actions">
+          {#if offerFilter}<button type="button" class="tuck" onclick={changeFilter}>Change filter</button>{/if}
+          <button type="button" class="tuck" onclick={tuckAway}>Tuck away</button>
+        </div>
       </div>
     {/if}
     </div>
@@ -486,7 +574,7 @@
       type="button"
       class="body"
       bind:this={bodyEl}
-      aria-label="Air purifier pet. Tap to pat, hold for turbo, drag to move."
+      aria-label="{name ? `${name}, your air purifier` : 'Air purifier pet'}. Tap to pat, hold for turbo, drag to move."
       onclick={pat}
       {onpointerdown}
       {onpointermove}
@@ -510,6 +598,8 @@
                 <path class="arm" d="M40 31 L46 22" />
                 <!-- body -->
                 <rect class="shell" x="6" y="6" width="36" height="43" rx="11" />
+                <!-- grime from the haze it has filtered, in two steps -->
+                <rect class="grime grime-{grime}" x="7" y="7" width="34" height="41" rx="10" />
                 <!-- the fan, seen through the top vent -->
                 <circle class="vent" cx="22" cy="17" r="8.5" />
                 <g class="fan">
@@ -566,6 +656,30 @@
                   <path class="cap" d="M9 9.5 Q12 -1 26 1 Q35 2.5 41 8 L37 10 Q30 6 9 9.5Z" />
                   <circle class="cap-pom" cx="41.5" cy="8.5" r="2.4" />
                 {/if}
+                <!-- dressed for the day -->
+                {#if outfit === 'halloween'}
+                  <g class="outfit">
+                    <ellipse class="pumpkin" cx="24" cy="3" rx="8" ry="4.6" />
+                    <path class="outfit-line" d="M20.5 0 q-1.5 3 0 6.6 M27.5 0 q1.5 3 0 6.6" />
+                    <path class="stem" d="M24 -1.6 q0.4 -2 2.2 -2.6" />
+                  </g>
+                {:else if outfit === 'christmas'}
+                  <g class="outfit">
+                    <path class="santa" d="M9 8 Q13 -3 26 -2 Q36 -1 41 9 L38 8 Q33 2 26 2.5 Q16 3 12 8Z" />
+                    <rect class="trim" x="8" y="6" width="31" height="4" rx="2" />
+                    <circle class="trim" cx="41" cy="9.5" r="2.6" />
+                  </g>
+                {:else if outfit === 'deepavali'}
+                  <g class="outfit">
+                    <path class="diya" d="M17 2 h14 q-1 4.4 -7 4.4 q-6 0 -7 -4.4Z" />
+                    <path class="flame" d="M24 -4.6 q2.4 3 0 5.6 q-2.4 -2.6 0 -5.6Z" />
+                  </g>
+                {:else if outfit === 'cny'}
+                  <g class="outfit">
+                    <circle class="mandarin" cx="24" cy="2.5" r="4.4" />
+                    <path class="leaf" d="M24 -1.8 q3 -2.6 5.6 -0.6 q-2.6 2 -5.6 0.6Z" />
+                  </g>
+                {/if}
                 {#if mood.sweat}<path class="sweat" d="M41 22 q2.6 3.4 0 5 q-2.6 -1.6 0 -5Z" />{/if}
             </g>
             <!-- a sparkle as the air clears; shown only while it plays -->
@@ -585,6 +699,20 @@
         </span>
       </span>
     </button>
+    </div>
+  </div>
+{/if}
+
+{#if peekable && peek}
+  <!-- Peeking over the tab bar while tucked away: decoration only. -->
+  <div class="peek" style:transform="translate3d({peek.left}px, {peek.top}px, 0)" aria-hidden="true">
+    <div transition:fly={{ y: 20, duration: reduce ? 0 : 240, easing: cubicOut }}>
+      <svg viewBox="0 0 48 56" width={PET_W} height={PET_H}>
+        <rect class="shell" x="6" y="6" width="36" height="43" rx="11" />
+        <circle class="vent" cx="22" cy="17" r="8.5" />
+        <circle class="eye" cx="18" cy="32" r="2" />
+        <circle class="eye" cx="30" cy="32" r="2" />
+      </svg>
     </div>
   </div>
 {/if}
@@ -807,6 +935,70 @@
     font-size: 0.9375rem;
     line-height: 1.3;
     overflow-wrap: anywhere;
+  }
+  .actions {
+    display: flex;
+    gap: 8px; /* more than the buttons' -6px margin, so their 44px hit areas don't overlap */
+  }
+  .grime {
+    fill: var(--pet-speck);
+    opacity: 0;
+    transition: opacity 400ms ease;
+  }
+  .grime-1 {
+    opacity: 0.18;
+  }
+  .grime-2 {
+    opacity: 0.35;
+  }
+  /* Costume art is fixed, like the nut in the game: a pumpkin is orange in either scheme. */
+  .outfit {
+    stroke: var(--pet-line);
+    stroke-width: 1.5;
+    stroke-linejoin: round;
+  }
+  .pumpkin {
+    fill: #f08a24;
+  }
+  .outfit-line,
+  .stem {
+    fill: none;
+    stroke-linecap: round;
+  }
+  .stem,
+  .leaf {
+    stroke: #3f7d2c;
+    stroke-width: 2;
+  }
+  .leaf {
+    fill: #5aa63c;
+    stroke-width: 1;
+  }
+  .santa {
+    fill: #d8352f;
+  }
+  .trim {
+    fill: var(--pet-body);
+  }
+  .diya {
+    fill: #c46a2b;
+  }
+  .flame {
+    fill: #ffb21f;
+    stroke: #e3741a;
+    stroke-width: 1;
+  }
+  .mandarin {
+    fill: #f7941d;
+  }
+  .peek {
+    position: fixed;
+    z-index: 2; /* under the tab bar (3): only its top shows over it */
+    left: 0;
+    top: 0;
+    width: 48px;
+    height: 56px;
+    pointer-events: none;
   }
   .tuck {
     margin: -2px 0 -6px -6px; /* a 44px hit area, laid out as the 32px it looks */

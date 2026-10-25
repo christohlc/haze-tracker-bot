@@ -10,6 +10,15 @@ import {
   leapTarget,
   parseSaved,
   COMBO_MS,
+  FRESH_LINE,
+  GREY_LINE,
+  GRIMY,
+  addGrime,
+  grimeLevel,
+  cleanName,
+  lovedLines,
+  parseFilter,
+  petOutfit,
   LOVED_LINES,
   NIGHT_LINES,
   PET_LINES,
@@ -189,6 +198,51 @@ test('extra lines give no advice either', () => {
     assert.ok(line.length <= 40, line);
     assert.doesNotMatch(line, /mask|indoors|stay in|go out|exercise|safe/i, line);
   }
+});
+
+test('outfits by SGT date, yearly and moving', () => {
+  assert.equal(petOutfit('2026-10-23'), null);
+  assert.equal(petOutfit('2026-10-24'), 'halloween');
+  assert.equal(petOutfit('2027-10-31'), 'halloween', 'every year');
+  assert.equal(petOutfit('2026-11-01'), null);
+  assert.equal(petOutfit('2026-11-08'), 'deepavali');
+  assert.equal(petOutfit('2027-11-08'), null, 'Deepavali moves: only the listed year');
+  assert.equal(petOutfit('2026-12-25'), 'christmas');
+  assert.equal(petOutfit('2026-12-27'), null);
+  assert.equal(petOutfit('2027-02-06'), 'cny');
+  for (const d of ['2026-11-05', '2026-11-10', '2027-02-03', '2027-02-12']) assert.equal(petOutfit(d), null, d);
+  assert.equal(petOutfit('2026-11-06'), 'deepavali');
+  assert.equal(petOutfit('2027-02-11'), 'cny');
+});
+
+test('the filter greys with haze hours from NEA and never cleans itself', () => {
+  const h = (t, pm) => ({ t: `2026-10-25T${t}:00:00+08:00`, west: pm, east: 10 });
+  const fresh = addGrime(null, [h('10', 200)], null);
+  assert.deepEqual(fresh, { dirt: 0, through: h('10').t }, 'a new filter starts clean, from the latest hour');
+  const one = addGrime(fresh, [h('10', 200), h('11', 200), h('12', 30)], null);
+  assert.ok(Math.abs(one.dirt - 1 / 40) < 1e-9, 'one hour of High; a Normal hour adds nothing');
+  assert.equal(one.through, h('12').t);
+  assert.deepEqual(addGrime(one, [h('12', 30)], null), one, 'nothing new');
+  assert.deepEqual(addGrime(one, [], null), one, 'history scrolled away: still as grimy');
+  assert.equal(addGrime(fresh, [h('11', 200)], 'east').dirt, 0, 'its own area only');
+  let f = fresh;
+  for (let i = 11; i < 24; i++) f = addGrime(f, [h(String(i), 300)], null);
+  assert.ok(f.dirt >= GRIMY && f.dirt <= 1, '13 hours of Very high greys it');
+  assert.deepEqual(parseFilter(JSON.stringify(one)), one);
+  assert.equal(addGrime(one, [h('12', 30)], null), one, 'unchanged: the same object');
+  assert.deepEqual([null, { dirt: 0.1 }, { dirt: 0.3 }, { dirt: 0.6 }].map(grimeLevel), [0, 0, 1, 2]);
+  assert.equal(parseFilter('nope'), null);
+  assert.equal(parseFilter('{"dirt":"x","through":"y"}'), null);
+});
+
+test('names are tidied and the lines use them without advice', () => {
+  assert.equal(cleanName('  Hazel   Nut  '), 'Hazel Nut');
+  assert.equal(cleanName('A'.repeat(40)).length, 16);
+  assert.equal([...cleanName('🌰'.repeat(20))].length, 16, 'cut by character, not code unit');
+  assert.equal(cleanName('   '), '');
+  assert.ok(lovedLines('Hazel').includes('Hazel loves a pat.'));
+  assert.equal(lovedLines('').length, 3);
+  for (const line of [GREY_LINE, FRESH_LINE]) assert.doesNotMatch(line, /mask|indoors|buy|replace your/i);
 });
 
 test('the wander AI picks by weight, like hedgehog-mode', () => {
