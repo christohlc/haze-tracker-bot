@@ -7,6 +7,8 @@ export const STORE_KEYS = {
   whatsNewSeen: 'whats_new_seen',
   petHidden: 'pet_hidden',
   petPos: 'pet_pos',
+  petName: 'pet_name',
+  petFilter: 'pet_filter',
   ninjaBest: 'ninja_best',
 } as const;
 

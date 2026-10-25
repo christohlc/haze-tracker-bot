@@ -40,6 +40,9 @@ export const PSI_BANDS = [
   { id: 'hazardous', label: 'Hazardous', max: Infinity, emoji: '🔴' },
 ];
 
+/** A band's place in PSI_BANDS, good first; -1 for no band. @param {string | null} id */
+export const bandRank = (id) => PSI_BANDS.findIndex((b) => b.id === id);
+
 /** @param {string | null | undefined} id */
 export const bandById = (id) => PSI_BANDS.find((b) => b.id === id) ?? null;
 

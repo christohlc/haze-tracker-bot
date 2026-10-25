@@ -34,7 +34,7 @@ code and this file disagree, fix one of them.
 
 Every colour, radius and easing is a CSS custom property in [`src/app.css`](../src/app.css).
 Components use the tokens and never hard-code a hex value. The exceptions are the game's nut
-art (see *Easter egg*) and the hero sky,
+art (see *Easter egg*), the purifier pet's costumes (see *Purifier pet*) and the hero sky,
 which is described below.
 
 | Group | Tokens | Notes |
@@ -46,7 +46,7 @@ which is described below.
 | Regions | `--region-north` … `--region-south` | Fixed order matching `REGIONS`. Never cycled or reassigned |
 | Status | `--status-good`, `--status-critical` | Feed health, errors, “Stop all alerts” |
 | Haze map | `--map-sea`, `--map-land`, `--map-coast`, `--map-label`, `--haze-moderate`, `--haze-dense`, `--map-fire` | Haze hues follow NEA’s map (orange moderate, brown-red dense) so they read the same as haze.gov.sg |
-| Purifier pet | `--pet-body`, `--pet-vent`, `--pet-line`, `--pet-blush`, `--pet-sweat` | A pale appliance in both schemes, so its face reads on any card |
+| Purifier pet | `--pet-body`, `--pet-vent`, `--pet-line`, `--pet-blush`, `--pet-sweat`, `--pet-puff`, `--pet-speck`, `--pet-heart`, `--pet-cap` | A pale appliance in both schemes, so its face reads on any card. Puffs (clean air) are cool blue, specks (haze) warm grey |
 | Shape | `--radius` 16px, `--gutter` 16px, `--shadow-thumb` | The shadow lifts a thumb or knob off its track |
 | Motion | `--ease-out`, `--ease-in-out`, `--ease-push` | `--ease-push` only for a view a tap pushes in (a region's page) |
 
@@ -299,13 +299,43 @@ It's written small, with no physics or canvas library.
 - Its mood follows the hero's band: dozing (Good), happy (Moderate, or no reading), busy
   (Unhealthy), struggling and heroic (Very unhealthy, Hazardous, sweating). The fan spins faster
   as the band rises. Its lines are about itself, never advice: the dashboard says what to do.
+- Its work shows: puffs of clean air rise from the top (one at low fan, two on high, three flat out,
+  faster as the fan speeds up), and from Unhealthy up, specks of haze drift into the grille. CSS loops only,
+  so they stop with the fan under reduced motion and off screen.
+- Play: three pats inside 1.5 s (`recentPats`) and hearts rise, with a success haptic, a quick
+  wiggle and a line of its own. Holding it revs the fan a step at 150 ms, and at 500 ms it's turbo
+  for 2 s: fan flat out, a shake, a light impact, no bubble. Let go early and it drops back (a
+  spin's speed can't ease); the click that ends a turbo press isn't a pat. A fast scroll (over
+  2.5 px/ms, measured per frame) while it rides a card gets a cling wobble. There's no double-tap:
+  telling one from a pat would hold every pat back 300 ms.
+- Night (11 pm–7 am SGT, `isSleepy`) with little haze (dozing or happy): a nightcap, mostly
+  dozing, and night lines. With haze to filter it stays up.
+- It dresses for the day (SGT, `petOutfit`): a pumpkin for Halloween, a diya for Deepavali, a Santa
+  hat at Christmas, a mandarin for Chinese New Year. Moving dates are listed per year in
+  `pet-physics.ts`; add the next ones when they pass. The nightcap wins at night. Costume colours
+  are fixed art, like the game's nut.
+- It can have a name (More → Purifier pet, `pet_name`, up to 16 characters, kept in Telegram's
+  cloud storage for this bot, never sent to the bot itself). The name goes in its label and in one
+  of its pat lines.
+- Its filter greys with haze (`addGrime`): each hour in NEA's PM2.5 history since it last looked
+  adds grime by band (Elevated, High, Very high), for the area being viewed, saved as `pet_filter`. It
+  only ever greys, in two visible steps (`grimeLevel`: half of `GRIMY`, then `GRIMY`). Once grey,
+  every other pat says so and offers **Change filter** beside Tuck away. It's play, never a
+  nudge to buy anything.
+- Tucked away (not hidden by the game), its eyes peek over the tab bar's right end for 3 s after a
+  tab switch, at most once a minute. No pointer, so it never covers a tap; bring it back from More.
+- When a new NEA reading moves the band, it says so: a sparkle and a line as the air clears, a brace
+  and a line as it worsens (`bandShift`). Only a new `asOf` for the same area and period counts, so
+  switching area or 1h/24h never reads as the air changing (24-hour PSI goes by `psiAsOf`). It reacts
+  to NEA's readings alone, not to loading or being offline; a fresh reading replacing the one saved on
+  the phone counts, since that's the air having changed since you last looked.
 - It roams the safe box (inside `--inset-top` and the side insets) and stands on the top edges
   of the visible tab's cards. On the floor just above the tab bar it would stand over whatever
   scrolls behind, so it leaps up to the nearest card top in view (`leapTarget`), and fades back
   while there's none. It sits at z-index 4,
   over the tab bar and under the game, which hides it.
 - Only the pet takes the pointer, so whatever is under it stays tappable. A drag past 10px picks it
-  up (a selection tick); less is a tap, a pat (a light impact, a wiggle and a speech bubble).
+  up (a selection tick); less is a tap, a pat (a selection tick, a wiggle and a speech bubble).
   The bubble's “Tuck away” hides it; the Purifier pet card in More brings it back. The spot it
   was dropped in is remembered (as fractions of the screen), not every place it wanders to.
 - Motion: its position is a transform set each frame; fan, feet and breathing are CSS loops under

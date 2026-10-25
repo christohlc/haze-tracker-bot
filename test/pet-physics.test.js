@@ -9,7 +9,24 @@ import {
   leap,
   leapTarget,
   parseSaved,
+  COMBO_MS,
+  FRESH_LINE,
+  GREY_LINE,
+  GRIMY,
+  addGrime,
+  grimeLevel,
+  cleanName,
+  lovedLines,
+  parseFilter,
+  petOutfit,
+  LOVED_LINES,
+  NIGHT_LINES,
   PET_LINES,
+  SHIFT_LINES,
+  isNight,
+  isSleepy,
+  recentPats,
+  bandShift,
   petMood,
   pickAction,
   release,
@@ -136,6 +153,96 @@ test('every band has a mood and lines that give no advice', () => {
       assert.doesNotMatch(line, /mask|indoors|stay in|go out|exercise|safe/i, line);
     }
   }
+});
+
+test('only a new NEA reading for the same area and period moves the band', () => {
+  const r = (band, extra = {}) => ({ asOf: '10:00', area: null, period: '24h', band, ...extra });
+  assert.equal(bandShift(null, r('good')), null, 'nothing to compare with yet');
+  assert.equal(bandShift(r('unhealthy'), r('moderate', { asOf: '11:00' })), 'down');
+  assert.equal(bandShift(r('moderate'), r('hazardous', { asOf: '11:00' })), 'up');
+  assert.equal(bandShift(r('moderate'), r('moderate', { asOf: '11:00' })), null, 'same band');
+  assert.equal(bandShift(r('unhealthy'), r('moderate')), null, 'same reading');
+  assert.equal(bandShift(r('unhealthy'), r('moderate', { asOf: '11:00', area: 'west' })), null, 'another area');
+  assert.equal(bandShift(r('unhealthy'), r('moderate', { asOf: '11:00', period: '1h' })), null, 'another period');
+  assert.equal(bandShift(r(null), r('good', { asOf: '11:00' })), null, 'no reading before');
+  for (const line of [...SHIFT_LINES.up, ...SHIFT_LINES.down]) {
+    assert.ok(line.length <= 40, line);
+    assert.doesNotMatch(line, /mask|indoors|stay in|go out|exercise|safe/i, line);
+  }
+});
+
+test('night is 11 pm to 7 am in Singapore, and only a purifier with little to filter dozes', () => {
+  const sgt = (hhmm) => Date.parse(`2026-10-25T${hhmm}:00+08:00`);
+  assert.equal(isNight(sgt('22:59')), false);
+  assert.equal(isNight(sgt('23:00')), true);
+  assert.equal(isNight(sgt('03:30')), true);
+  assert.equal(isNight(sgt('06:59')), true);
+  assert.equal(isNight(sgt('07:00')), false);
+  assert.equal(isSleepy('happy', sgt('01:00')), true);
+  assert.equal(isSleepy('heroic', sgt('01:00')), false, 'haze to filter: it stays up');
+  assert.equal(isSleepy('dozing', sgt('12:00')), false);
+  assert.ok(!actionWeights('happy', true).some(([a]) => a === 'hop'), 'no hopping at night');
+  assert.equal(pickAction('happy', 0, true), 'wait');
+});
+
+test('three pats inside the window are a combo; old ones drop out', () => {
+  let pats = recentPats([], 0);
+  pats = recentPats(pats, 400);
+  assert.equal(recentPats(pats, 900).length, 3);
+  assert.equal(recentPats(pats, COMBO_MS + 300).length, 2, 'the first pat is too old');
+  assert.deepEqual(recentPats([0, 100], 5000), [5000]);
+});
+
+test('extra lines give no advice either', () => {
+  for (const line of [...NIGHT_LINES, ...LOVED_LINES]) {
+    assert.ok(line.length <= 40, line);
+    assert.doesNotMatch(line, /mask|indoors|stay in|go out|exercise|safe/i, line);
+  }
+});
+
+test('outfits by SGT date, yearly and moving', () => {
+  assert.equal(petOutfit('2026-10-23'), null);
+  assert.equal(petOutfit('2026-10-24'), 'halloween');
+  assert.equal(petOutfit('2027-10-31'), 'halloween', 'every year');
+  assert.equal(petOutfit('2026-11-01'), null);
+  assert.equal(petOutfit('2026-11-08'), 'deepavali');
+  assert.equal(petOutfit('2027-11-08'), null, 'Deepavali moves: only the listed year');
+  assert.equal(petOutfit('2026-12-25'), 'christmas');
+  assert.equal(petOutfit('2026-12-27'), null);
+  assert.equal(petOutfit('2027-02-06'), 'cny');
+  for (const d of ['2026-11-05', '2026-11-10', '2027-02-03', '2027-02-12']) assert.equal(petOutfit(d), null, d);
+  assert.equal(petOutfit('2026-11-06'), 'deepavali');
+  assert.equal(petOutfit('2027-02-11'), 'cny');
+});
+
+test('the filter greys with haze hours from NEA and never cleans itself', () => {
+  const h = (t, pm) => ({ t: `2026-10-25T${t}:00:00+08:00`, west: pm, east: 10 });
+  const fresh = addGrime(null, [h('10', 200)], null);
+  assert.deepEqual(fresh, { dirt: 0, through: h('10').t }, 'a new filter starts clean, from the latest hour');
+  const one = addGrime(fresh, [h('10', 200), h('11', 200), h('12', 30)], null);
+  assert.ok(Math.abs(one.dirt - 1 / 40) < 1e-9, 'one hour of High; a Normal hour adds nothing');
+  assert.equal(one.through, h('12').t);
+  assert.deepEqual(addGrime(one, [h('12', 30)], null), one, 'nothing new');
+  assert.deepEqual(addGrime(one, [], null), one, 'history scrolled away: still as grimy');
+  assert.equal(addGrime(fresh, [h('11', 200)], 'east').dirt, 0, 'its own area only');
+  let f = fresh;
+  for (let i = 11; i < 24; i++) f = addGrime(f, [h(String(i), 300)], null);
+  assert.ok(f.dirt >= GRIMY && f.dirt <= 1, '13 hours of Very high greys it');
+  assert.deepEqual(parseFilter(JSON.stringify(one)), one);
+  assert.equal(addGrime(one, [h('12', 30)], null), one, 'unchanged: the same object');
+  assert.deepEqual([null, { dirt: 0.1 }, { dirt: 0.3 }, { dirt: 0.6 }].map(grimeLevel), [0, 0, 1, 2]);
+  assert.equal(parseFilter('nope'), null);
+  assert.equal(parseFilter('{"dirt":"x","through":"y"}'), null);
+});
+
+test('names are tidied and the lines use them without advice', () => {
+  assert.equal(cleanName('  Hazel   Nut  '), 'Hazel Nut');
+  assert.equal(cleanName('A'.repeat(40)).length, 16);
+  assert.equal([...cleanName('🌰'.repeat(20))].length, 16, 'cut by character, not code unit');
+  assert.equal(cleanName('   '), '');
+  assert.ok(lovedLines('Hazel').includes('Hazel loves a pat.'));
+  assert.equal(lovedLines('').length, 3);
+  for (const line of [GREY_LINE, FRESH_LINE]) assert.doesNotMatch(line, /mask|indoors|buy|replace your/i);
 });
 
 test('the wander AI picks by weight, like hedgehog-mode', () => {

@@ -9,6 +9,30 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-25-pet-personality',
+    date: '2026-10-25',
+    title: 'Name your purifier',
+    body: 'Give your purifier a name in More. It dresses up for Halloween, Deepavali, Christmas and Chinese New Year, its filter greys as haze rolls through (tap it to change the filter), and once tucked away it peeks out now and then.',
+  },
+  {
+    id: '2026-10-25-pet-play',
+    date: '2026-10-25',
+    title: 'More ways to play with your purifier',
+    body: 'Pat it three times quickly for hearts, or hold it down to send its fan into turbo. Late at night, when the air is fine, it puts on a nightcap and dozes.',
+  },
+  {
+    id: '2026-10-25-pet-air',
+    date: '2026-10-25',
+    title: 'Watch your purifier at work',
+    body: 'Puffs of clean air now rise from the purifier, faster as its fan speeds up, and once there’s haze about you can see it drawing the haze in.',
+  },
+  {
+    id: '2026-10-25-pet-notices',
+    date: '2026-10-25',
+    title: 'Hear from your purifier when the air changes',
+    body: 'When NEA’s new reading moves the haze into another band, the purifier tells you: a sparkle as it clears, a brace as it gets worse.',
+  },
+  {
     id: '2026-10-23-highest-since',
     date: '2026-10-23',
     title: 'See how this haze compares',

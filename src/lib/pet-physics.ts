@@ -3,6 +3,11 @@
 // Matter.js + PixiJS. Pure (no DOM), so `node --test` covers it; PurifierPet.svelte measures the
 // page and draws. Units: px and px/s, y down; the pet's (x, y) is its left edge and its feet.
 
+import { REGIONS } from '../../tgcloud/lib/config.js';
+import { bandRank, pm25Band } from '../../tgcloud/lib/psi.js';
+import type { HourRow, RegionId } from './api';
+import type { Period } from './period';
+
 export const PET_W = 48;
 export const PET_H = 56;
 
@@ -51,16 +56,18 @@ export interface MoodInfo {
   /** 1 low, 2 high, 3 flat out. */
   fan: 1 | 2 | 3;
   sweat: boolean;
+  /** Haze about (Unhealthy and up): specks drift into its grille. */
+  haze: boolean;
   /** Walking speed in px/s. */
   speed: number;
 }
 
 const MOODS: Record<string, MoodInfo> = {
-  good: { mood: 'dozing', fan: 1, sweat: false, speed: 24 },
-  moderate: { mood: 'happy', fan: 1, sweat: false, speed: 36 },
-  unhealthy: { mood: 'busy', fan: 2, sweat: false, speed: 52 },
-  very_unhealthy: { mood: 'struggling', fan: 3, sweat: true, speed: 60 },
-  hazardous: { mood: 'heroic', fan: 3, sweat: true, speed: 68 },
+  good: { mood: 'dozing', fan: 1, sweat: false, haze: false, speed: 24 },
+  moderate: { mood: 'happy', fan: 1, sweat: false, haze: false, speed: 36 },
+  unhealthy: { mood: 'busy', fan: 2, sweat: false, haze: true, speed: 52 },
+  very_unhealthy: { mood: 'struggling', fan: 3, sweat: true, haze: true, speed: 60 },
+  hazardous: { mood: 'heroic', fan: 3, sweat: true, haze: true, speed: 68 },
 };
 
 /** How the pet feels about a PSI band (ids from tgcloud/lib/psi.js); no reading: happy. */
@@ -75,6 +82,122 @@ export const PET_LINES: Record<Mood, string[]> = {
   heroic: ['Every blade, full speed.', 'I was built for this.', 'Not stopping till it clears.'],
 };
 
+export const NIGHT_LINES = ['Shh. Night shift.', 'Running quiet tonight.', 'Still on. Just quieter.'];
+export const LOVED_LINES = ['Aw. Fan’s all aflutter.', 'Okay, okay, I’m blushing.', 'Best pats in Singapore.'];
+/** The loved lines, with one that says its name once it has one. */
+export const lovedLines = (name: string) => (name ? [...LOVED_LINES, `${name} loves a pat.`] : LOVED_LINES);
+export const GREY_LINE = 'Filter’s looking grey.';
+export const FRESH_LINE = 'Fresh filter. Ahh.';
+
+/** 11 pm to 7 am in Singapore. */
+export function isNight(ms: number): boolean {
+  const h = new Date(ms + 8 * 3_600_000).getUTCHours();
+  return h >= 23 || h < 7;
+}
+
+/** Night, and the air's fine (dozing or happy): it puts on its nightcap and runs quiet. A purifier
+ *  with haze to filter stays up. */
+export const isSleepy = (mood: Mood, ms: number) => (mood === 'dozing' || mood === 'happy') && isNight(ms);
+
+export const COMBO_PATS = 3;
+export const COMBO_MS = 1500;
+
+/** The pats still inside the combo window, with this one added; COMBO_PATS of them is a combo. */
+export const recentPats = (times: number[], now: number) => [...times.filter((t) => now - t < COMBO_MS), now];
+
+export type Outfit = 'halloween' | 'deepavali' | 'christmas' | 'cny';
+
+// SGT dates, inclusive. Deepavali and Chinese New Year move: add next year's when this one passes.
+const OUTFITS: [Outfit, string, string][] = [
+  ['halloween', '10-24', '10-31'],
+  ['christmas', '12-18', '12-26'],
+  ['deepavali', '2026-11-06', '2026-11-09'],
+  ['cny', '2027-02-04', '2027-02-11'],
+];
+
+/** What it's wearing on an SGT date (YYYY-MM-DD), if anything. Yearly dates are given as MM-DD. */
+export function petOutfit(ymd: string): Outfit | null {
+  for (const [outfit, from, to] of OUTFITS) {
+    const day = from.length === 5 ? ymd.slice(5) : ymd;
+    if (day >= from && day <= to) return outfit;
+  }
+  return null;
+}
+
+/** Its filter: how grimy (0 clean to 1) and the last NEA hour counted. */
+export interface Filter {
+  dirt: number;
+  through: string;
+}
+
+// Grime an hour of PM2.5 adds, by NEA's band: about 2 days of Elevated, a day of High or 12 hours
+// of Very high to grey it (GRIMY).
+const GRIME: Record<string, number> = { II: 1 / 80, III: 1 / 40, IV: 1 / 20 };
+export const GRIMY = 0.6;
+
+/**
+ * Adds the hours of NEA's PM2.5 history after `f.through`, for the area (null: the highest region).
+ * Only ever adds, so hours scrolling out of the history never clean it. No filter yet: a fresh one,
+ * counting from the latest hour.
+ */
+export function addGrime(f: Filter | null, history: HourRow[], area: string | null): Filter {
+  const latest = history.at(-1)?.t ?? f?.through ?? '';
+  if (!f) return { dirt: 0, through: latest };
+  if (latest <= f.through) return f; // nothing new: the same filter, so callers can compare by identity
+  const ids = (area ? [area] : REGIONS.map((r) => r.id)) as RegionId[];
+  let dirt = f.dirt;
+  for (const row of history) {
+    if (row.t <= f.through) continue;
+    const pm25 = Math.max(...ids.map((id) => row[id] ?? -Infinity));
+    dirt += GRIME[pm25Band(Number.isFinite(pm25) ? pm25 : null)?.id ?? ''] ?? 0;
+  }
+  return { dirt: Math.min(1, dirt), through: latest };
+}
+
+/** How grey it looks: 0 clean, 1 greying (half of GRIMY), 2 grey (it asks for a new filter). */
+export const grimeLevel = (f: Filter | null): 0 | 1 | 2 => (!f ? 0 : f.dirt >= GRIMY ? 2 : f.dirt >= GRIMY / 2 ? 1 : 0);
+
+export function parseFilter(raw: string | null): Filter | null {
+  try {
+    const f = JSON.parse(raw ?? 'null');
+    return typeof f?.dirt === 'number' && typeof f?.through === 'string' ? { dirt: clamp(f.dirt, 0, 1), through: f.through } : null;
+  } catch {
+    return null;
+  }
+}
+
+export const NAME_MAX = 16;
+/** A name as typed: trimmed, inner runs of spaces made one, cut to NAME_MAX characters. */
+export const cleanName = (raw: string) => [...raw.trim().replace(/\s+/g, ' ')].slice(0, NAME_MAX).join('').trim();
+
+/** What the pet last saw: one NEA reading for one area and period. */
+export interface Reading {
+  asOf: string;
+  area: string | null;
+  period: Period;
+  band: string | null;
+}
+
+/** Which way a new reading moved the band: 'up' is worse. */
+export type BandShift = 'up' | 'down';
+
+/**
+ * A new NEA reading moved the band: 'up' (worse) or 'down'. Only a new `asOf` for the same area and
+ * period counts, so switching area or period never reads as the air changing.
+ */
+export function bandShift(prev: Reading | null, next: Reading): BandShift | null {
+  if (!prev || prev.asOf === next.asOf || prev.area !== next.area || prev.period !== next.period) return null;
+  const a = bandRank(prev.band);
+  const b = bandRank(next.band);
+  if (a < 0 || b < 0 || a === b) return null;
+  return b > a ? 'up' : 'down';
+}
+
+export const SHIFT_LINES: Record<BandShift, string[]> = {
+  down: ['Clearing up! Fan’s easing off.', 'Air’s better. I felt that.'],
+  up: ['Haze is up. So’s my fan.', 'More haze in. Bracing.'],
+};
+
 // Wander weights, like hedgehog-mode's AI (walk 10, wait 3, jump 1, wave 1), shifted by mood.
 const WEIGHTS: Record<Mood, [PetAction, number][]> = {
   dozing: [['wait', 10], ['walk', 4], ['wave', 1]],
@@ -84,11 +207,14 @@ const WEIGHTS: Record<Mood, [PetAction, number][]> = {
   heroic: [['walk', 10], ['wait', 1], ['hop', 3], ['wave', 1]],
 };
 
-export const actionWeights = (mood: Mood) => WEIGHTS[mood];
+// At night, with little haze to filter, it mostly dozes.
+const NIGHT_WEIGHTS: [PetAction, number][] = [['wait', 12], ['walk', 3], ['wave', 1]];
 
-/** A weighted pick; `rand` in [0, 1). */
-export function pickAction(mood: Mood, rand: number): PetAction {
-  const w = WEIGHTS[mood];
+export const actionWeights = (mood: Mood, sleepy = false) => (sleepy ? NIGHT_WEIGHTS : WEIGHTS[mood]);
+
+/** A weighted pick; `rand` in [0, 1). `sleepy`: night, with little haze (`isSleepy`). */
+export function pickAction(mood: Mood, rand: number, sleepy = false): PetAction {
+  const w = actionWeights(mood, sleepy);
   let r = rand * w.reduce((n, [, k]) => n + k, 0);
   for (const [a, k] of w) if ((r -= k) < 0) return a;
   return w[0][0];

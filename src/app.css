@@ -55,6 +55,10 @@
   --pet-line: #2b2a27;
   --pet-blush: rgba(232, 123, 164, 0.45);
   --pet-sweat: #5aa6e8;
+  --pet-puff: #8ccbf2; /* clean air out of the top */
+  --pet-speck: #9b917b; /* haze drawn into the grille */
+  --pet-heart: #e8578f;
+  --pet-cap: #6b7fc4; /* the nightcap */
   --font-display: ui-rounded, 'SF Pro Rounded', 'Nunito', system-ui, -apple-system, sans-serif;
 
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
@@ -98,6 +102,10 @@
   --pet-line: #1a1a19;
   --pet-blush: rgba(213, 81, 129, 0.45);
   --pet-sweat: #6fb3ee;
+  --pet-puff: #7cc4ee;
+  --pet-speck: #a49a84;
+  --pet-heart: #f06b9f;
+  --pet-cap: #7b8fd0;
 
   --band-good: #0ca30c;           --band-good-ink: #0b0b0b;
   --band-moderate: #3987e5;       --band-moderate-ink: #0b0b0b;

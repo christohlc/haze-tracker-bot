@@ -4,14 +4,13 @@
 import { levelOrNull, QUIET_FROM, QUIET_UNTIL } from './alert-settings.js';
 import { subscriberTarget } from './chat-rules.js';
 import { REGIONS } from './config.js';
-import { PSI_BANDS, psiBand } from './psi.js';
+import { PSI_BANDS, bandRank, psiBand } from './psi.js';
 
 /** A drop to a lower band waits this long after the last change, so a PSI hovering on a
  *  boundary doesn't ping people every hour. A rise is always announced straight away. */
 export const DEESCALATE_HOLD_MS = 3 * 3600_000;
 
-/** @param {string} id */
-export const bandRank = (id) => PSI_BANDS.findIndex((b) => b.id === id);
+export { bandRank };
 
 /**
  * The band people get alerted about, given the previous one and the band right now.
