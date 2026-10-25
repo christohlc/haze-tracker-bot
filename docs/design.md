@@ -46,7 +46,7 @@ which is described below.
 | Regions | `--region-north` … `--region-south` | Fixed order matching `REGIONS`. Never cycled or reassigned |
 | Status | `--status-good`, `--status-critical` | Feed health, errors, “Stop all alerts” |
 | Haze map | `--map-sea`, `--map-land`, `--map-coast`, `--map-label`, `--haze-moderate`, `--haze-dense`, `--map-fire` | Haze hues follow NEA’s map (orange moderate, brown-red dense) so they read the same as haze.gov.sg |
-| Purifier pet | `--pet-body`, `--pet-vent`, `--pet-line`, `--pet-blush`, `--pet-sweat` | A pale appliance in both schemes, so its face reads on any card |
+| Purifier pet | `--pet-body`, `--pet-vent`, `--pet-line`, `--pet-blush`, `--pet-sweat`, `--pet-puff`, `--pet-speck` | A pale appliance in both schemes, so its face reads on any card. Puffs (clean air) are cool blue, specks (haze) warm grey |
 | Shape | `--radius` 16px, `--gutter` 16px, `--shadow-thumb` | The shadow lifts a thumb or knob off its track |
 | Motion | `--ease-out`, `--ease-in-out`, `--ease-push` | `--ease-push` only for a view a tap pushes in (a region's page) |
 
@@ -299,6 +299,9 @@ It's written small, with no physics or canvas library.
 - Its mood follows the hero's band: dozing (Good), happy (Moderate, or no reading), busy
   (Unhealthy), struggling and heroic (Very unhealthy, Hazardous, sweating). The fan spins faster
   as the band rises. Its lines are about itself, never advice: the dashboard says what to do.
+- Its work shows: puffs of clean air rise from the top (one at low fan, two on high, three flat out,
+  faster as the fan speeds up), and from Unhealthy up, specks of haze drift into the grille. CSS loops only,
+  so they stop with the fan under reduced motion and off screen.
 - When a new NEA reading moves the band, it says so: a sparkle and a line as the air clears, a brace
   and a line as it worsens (`bandShift`). Only a new `asOf` for the same area and period counts, so
   switching area or 1h/24h never reads as the air changing (24-hour PSI goes by `psiAsOf`). It reacts

@@ -54,16 +54,18 @@ export interface MoodInfo {
   /** 1 low, 2 high, 3 flat out. */
   fan: 1 | 2 | 3;
   sweat: boolean;
+  /** Haze about (Unhealthy and up): specks drift into its grille. */
+  haze: boolean;
   /** Walking speed in px/s. */
   speed: number;
 }
 
 const MOODS: Record<string, MoodInfo> = {
-  good: { mood: 'dozing', fan: 1, sweat: false, speed: 24 },
-  moderate: { mood: 'happy', fan: 1, sweat: false, speed: 36 },
-  unhealthy: { mood: 'busy', fan: 2, sweat: false, speed: 52 },
-  very_unhealthy: { mood: 'struggling', fan: 3, sweat: true, speed: 60 },
-  hazardous: { mood: 'heroic', fan: 3, sweat: true, speed: 68 },
+  good: { mood: 'dozing', fan: 1, sweat: false, haze: false, speed: 24 },
+  moderate: { mood: 'happy', fan: 1, sweat: false, haze: false, speed: 36 },
+  unhealthy: { mood: 'busy', fan: 2, sweat: false, haze: true, speed: 52 },
+  very_unhealthy: { mood: 'struggling', fan: 3, sweat: true, haze: true, speed: 60 },
+  hazardous: { mood: 'heroic', fan: 3, sweat: true, haze: true, speed: 68 },
 };
 
 /** How the pet feels about a PSI band (ids from tgcloud/lib/psi.js); no reading: happy. */

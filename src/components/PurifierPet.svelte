@@ -47,6 +47,9 @@
   }: { snapshot: Snapshot; period: Period; hidden: boolean; onhide: () => void } = $props();
 
   const POS_KEY = STORE_KEYS.petPos;
+  // [cx, cy, r]. The middle puff first: at low fan only it runs. Specks start off the sides.
+  const PUFFS = [[23, 2, 2.2], [18, 3, 1.8], [28, 3.5, 1.6]];
+  const SPECKS = [[2, 40, 1.1], [46, 42, 1], [0, 47, 0.9], [48, 48, 1.2]];
   const TAP_SLOP = 10; // px; hedgehog-mode's click threshold
 
   // The same band as the hero, so the pet and the big number agree.
@@ -417,6 +420,16 @@
                   <path d="M22 17 C17.7 19.5 14.7 18 15 15.4 C17.6 15 19.9 15.7 22 17Z" />
                 </g>
                 <circle class="hub" cx="22" cy="17" r="1.6" />
+                <!-- clean air out of the top; how many and how fast follow the fan -->
+                <g class="puffs">
+                  {#each PUFFS as [cx, cy, r], i (i)}<circle {cx} {cy} {r} style:--i={i} />{/each}
+                </g>
+                <!-- haze drawn into the grille, once there's haze to filter -->
+                {#if mood.haze}
+                  <g class="specks">
+                    {#each SPECKS as [cx, cy, r], i (i)}<circle {cx} {cy} {r} style:--i={i} />{/each}
+                  </g>
+                {/if}
                 <!-- status light, in the band's colour -->
                 <circle class="light" cx="36" cy="12.5" r="2.4" style:fill={band ? `var(--band-${band.id})` : 'var(--muted)'} />
                 <!-- face -->
@@ -602,6 +615,21 @@
   .sweat {
     fill: var(--pet-sweat);
   }
+  .puffs circle,
+  .specks circle {
+    opacity: 0;
+    transform-box: fill-box;
+    transform-origin: 50% 50%;
+  }
+  .puffs circle {
+    fill: var(--pet-puff);
+  }
+  .specks circle {
+    fill: var(--pet-speck);
+    /* scaled toward the grille's middle: drawn in and shrinking */
+    transform-box: view-box;
+    transform-origin: 24px 44px;
+  }
   .sparkle {
     fill: var(--band-good);
     opacity: 0;
@@ -682,12 +710,18 @@
     }
     .fan-1 {
       --fan-s: 1.6s;
+      --puff-s: 2.4s;
+      --puffs: 1;
     }
     .fan-2 {
       --fan-s: 0.6s;
+      --puff-s: 1.6s;
+      --puffs: 2;
     }
     .fan-3 {
       --fan-s: 0.28s;
+      --puff-s: 1.1s;
+      --puffs: 3;
     }
     .act-walk .foot-l {
       animation: step 420ms ease-in-out infinite;
@@ -712,6 +746,17 @@
     .sweat {
       animation: drip 1.6s ease-in infinite;
     }
+    /* One puff at low fan, two on high, three flat out, evenly spaced, rising faster as the fan speeds up. */
+    .puffs circle {
+      animation: rise var(--puff-s, 2.4s) ease-in-out calc(var(--i) * var(--puff-s, 2.4s) / var(--puffs, 1) * -1) infinite;
+    }
+    .fan-1 .puffs :nth-child(n + 2),
+    .fan-2 .puffs :nth-child(3) {
+      animation: none;
+    }
+    .specks circle {
+      animation: drawn-in 2.2s ease-in-out calc(var(--i) * -0.55s) infinite;
+    }
     .zz {
       animation: drift 2.4s ease-in-out infinite;
     }
@@ -729,6 +774,32 @@
     }
   }
 
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(0) scale(0.6);
+    }
+    30% {
+      opacity: 0.9;
+    }
+    to {
+      opacity: 0;
+      transform: translateY(-10px) scale(1);
+    }
+  }
+  @keyframes drawn-in {
+    from {
+      opacity: 0;
+      transform: none;
+    }
+    25% {
+      opacity: 0.8;
+    }
+    to {
+      opacity: 0;
+      transform: scale(0.45);
+    }
+  }
   @keyframes spin {
     to {
       transform: rotate(360deg);
