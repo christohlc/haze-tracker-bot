@@ -1,6 +1,6 @@
 // @ts-check
-// Retry a request once if it throws: the platform's fetch gives up after about 5 s (see the
-// alerts note in AGENTS.md). fetch resolves on HTTP errors, so a 4xx/5xx isn't retried.
+// Retry a request once if it throws: the platform's fetch gives up after about 5 s (see
+// Alerts in docs/architecture.md). fetch resolves on HTTP errors, so a 4xx/5xx isn't retried.
 // Pure (the request is passed in) so node --test can load it.
 
 /** How long the platform's fetch waits before it throws "fetch: request failed". */
