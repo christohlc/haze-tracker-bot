@@ -1,8 +1,9 @@
 # REVIEW.md
 
 How to review a change to this bot, for `/code-review`, a fresh-context subagent, or a person.
-Conventions and the why behind them are in [AGENTS.md](AGENTS.md); this file is what to look
-for and how to report it. Keep it short: it's read on every review.
+Rules are in [AGENTS.md](AGENTS.md), how the parts work in
+[docs/architecture.md](docs/architecture.md); this file is what to look for and how to report
+it. Keep it short: it's read on every review.
 
 ## What failure looks like here
 
