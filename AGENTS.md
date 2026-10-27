@@ -196,6 +196,8 @@ and copy rules in [docs/design.md](docs/design.md). Things that aren't obvious f
 - **New or changed UI gets a pass with the UI skills** before it's committed:
   `emil-design-eng` (polish, motion) and `mobile-native` (touch, safe areas), plus
   `break-ui` for components that show data. Keep the result consistent with docs/design.md.
+- **Reviews follow [REVIEW.md](REVIEW.md)**: what failure looks like here, which paths are high
+  risk and get which reviews, and how findings are reported. PRs use `.github/pull_request_template.md`.
 - Checks: `npm test`, `npm run check` and `npm run build` (CI runs all three). Deploy: `npm run deploy` (+ `npx tgcloud
   migrate` after schema changes; + `npx wrangler@4 deploy --config cron/wrangler.jsonc` after
   changing `cron/`, which `npm run deploy` doesn't touch). `npm run deploy` refuses
