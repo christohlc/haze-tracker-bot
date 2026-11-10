@@ -7,12 +7,17 @@ import { isBadRequest } from '../lib/bot-errors.js';
 import { ADMINS_ONLY, topicOf } from '../lib/chat-rules.js';
 import { canManageAlerts } from '../lib/groups.js';
 import { editHtml } from '../lib/messages.js';
+import { RETIRED, RETIRED_ALERT } from '../lib/retired.js';
 import { deleteSubscriber, getSubscriber, saveSubscriber } from '../lib/subscriptions.js';
 
 export default async function (query) {
   const msg = query.message;
   if (!msg || !query.data?.startsWith('a:')) {
     await api.answerCallbackQuery({ callback_query_id: query.id });
+    return;
+  }
+  if (RETIRED) {
+    await api.answerCallbackQuery({ callback_query_id: query.id, text: RETIRED_ALERT, show_alert: true });
     return;
   }
   const chatId = msg.chat.id;

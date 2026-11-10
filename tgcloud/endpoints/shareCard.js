@@ -6,6 +6,7 @@
 // it goes to the user's own chat first (`sentToChat` says so).
 
 import { api, EndpointError } from 'sdk';
+import { RETIRED } from '../lib/retired.js';
 import { describeError, isUnreachable } from '../lib/bot-errors.js';
 import { dashboardButton } from '../lib/buttons.js';
 import { cachedCardId, photoFileId, sendCard } from '../lib/card/send.js';
@@ -15,6 +16,8 @@ import { getSnapshot } from '../lib/refresh.js';
 export default async function (input, ctx) {
   const userId = ctx.initData?.user?.id;
   if (!userId) throw new EndpointError('Open this from Telegram', { code: 'NO_USER' });
+  // Resting (lib/retired.js): an old Mini App still open mustn't turn alerts on or send a card.
+  if (RETIRED) throw new EndpointError('The bot is resting', { code: 'RETIRED' });
   if (input.action !== 'share' && input.action !== 'send') throw new EndpointError("action must be 'share' or 'send'");
 
   const snap = await getSnapshot();

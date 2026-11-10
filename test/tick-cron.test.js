@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import worker, { KEEPALIVE_CRON, dispatchRequest, opsDue } from '../cron/worker.js';
+import { RETIRED } from '../tgcloud/lib/retired.js';
 
 test('tick cron dispatches main, the keepalive cron adds the input', () => {
   assert.deepEqual(JSON.parse(dispatchRequest('12,27,42,57 * * * *', 't').body), { ref: 'main' });
@@ -13,7 +14,10 @@ test('tick cron dispatches main, the keepalive cron adds the input', () => {
 });
 
 test('wrangler.jsonc schedules the keepalive cron worker.js expects', () => {
-  assert.ok(readFileSync(new URL('../cron/wrangler.jsonc', import.meta.url), 'utf8').includes(`"${KEEPALIVE_CRON}"`));
+  const config = readFileSync(new URL('../cron/wrangler.jsonc', import.meta.url), 'utf8');
+  // Resting (tgcloud/lib/retired.js): no crons at all, and the keepalive is in the note to bring them back.
+  assert.ok(config.includes(`"${KEEPALIVE_CRON}"`));
+  assert.ok(RETIRED === /"crons": \[\]/.test(config), 'crons are off exactly while the bot is retired');
 });
 
 test('scheduled throws unless GitHub answers 204', async (t) => {

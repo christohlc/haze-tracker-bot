@@ -12,6 +12,7 @@ import { botInfo, canManageAlerts } from '../lib/groups.js';
 import { answer, sendHtml } from '../lib/messages.js';
 import { forecastMessage, formatCigs, formatHaze, formatHazeCaption } from '../lib/format.js';
 import { getSnapshot } from '../lib/refresh.js';
+import { RETIRED, RETIRED_TEXT } from '../lib/retired.js';
 import { countStart } from '../lib/store.js';
 import { deleteSubscriber, getSubscriber, moveSubscriber, saveSubscriber } from '../lib/subscriptions.js';
 
@@ -43,10 +44,17 @@ export default async function (message) {
   const bot = /^\/\S*@/.test(text) ? await botInfo() : null;
   const command = parseCommand(text, bot?.username ?? null);
   if (!command) {
-    if (!group && !text.startsWith('/')) await reply(message, help(copy));
+    if (!group && !text.startsWith('/')) await reply(message, RETIRED ? RETIRED_TEXT : help(copy));
     return;
   }
   const { cmd, args } = command;
+  // Resting: every command gets the note, except the ones that delete a chat's data.
+  const deletes = cmd === 'stop' || cmd === 'unsubscribe';
+  if (RETIRED && !deletes) {
+    const known = cmd === 'start' || COMMANDS.some((c) => c.command === cmd);
+    if (known || !group) await reply(message, RETIRED_TEXT);
+    return;
+  }
 
   switch (cmd) {
     case 'start':
@@ -91,7 +99,7 @@ export default async function (message) {
       if (!(await canManageAlerts(message))) return answer(message, (to) => sendHtml(to, ADMINS_ONLY), true);
       if (cmd !== 'subscribe') {
         await deleteSubscriber(message.chat.id);
-        return reply(message, `🔕 Alerts off. ${copy.whose} chat ID and settings are deleted. /subscribe turns them back on.`);
+        return reply(message, `🔕 Alerts off. ${copy.whose} chat ID and settings are deleted.${RETIRED ? '' : ' /subscribe turns them back on.'}`);
       }
       const existing = await getSubscriber(message.chat.id);
       const { sub } = await saveSubscriber(message.chat.id, { bandAlerts: true, dailyHour: existing?.dailyHour ?? null, threadId: topicOf(message) });
