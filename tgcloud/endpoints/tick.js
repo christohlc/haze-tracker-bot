@@ -19,9 +19,12 @@ import { requireCli } from '../lib/cli-only.js';
 import { refreshNews, refreshNewsIfDue } from '../lib/news.js';
 import { reportOps, uploadCard } from '../lib/ops.js';
 import { refreshNea, refreshNeaIfDue, storedSnapshot } from '../lib/refresh.js';
+import { RETIRED } from '../lib/retired.js';
 
 export default async function (input, ctx) {
   requireCli(ctx);
+  // Resting (lib/retired.js): a stray manual run must not send alerts or breaking news.
+  if (RETIRED) return { retired: true };
   const started = Date.now();
   const force = Boolean(input?.force);
   const stored = await storedSnapshot();

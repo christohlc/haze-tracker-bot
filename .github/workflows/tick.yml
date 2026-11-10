@@ -20,12 +20,15 @@
 # through the API, which counts as activity (the approach of the keepalive-workflow action,
 # without the third-party dependency). It runs on a dispatch with keepalive=true too, which the
 # Worker sends weekly in case GitHub drops the scheduled one.
+#
+# RESTING since 10 Nov 2026 (tgcloud/lib/retired.js): no schedule, and the Worker has no crons.
+# To bring it back, put these under `on:` again (reverting the retiring commit does it):
+#   schedule:
+#     - cron: '12,27,42,57 * * * *' # NEA publishes ~15 min past the hour; off the congested :00 slot
+#     - cron: '33 3 * * 1' # keepalive, Mondays 11:33 SGT
 name: tick
 
 on:
-  schedule:
-    - cron: '12,27,42,57 * * * *' # NEA publishes ~15 min past the hour; off the congested :00 slot
-    - cron: '33 3 * * 1' # keepalive, Mondays 11:33 SGT
   workflow_dispatch:
     inputs:
       keepalive:

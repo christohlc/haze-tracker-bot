@@ -8,7 +8,9 @@
   "triggers": {
     // UTC. The tick at :12, :27, :42, :57 (NEA publishes ~15 min past the hour), and the
     // keepalive on Mondays 11:33 SGT (KEEPALIVE_CRON in worker.js).
-    "crons": ["12,27,42,57 * * * *", "33 3 * * MON"]
+    // RESTING since 10 Nov 2026 (tgcloud/lib/retired.js): no crons, so the Worker never runs.
+    // To bring it back: "crons": ["12,27,42,57 * * * *", "33 3 * * MON"]
+    "crons": []
   },
   "observability": { "enabled": true }
 }

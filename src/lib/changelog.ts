@@ -9,6 +9,12 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-10-resting',
+    date: '2026-11-10',
+    title: 'Resting till the next haze',
+    body: 'Singapore’s air has cleared, so the bot has stopped checking NEA’s readings and sending alerts. For the latest PSI, see haze.gov.sg.',
+  },
+  {
     id: '2026-10-25-pet-personality',
     date: '2026-10-25',
     title: 'Name your purifier',
