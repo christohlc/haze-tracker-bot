@@ -3,9 +3,12 @@
 // the Mini App and the tick all stand down, so nobody is shown a stale reading as if it were
 // current; /stop still deletes a chat's data. Pure: the Mini App imports it.
 //
+// Retiring took `npm run deploy` and `npx wrangler@4 deploy --config cron/wrangler.jsonc` (with
+// `"crons": []`, which removes the Worker's triggers).
 // To bring it back: set RETIRED to false, put back the `schedule` in .github/workflows/tick.yml
-// and the crons in cron/wrangler.jsonc (reverting the retiring commit does all three), then
-// `npm run deploy` and `npx wrangler@4 deploy --config cron/wrangler.jsonc`.
+// and the crons in cron/wrangler.jsonc (reverting the retiring commit does all three), run
+// `npm run psi:history`, then the same two deploys. Inline answers may say “resting” for up to an
+// hour after that (Telegram caches them).
 
 export const RETIRED = true;
 

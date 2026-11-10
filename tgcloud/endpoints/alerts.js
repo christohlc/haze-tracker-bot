@@ -5,6 +5,7 @@
 // Alerts go to the user's private chat with the bot, whose id is the user id.
 
 import { api, EndpointError } from 'sdk';
+import { RETIRED } from '../lib/retired.js';
 import { parseAlertInput, settingsOf } from '../lib/alert-settings.js';
 import { isUnreachable } from '../lib/bot-errors.js';
 import { deleteSubscriber, getSubscriber, saveSubscriber } from '../lib/subscriptions.js';
@@ -15,6 +16,8 @@ const view = (sub) => (sub ? settingsOf(sub) : null);
 export default async function (input, ctx) {
   const chatId = ctx.initData?.user?.id;
   if (!chatId) throw new EndpointError('Open this from Telegram', { code: 'NO_USER' });
+  // Resting (lib/retired.js): an old Mini App still open mustn't turn alerts on or send a card.
+  if (RETIRED) throw new EndpointError('The bot is resting', { code: 'RETIRED' });
 
   if (input.action === 'get') return view(await getSubscriber(chatId));
   if (input.action !== 'save') throw new EndpointError("action must be 'get' or 'save'");

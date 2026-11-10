@@ -99,7 +99,7 @@ export default async function (message) {
       if (!(await canManageAlerts(message))) return answer(message, (to) => sendHtml(to, ADMINS_ONLY), true);
       if (cmd !== 'subscribe') {
         await deleteSubscriber(message.chat.id);
-        return reply(message, `🔕 Alerts off. ${copy.whose} chat ID and settings are deleted. /subscribe turns them back on.`);
+        return reply(message, `🔕 Alerts off. ${copy.whose} chat ID and settings are deleted.${RETIRED ? '' : ' /subscribe turns them back on.'}`);
       }
       const existing = await getSubscriber(message.chat.id);
       const { sub } = await saveSubscriber(message.chat.id, { bandAlerts: true, dailyHour: existing?.dailyHour ?? null, threadId: topicOf(message) });
